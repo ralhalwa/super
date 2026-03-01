@@ -1,0 +1,6 @@
+@import "./theme.css";
+
+/* Small improvements */
+button, input, select {
+  font: inherit;
+}
