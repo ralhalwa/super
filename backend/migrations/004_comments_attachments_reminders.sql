@@ -1,6 +1,5 @@
 PRAGMA foreign_keys = ON;
 
--- Comments
 CREATE TABLE IF NOT EXISTS card_comments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   card_id INTEGER NOT NULL,
@@ -15,7 +14,6 @@ CREATE TABLE IF NOT EXISTS card_comments (
 CREATE INDEX IF NOT EXISTS idx_card_comments_card_id_created_at
 ON card_comments(card_id, created_at DESC);
 
--- Attachments
 CREATE TABLE IF NOT EXISTS card_attachments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   card_id INTEGER NOT NULL,
@@ -32,12 +30,11 @@ CREATE TABLE IF NOT EXISTS card_attachments (
 CREATE INDEX IF NOT EXISTS idx_card_attachments_card_id_created_at
 ON card_attachments(card_id, created_at DESC);
 
--- Reminders
 CREATE TABLE IF NOT EXISTS card_reminders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   card_id INTEGER NOT NULL,
   user_id INTEGER NOT NULL,
-  remind_at TEXT NOT NULL, -- ISO string
+  remind_at TEXT NOT NULL,
   is_sent INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY(card_id) REFERENCES cards(id) ON DELETE CASCADE,

@@ -1,0 +1,88 @@
+.assignGrid{
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 14px;
+}
+
+.assignCard{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow2);
+}
+
+.assignCardHead{
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.assignList{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  position: relative;
+  z-index: 1; /* 🔥 ensures clickable */
+}
+
+.assignItem{
+  width: 100%;
+  text-align: left;
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+
+.assignItemActive{
+  background: var(--soft);
+  border-color: rgba(109,94,252,0.3);
+}
+
+.assignItemTitle{
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.assignItemSub{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.assignNotice{
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--soft);
+}
+
+.assignSplit{
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.assignPane{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.assignCheckRow,
+.assignRowStatic{
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+@media (max-width: 1050px){
+  .assignGrid{ grid-template-columns: 1fr; }
+  .assignSplit{ grid-template-columns: 1fr; }
+}

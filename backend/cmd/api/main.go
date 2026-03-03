@@ -118,6 +118,12 @@ ar.Post("/card/attachments/delete", api.AdminDeleteAttachment)
 ar.Post("/card/reminders", api.AdminCreateReminder)
 ar.Post("/card/reminders/delete", api.AdminDeleteReminder)
 ar.Get("/all-boards", api.AdminAllBoards)
+ar.Get("/assign/supervisors", api.AdminAssignListSupervisors)
+		ar.Get("/assign/students", api.AdminAssignListStudents)
+		ar.Get("/assign/list", api.AdminAssignList)          // ?supervisor_id=
+		ar.Post("/assign", api.AdminAssignAdd)               // { supervisor_id, student_id }
+		ar.Post("/assign/remove", api.AdminAssignRemove)  
+		ar.Get("/users", api.AdminSearchUsers)
 
 	})
 	
@@ -134,6 +140,7 @@ func runMigrations(conn *sql.DB) error {
 		"migrations/002_activity.sql",
 		"migrations/003_card_meta.sql",
 		"migrations/004_comments_attachments_reminders.sql",
+		"migrations/005_supervisor_assignments.sql",
 	}
 
 	for _, f := range files {

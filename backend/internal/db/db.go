@@ -506,3 +506,30 @@ func RemoveAssignee(conn *sql.DB, cardID, userID int64) error {
 	_, err := conn.Exec(`DELETE FROM card_assignments WHERE card_id = ? AND user_id = ?`, cardID, userID)
 	return err
 }
+func SearchUsersStudentsAndSupervisors(conn *sql.DB, q string) ([]models.User, error) {
+	rows, err := conn.Query(`
+		SELECT id, full_name, email, role, is_active, created_at
+		FROM users
+		WHERE role IN ('student','supervisor')
+		  AND is_active = 1
+		  AND (LOWER(full_name) LIKE '%' || LOWER(?) || '%' OR LOWER(email) LIKE '%' || LOWER(?) || '%')
+		ORDER BY full_name ASC
+		LIMIT 25
+	`, q, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []models.User{}
+	for rows.Next() {
+		var u models.User
+		var activeInt int
+		if err := rows.Scan(&u.ID, &u.FullName, &u.Email, &u.Role, &activeInt, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		u.IsActive = activeInt == 1
+		out = append(out, u)
+	}
+	return out, nil
+}

@@ -1,6 +1,5 @@
 PRAGMA foreign_keys = ON;
 
--- Labels per board
 CREATE TABLE IF NOT EXISTS labels (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   board_id INTEGER NOT NULL,
@@ -13,7 +12,6 @@ CREATE TABLE IF NOT EXISTS labels (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_labels_board_name
 ON labels(board_id, LOWER(name));
 
--- Card <-> Labels
 CREATE TABLE IF NOT EXISTS card_labels (
   card_id INTEGER NOT NULL,
   label_id INTEGER NOT NULL,

@@ -634,3 +634,36 @@ func (a *API) AdminAllBoards(w http.ResponseWriter, r *http.Request) {
 
 	utils.WriteJSON(w, 200, out)
 }
+/*
+ADMIN: Search users (students + supervisors)
+GET /admin/users?q=reem&role=student|supervisor|all
+*/
+func (a *API) AdminSearchUsers(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	role := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("role")))
+
+	// default: all (students + supervisors)
+	if role == "" || role == "all" {
+		users, err := db.SearchUsersStudentsAndSupervisors(a.conn, q)
+		if err != nil {
+			utils.WriteJSON(w, http.StatusInternalServerError, map[string]any{"error": "db error"})
+			return
+		}
+		utils.WriteJSON(w, http.StatusOK, users)
+		return
+	}
+
+	// specific role
+	if role != "student" && role != "supervisor" {
+		utils.WriteJSON(w, http.StatusBadRequest, map[string]any{"error": "role must be all, student, or supervisor"})
+		return
+	}
+
+	users, err := db.SearchUsersByRole(a.conn, role, q)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, map[string]any{"error": "db error"})
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, users)
+}

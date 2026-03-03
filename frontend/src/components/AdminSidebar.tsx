@@ -1,8 +1,6 @@
 import { useNavigate } from "react-router-dom";
 
-type Props = {
-  active?: "dashboard" | "supervisors" | "boards" | "reports";
-};
+type Props = { active?: "dashboard" | "supervisors" | "boards" | "reports" | "assign" };
 
 export default function AdminSidebar({ active }: Props) {
   const nav = useNavigate();
@@ -45,6 +43,13 @@ export default function AdminSidebar({ active }: Props) {
           <span className="admNavDot" />
           Boards
         </button>
+        <button
+  className={`admNavItem ${active === "assign" ? "admNavItemActive" : ""}`}
+  onClick={() => nav("/admin/assign")}
+>
+  <span className="admNavDot" />
+  Assign
+</button>
 
         <button
           className={`admNavItem ${active === "reports" ? "admNavItemActive" : ""}`}

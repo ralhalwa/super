@@ -8,6 +8,8 @@ import { getToken } from "./lib/api";
 import type { JSX } from "react";
 import BoardPage from "./pages/BoardPage.tsx";
 import AdminBoardsPage from "./pages/AdminBoardsPage";
+import AssignPage from "./pages/AssignPage";
+
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const token = getToken();
@@ -24,6 +26,14 @@ export default function App() {
   element={
     <RequireAuth>
       <BoardPage />
+    </RequireAuth>
+  }
+/>
+<Route
+  path="/admin/assign"
+  element={
+    <RequireAuth>
+      <AssignPage />
     </RequireAuth>
   }
 />

@@ -76,22 +76,27 @@ export default function AdminDashboard() {
   // student count placeholder until backend exists
   const [studentCount, setStudentCount] = useState<number>(0);
 
-  async function loadSupervisors() {
-    setStatsLoading(true);
-    try {
-      const res = await apiFetch("/admin/supervisors");
-      setSupervisors(res);
-    } catch (e: any) {
-      console.error(e);
-    } finally {
-      setStatsLoading(false);
-    }
-  }
+async function loadDashboardStats() {
+  setStatsLoading(true);
+  try {
+    const [sups, students] = await Promise.all([
+      apiFetch("/admin/supervisors"),
+      apiFetch("/admin/assign/students")  // reuse existing endpoint
+    ]);
 
-  useEffect(() => {
-    loadSupervisors();
-    setStudentCount(0);
-  }, []);
+    setSupervisors(sups || []);
+    setStudentCount((students || []).length);
+
+  } catch (e: any) {
+    console.error(e);
+  } finally {
+    setStatsLoading(false);
+  }
+}
+
+useEffect(() => {
+  loadDashboardStats();
+}, []);
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
@@ -110,9 +115,8 @@ export default function AdminDashboard() {
       setEmail("");
       setPassword("");
 
-      if (role === "supervisor") await loadSupervisors();
-      if (role === "student") setStudentCount((p) => p + 1); // optimistic
-    } catch (e: any) {
+      if (role === "supervisor") await loadDashboardStats();
+if (role === "student") await loadDashboardStats();    } catch (e: any) {
       setErr(e.message || "Failed");
     } finally {
       setLoading(false);

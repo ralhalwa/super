@@ -103,6 +103,7 @@ export default function BoardMembersPage() {
   const [msg, setMsg] = useState("");
 
   const [q, setQ] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "student" | "supervisor">("all");
   const [results, setResults] = useState<User[]>([]);
   const [searching, setSearching] = useState(false);
 
@@ -125,19 +126,24 @@ export default function BoardMembersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardID]);
 
-  async function searchStudents() {
-    setMsg("");
-    setErr("");
-    setSearching(true);
-    try {
-      const res = await apiFetch(`/admin/students?q=${encodeURIComponent(q)}`);
-      setResults(res);
-    } catch (e: any) {
-      setErr(e.message || "Search failed");
-    } finally {
-      setSearching(false);
-    }
+async function searchUsers() {
+  setMsg("");
+  setErr("");
+  setSearching(true);
+  try {
+    const url =
+      roleFilter === "all"
+        ? `/admin/users?q=${encodeURIComponent(q)}`
+        : `/admin/users?q=${encodeURIComponent(q)}&role=${encodeURIComponent(roleFilter)}`;
+
+    const res = await apiFetch(url);
+    setResults(res);
+  } catch (e: any) {
+    setErr(e.message || "Search failed");
+  } finally {
+    setSearching(false);
   }
+}
 
   async function addMember(userId: number) {
     setMsg("");
@@ -216,19 +222,19 @@ export default function BoardMembersPage() {
                 </span>
                 <input
                   className="admSearchInput"
-                  placeholder="Search students…"
+                  placeholder="Search ..."
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      if (q.trim() && !searching) searchStudents();
+                      if (q.trim() && !searching) searchUsers();
                     }
                   }}
                 />
               </div>
 
-              <button className="admPrimaryBtn" onClick={searchStudents} disabled={searching || q.trim().length < 2}>
+              <button className="admPrimaryBtn" onClick={searchUsers} disabled={searching || q.trim().length < 2}>
                 {searching ? "Searching..." : "Search"}
               </button>
 
@@ -245,6 +251,16 @@ export default function BoardMembersPage() {
               >
                 Clear
               </button>
+              <select
+  className="admInput"
+  value={roleFilter}
+  onChange={(e) => setRoleFilter(e.target.value as any)}
+  style={{ width: 170 }}
+>
+  <option value="all">All roles</option>
+  <option value="student">Students</option>
+  <option value="supervisor">Supervisors</option>
+</select>
 
               <div className="admHint" style={{ marginLeft: "auto" }}>
                 Tip: type at least 2 characters

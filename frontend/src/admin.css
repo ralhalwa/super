@@ -1786,3 +1786,1047 @@
 .skPill::after{
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.70), transparent);
 }
+.grid2{
+  display:grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.card{
+  border-radius: 18px;
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(15,23,42,0.10);
+  box-shadow: 0 10px 28px rgba(15,23,42,0.06);
+  padding: 14px;
+  overflow: hidden;
+}
+
+.cardHead{
+  display:flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.cardTitle{ font-size: 16px; font-weight: 900; }
+.cardSub{ font-size: 12px; opacity: .7; margin-top: 2px; }
+
+.input{
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,0.12);
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.9);
+  outline: none;
+}
+
+.list{
+  display:flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.row{
+  text-align:left;
+  border-radius: 14px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.75);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.rowActive{
+  border-color: rgba(109,94,252,0.45);
+  box-shadow: 0 10px 22px rgba(109,94,252,0.12);
+}
+
+.rowTitle{ font-weight: 800; font-size: 13px; }
+.rowSub{ font-size: 12px; opacity: .7; margin-top: 2px; }
+
+.notice{
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(109,94,252,0.10);
+  border: 1px solid rgba(109,94,252,0.25);
+}
+
+.muted{ opacity: .7; font-size: 13px; }
+
+.split{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pane{
+  border-radius: 14px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.55);
+  padding: 10px;
+  overflow: hidden;
+}
+
+.paneTitle{
+  font-size: 12px;
+  font-weight: 900;
+  opacity: .75;
+  margin-bottom: 8px;
+}
+
+.checkRow{
+  display:flex;
+  gap: 10px;
+  align-items:flex-start;
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.8);
+}
+
+.rowStatic{
+  display:flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items:center;
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.8);
+}
+
+.btnSmall{
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(15,23,42,0.14);
+  background: rgba(255,255,255,0.9);
+  cursor:pointer;
+}
+
+.btnPrimary{
+  border-color: rgba(109,94,252,0.45);
+}
+/* =========================
+   Assign page polish
+   ========================= */
+
+/* make the two panes feel equal and aligned */
+.split{
+  align-items: start;
+}
+
+/* panes become vertical layouts so header/input/buttons/list align neatly */
+.pane{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* list spacing + scrollbar nicer */
+.list{
+  padding-right: 4px;
+}
+.list::-webkit-scrollbar{ width: 10px; }
+.list::-webkit-scrollbar-thumb{
+  background: rgba(15,23,42,0.12);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* button size consistent */
+.btnSmall{
+  height: 34px;
+  line-height: 34px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* --- Available students rows (checkbox + text) --- */
+.checkRow{
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.checkRow input[type="checkbox"]{
+  margin: 0;
+  width: 14px;
+  height: 14px;
+}
+
+/* clamp long email so it doesn't push layout */
+.checkRow .muted{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* --- Assigned rows (text left, Remove aligned right) --- */
+.rowStatic{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+.rowStatic .rowSub{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+/* =========================================================
+   Assign page — Dashboard-style user rows (avatar + pill + email)
+   Paste at the VERY BOTTOM of admin.css
+   ========================================================= */
+
+/* Make Students column wider (keep from previous) */
+.grid2{
+  display:grid;
+  grid-template-columns: 420px 1.4fr;
+  gap: 24px;
+  align-items: start;
+}
+.grid2 .card:last-child{ padding: 20px; }
+
+/* panes */
+.split{
+  display:grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.pane{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+}
+
+/* list height */
+.pane .list{ max-height: 480px; }
+
+/* ---------- Dashboard-style row ---------- */
+.admUserRow{
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 10px 26px rgba(15,23,42,0.06);
+  padding: 12px 14px;
+  display:flex;
+  gap: 12px;
+  align-items:center;
+  cursor:pointer;
+  text-align:left;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.admUserRow:hover{
+  transform: translateY(-1px);
+  border-color: rgba(109,94,252,0.20);
+  box-shadow: 0 16px 34px rgba(15,23,42,0.08);
+}
+.admUserRow.isActive{
+  border-color: rgba(109,94,252,0.35);
+  box-shadow: 0 16px 34px rgba(109,94,252,0.10);
+  background: rgba(109,94,252,0.06);
+}
+
+/* avatar */
+.admUserAvatar{
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 2px solid rgba(15,23,42,0.12);
+  background: rgba(15,23,42,0.04);
+  display:grid;
+  place-items:center;
+  font-weight: 950;
+  color: rgba(15,23,42,0.85);
+  flex: 0 0 52px;
+}
+
+/* content */
+.admUserMain{ min-width: 0; }
+.admUserName{
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  color: rgba(15,23,42,0.92);
+  line-height: 1.1;
+}
+.admUserMeta{
+  margin-top: 8px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  min-width: 0;
+}
+.admUserEmail{
+  color: rgba(15,23,42,0.55);
+  font-weight: 800;
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* role pill (same style as dashboard) */
+.admRolePill{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-weight: 950;
+  border: 2px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.90);
+  color: rgba(15,23,42,0.88);
+  flex: 0 0 auto;
+}
+.admRolePill.sup{
+  border-color: rgba(109,94,252,0.25);
+  background: rgba(109,94,252,0.08);
+  color: rgba(15,23,42,0.92);
+}
+.admRolePill.stu{
+  border-color: rgba(16,185,129,0.25);
+  background: rgba(16,185,129,0.08);
+  color: rgba(15,23,42,0.92);
+}
+
+/* ---------- Available students (checkbox + card) ---------- */
+.admUserCheckRow{
+  display:grid;
+  grid-template-columns: 18px 1fr;
+  gap: 12px;
+  align-items:center;
+  cursor:pointer;
+}
+.admUserCheckbox{
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.admUserRowCard{
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 10px 26px rgba(15,23,42,0.06);
+  padding: 12px 14px;
+  display:flex;
+  gap: 12px;
+  align-items:center;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.admUserCheckRow:hover .admUserRowCard{
+  transform: translateY(-1px);
+  border-color: rgba(15,23,42,0.16);
+  box-shadow: 0 16px 34px rgba(15,23,42,0.08);
+}
+.admUserCheckRow.isChecked .admUserRowCard{
+  border-color: rgba(109,94,252,0.35);
+  box-shadow: 0 16px 34px rgba(109,94,252,0.12);
+  background: rgba(109,94,252,0.06);
+}
+
+/* ---------- Assigned rows (card + right Remove) ---------- */
+.admAssignedRow{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items:center;
+}
+.btnSmall{
+  height: 38px;
+  line-height: 38px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: 13px;
+}
+/* =========================================================
+   Assign page — scoped sizing (match Dashboard preview)
+   ========================================================= */
+
+.assignPage .grid2{
+  display:grid;
+  grid-template-columns: 360px 1fr;     /* supervisors smaller */
+  gap: 18px;
+  align-items: start;
+}
+
+.assignPage .grid2 .card:last-child{
+  padding: 18px;                       /* keep students card comfy */
+}
+
+/* students panes inside right card */
+.assignPage .split{
+  display:grid;
+  grid-template-columns: 1.15fr 0.85fr; /* give more room to Available */
+  gap: 14px;
+  align-items: start;
+}
+
+.assignPage .pane{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+}
+
+.assignPage .pane .list{
+  max-height: 460px;
+}
+
+/* ---------- Compact row (same feel as Dashboard preview) ---------- */
+
+.assignPage .admUserRow,
+.assignPage .admUserRowCard{
+  border-radius: 18px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 10px 26px rgba(15,23,42,0.06);
+
+  padding: 10px 12px;                 /* smaller padding */
+  display:flex;
+  gap: 12px;
+  align-items:center;
+
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+
+.assignPage .admUserRow{
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+
+.assignPage .admUserRow:hover,
+.assignPage .admUserCheckRow:hover .admUserRowCard{
+  transform: translateY(-1px);
+  border-color: rgba(109,94,252,0.20);
+  box-shadow: 0 14px 30px rgba(15,23,42,0.08);
+}
+
+.assignPage .admUserRow.isActive{
+  border-color: rgba(109,94,252,0.35);
+  box-shadow: 0 14px 30px rgba(109,94,252,0.10);
+  background: rgba(109,94,252,0.06);
+}
+
+/* avatar (smaller like dashboard preview) */
+.assignPage .admUserAvatar{
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 2px solid rgba(15,23,42,0.12);
+  background: rgba(15,23,42,0.04);
+  display:grid;
+  place-items:center;
+  font-weight: 950;
+  color: rgba(15,23,42,0.85);
+  flex: 0 0 44px;
+}
+
+/* text sizing */
+.assignPage .admUserMain{ min-width: 0; }
+
+.assignPage .admUserName{
+  font-size: 16px;                    /* smaller */
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  color: rgba(15,23,42,0.92);
+  line-height: 1.1;
+}
+
+.assignPage .admUserMeta{
+  margin-top: 6px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.assignPage .admUserEmail{
+  color: rgba(15,23,42,0.55);
+  font-weight: 800;
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* role pill (same scale as dashboard) */
+.assignPage .admRolePill{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  height: 30px;                      /* smaller */
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 950;
+  border: 2px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.90);
+  color: rgba(15,23,42,0.88);
+  flex: 0 0 auto;
+}
+
+.assignPage .admRolePill.sup{
+  border-color: rgba(109,94,252,0.25);
+  background: rgba(109,94,252,0.08);
+  color: rgba(15,23,42,0.92);
+}
+
+.assignPage .admRolePill.stu{
+  border-color: rgba(16,185,129,0.25);
+  background: rgba(16,185,129,0.08);
+  color: rgba(15,23,42,0.92);
+}
+
+/* ---------- Available students row (checkbox layout) ---------- */
+.assignPage .admUserCheckRow{
+  display:grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  align-items:center;
+  cursor:pointer;
+}
+
+.assignPage .admUserCheckbox{
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+/* checked highlight */
+.assignPage .admUserCheckRow.isChecked .admUserRowCard{
+  border-color: rgba(109,94,252,0.35);
+  box-shadow: 0 14px 30px rgba(109,94,252,0.12);
+  background: rgba(109,94,252,0.06);
+}
+
+/* ---------- Assigned rows (card + remove button aligned) ---------- */
+.assignPage .admAssignedRow{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items:center;
+}
+
+/* buttons */
+.assignPage .btnSmall{
+  height: 36px;
+  line-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+/* =========================================================
+   Assign page — tighter vertical layout (fit everything)
+   Paste at END of admin.css
+   ========================================================= */
+
+.assignPage .grid2{
+  grid-template-columns: 340px 1fr;  /* slightly smaller left */
+  gap: 16px;
+}
+
+.assignPage .card{
+  padding: 12px;                    /* was 14+ */
+}
+
+.assignPage .cardHead{
+  margin-bottom: 10px;
+}
+
+.assignPage .split{
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 12px;
+}
+
+.assignPage .pane{
+  padding: 12px;                    /* was 14 */
+  gap: 8px;
+}
+
+.assignPage .paneTitle{
+  margin-bottom: 2px;
+}
+
+/* compact inputs/buttons */
+.assignPage .input{
+  padding: 9px 10px;
+  border-radius: 12px;
+}
+
+.assignPage .btnSmall{
+  height: 34px;
+  line-height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+/* make list areas fit without page scroll */
+.assignPage .pane .list{
+  max-height: 240px;                /* key: keeps both panes visible */
+  overflow: auto;
+  padding-right: 6px;
+}
+
+/* supervisors list slightly shorter too */
+.assignPage .card .list{
+  max-height: 360px;
+  overflow: auto;
+}
+
+/* compact row cards */
+.assignPage .admUserRow,
+.assignPage .admUserRowCard{
+  padding: 9px 10px;
+  gap: 10px;
+}
+
+.assignPage .admUserAvatar{
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+}
+
+.assignPage .admUserName{
+  font-size: 15px;
+}
+
+.assignPage .admRolePill{
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+/* assigned row: keep remove visible */
+.assignPage .admAssignedRow{
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.assignPage .admUserCheckbox{
+  width: 15px;
+  height: 15px;
+}
+
+/* small responsiveness */
+@media (max-width: 1100px){
+  .assignPage .grid2{ grid-template-columns: 1fr; }
+  .assignPage .split{ grid-template-columns: 1fr; }
+  .assignPage .pane .list{ max-height: 260px; }
+}
+/* =========================================================
+   Assign page — force-fit into viewport (no page scroll)
+   Paste at END of admin.css
+   ========================================================= */
+
+/* make the main area use available height */
+.assignPage .admMain{
+  padding-bottom: 14px;
+}
+
+/* give the grid a max height based on viewport */
+.assignPage .grid2{
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  align-items: start;
+  max-height: calc(100vh - 210px); /* adjust if your header area changes */
+}
+
+/* cards should not grow beyond the grid height */
+.assignPage .card{
+  padding: 12px;
+  max-height: calc(100vh - 210px);
+  overflow: hidden; /* important: keep scroll inside */
+  display: flex;
+  flex-direction: column;
+}
+
+/* supervisors list scrolls inside */
+.assignPage .card .list{
+  flex: 1;
+  overflow: auto;
+  max-height: none; /* let flex control */
+  padding-right: 6px;
+}
+
+/* students: make split area take remaining height */
+.assignPage .split{
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 12px;
+  flex: 1;               /* fill remaining card height */
+  min-height: 0;         /* allow children to shrink */
+}
+
+/* each pane also becomes a flex column */
+.assignPage .pane{
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;         /* allow internal list to scroll */
+}
+
+/* list inside panes scrolls */
+.assignPage .pane .list{
+  flex: 1;
+  overflow: auto;
+  max-height: none;
+  padding-right: 6px;
+}
+
+/* make header controls compact */
+.assignPage .input{
+  padding: 9px 10px;
+}
+.assignPage .btnSmall{
+  height: 34px;
+  line-height: 34px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+
+/* responsive */
+@media (max-width: 1100px){
+  .assignPage .grid2{
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+  .assignPage .card{
+    max-height: none;
+  }
+  .assignPage .split{
+    grid-template-columns: 1fr;
+  }
+}
+/* =========================================================
+   Assign page — Option 3 (3 columns, full height, scroll per column)
+   ========================================================= */
+
+.assignPage{
+  width: 100%;
+}
+
+/* 3-column grid */
+.assignGrid3{
+  display: grid;
+  grid-template-columns: 360px 1fr 1fr;
+  gap: 14px;
+  align-items: stretch;
+
+  /* key: fit into viewport */
+  height: calc(100vh - 220px);
+}
+
+/* one column card */
+.assignCard{
+  border-radius: 18px;
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(15,23,42,0.10);
+  box-shadow: 0 10px 28px rgba(15,23,42,0.06);
+  padding: 12px;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow inner scroll */
+}
+
+.assignHead{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.assignTitle{
+  font-size: 16px;
+  font-weight: 950;
+  color: rgba(15,23,42,0.92);
+  line-height: 1.1;
+}
+
+.assignSub{
+  margin-top: 3px;
+  font-size: 12px;
+  color: rgba(15,23,42,0.55);
+  font-weight: 700;
+}
+
+.assignHeadRight{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.countPill{
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(15,23,42,0.03);
+  font-weight: 950;
+  font-size: 12px;
+  color: rgba(15,23,42,0.70);
+}
+
+/* input */
+.assignInput{
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,0.12);
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.90);
+  outline: none;
+  margin-bottom: 10px;
+}
+
+/* inner scroll list */
+.assignList{
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+
+  /* FIX: keep items at top (no weird vertical centering) */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: flex-start;
+
+  padding-right: 6px;
+}
+
+/* hint / empty */
+.assignHint{
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(109,94,252,0.08);
+  border: 1px solid rgba(109,94,252,0.22);
+  color: rgba(15,23,42,0.72);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.assignSelectedPill{
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(109,94,252,0.10);
+  border: 1px solid rgba(109,94,252,0.25);
+  color: rgba(15,23,42,0.78);
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.assignEmpty{
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(15,23,42,0.16);
+  background: rgba(255,255,255,0.70);
+  color: rgba(15,23,42,0.58);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* row styles (dashboard-like) */
+.userRow{
+  width: 100%;
+  text-align: left;
+  border-radius: 16px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.78);
+  padding: 10px 12px;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease;
+}
+
+.userRow:hover{
+  transform: translateY(-1px);
+  border-color: rgba(109,94,252,0.22);
+  box-shadow: 0 10px 22px rgba(109,94,252,0.10);
+}
+
+.userRow.isActive{
+  border-color: rgba(109,94,252,0.40);
+  box-shadow: 0 12px 26px rgba(109,94,252,0.12);
+  background: rgba(109,94,252,0.06);
+}
+
+/* avatar */
+.userAvatar{
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,0.14);
+  background: rgba(15,23,42,0.05);
+  display: grid;
+  place-items: center;
+  font-weight: 950;
+  color: rgba(15,23,42,0.85);
+  flex: 0 0 44px;
+}
+.userAvatar.sm{
+  width: 40px;
+  height: 40px;
+  flex-basis: 40px;
+}
+
+/* main text */
+.userMain{
+  min-width: 0;
+  flex: 1;
+}
+.userName{
+  font-weight: 950;
+  color: rgba(15,23,42,0.92);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userMeta{
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.userEmail{
+  color: rgba(15,23,42,0.58);
+  font-weight: 700;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* role pill */
+.rolePill{
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.80);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 950;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.rolePill svg{ margin-top: -1px; }
+
+.rolePill.sup{
+  border-color: rgba(109,94,252,0.22);
+  background: rgba(109,94,252,0.08);
+}
+.rolePill.stu{
+  border-color: rgba(16,185,129,0.22);
+  background: rgba(16,185,129,0.08);
+}
+
+/* checkbox row (available students) */
+.checkRow{
+  border-radius: 16px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.78);
+  padding: 10px 12px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.checkRow input[type="checkbox"]{
+  width: 16px;
+  height: 16px;
+}
+.checkRow.checked{
+  border-color: rgba(16,185,129,0.26);
+  box-shadow: 0 10px 22px rgba(16,185,129,0.08);
+}
+
+/* assigned row with remove */
+.assignedRow{
+  border-radius: 16px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(255,255,255,0.78);
+  padding: 10px 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rowLeft{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* buttons */
+.btnSmall{
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(15,23,42,0.14);
+  background: rgba(255,255,255,0.90);
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 12.5px;
+}
+.btnSmall:hover{
+  border-color: rgba(109,94,252,0.22);
+  box-shadow: 0 10px 18px rgba(15,23,42,0.08);
+}
+.btnDanger{
+  border-color: rgba(239,68,68,0.26);
+  background: rgba(239,68,68,0.06);
+}
+.btnDanger:hover{
+  border-color: rgba(239,68,68,0.36);
+  box-shadow: 0 10px 18px rgba(239,68,68,0.10);
+}
+
+/* responsive */
+@media (max-width: 1200px){
+  .assignGrid3{
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .assignCard{
+    min-height: 320px;
+  }
+}
