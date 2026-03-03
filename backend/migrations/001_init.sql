@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS card_subtasks (
   card_id INTEGER NOT NULL,
   title TEXT NOT NULL,
   is_done INTEGER NOT NULL DEFAULT 0,
+  due_date TEXT,
   position INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   

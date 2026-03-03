@@ -1,19 +1,11 @@
--- migrations/003_card_meta.sql
 PRAGMA foreign_keys = ON;
-
--- Card meta (status/priority)
--- ALTER TABLE cards ADD COLUMN status TEXT NOT NULL DEFAULT 'todo'
---   CHECK(status IN ('todo','doing','blocked','done'));
-
--- ALTER TABLE cards ADD COLUMN priority TEXT NOT NULL DEFAULT 'medium'
---   CHECK(priority IN ('low','medium','high','urgent'));
 
 -- Labels per board
 CREATE TABLE IF NOT EXISTS labels (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   board_id INTEGER NOT NULL,
   name TEXT NOT NULL,
-  color TEXT NOT NULL DEFAULT 'indigo', -- simple token name for UI
+  color TEXT NOT NULL DEFAULT 'indigo',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
 );
