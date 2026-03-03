@@ -237,11 +237,11 @@ export default function AdminBoardsPage() {
       active="boards"
       title="Boards"
       subtitle="All boards across supervisors"
-      right={
-        <button className="admPrimaryBtn" onClick={load} disabled={loading}>
-          {loading ? "Refreshing..." : "Refresh"}
-        </button>
-      }
+    //   right={
+    //     // <button className="admPrimaryBtn" onClick={load} disabled={loading}>
+    //     //   {loading ? "Refreshing..." : "Refresh"}
+    //     // </button>
+    //   }
     >
       <div className="admPageWrap">
         {/* Top toolbar */}

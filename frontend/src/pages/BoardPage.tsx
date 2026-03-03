@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
 import "../admin.css";
+// import "../board-pill.css";
+
 
 import {
   DndContext,
@@ -497,9 +499,9 @@ export default function BoardPage() {
           <button className="admGhostBtn" onClick={() => nav(-1)}>
             Back
           </button>
-          <button className="admPrimaryBtn" onClick={load} disabled={loading}>
+          {/* <button className="admPrimaryBtn" onClick={load} disabled={loading}>
             {loading ? "Refreshing..." : "Refresh"}
-          </button>
+          </button> */}
         </>
       }
     >

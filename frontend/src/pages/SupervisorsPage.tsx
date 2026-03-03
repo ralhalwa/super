@@ -117,9 +117,9 @@ export default function SupervisorsPage() {
           <button className="admGhostBtn" onClick={() => nav("/admin")}>
             Back
           </button>
-          <button className="admPrimaryBtn" onClick={load} disabled={loading}>
+          {/* <button className="admPrimaryBtn" onClick={load} disabled={loading}>
             {loading ? "Refreshing..." : "Refresh"}
-          </button>
+          </button> */}
         </div>
       }
     >

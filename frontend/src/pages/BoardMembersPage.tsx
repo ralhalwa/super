@@ -189,9 +189,9 @@ export default function BoardMembersPage() {
           <button className="admGhostBtn" onClick={() => nav(-1)}>
             Back
           </button>
-          <button className="admPrimaryBtn" onClick={loadMembers} disabled={loading}>
+          {/* <button className="admPrimaryBtn" onClick={loadMembers} disabled={loading}>
             {loading ? "Refreshing..." : "Refresh"}
-          </button>
+          </button> */}
         </div>
       }
     >

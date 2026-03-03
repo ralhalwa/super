@@ -148,9 +148,9 @@ export default function SupervisorFilePage() {
           <button className="admGhostBtn" onClick={() => nav("/admin/supervisors")}>
             Back
           </button>
-          <button className="admPrimaryBtn" onClick={loadBoards} disabled={loading}>
+          {/* <button className="admPrimaryBtn" onClick={loadBoards} disabled={loading}>
             {loading ? "Refreshing..." : "Refresh"}
-          </button>
+          </button> */}
         </div>
       }
     >

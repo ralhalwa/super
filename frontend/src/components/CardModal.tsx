@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
 import { apiFetch } from "../lib/api";
-import "../admin.css";
+import "../boards.css";
 
 type Card = {
   id: number;
