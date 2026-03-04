@@ -2,79 +2,92 @@ import { useNavigate } from "react-router-dom";
 
 type Props = { active?: "dashboard" | "supervisors" | "boards" | "reports" | "assign" };
 
+function cn(...xs: Array<string | false | null | undefined>) {
+  return xs.filter(Boolean).join(" ");
+}
+
 export default function AdminSidebar({ active }: Props) {
   const nav = useNavigate();
 
-  return (
-    <aside className="admSide">
-      <div
-        className="admBrand"
-        onClick={() => nav("/admin")}
-        style={{ cursor: "pointer" }}
+  const Item = ({
+    id,
+    label,
+    to,
+  }: {
+    id: NonNullable<Props["active"]>;
+    label: string;
+    to: string;
+  }) => {
+    const isActive = active === id;
+    return (
+      <button
+        type="button"
+        onClick={() => nav(to)}
+        className={cn(
+          "h-11 w-full rounded-[14px] border px-3 text-left font-extrabold transition",
+          "flex items-center gap-3",
+          isActive
+            ? "border-[#6d5efc]/25 bg-[#6d5efc]/10 text-slate-900"
+            : "border-transparent bg-transparent text-slate-900 hover:border-slate-200 hover:bg-slate-50"
+        )}
       >
-        <div className="admLogo" />
-        <div>
-          <div className="admBrandName">TaskFlow</div>
-          <div className="admBrandSub">Admin Console</div>
-        </div>
-      </div>
+        <span
+          className={cn(
+            "h-2.5 w-2.5 rounded-full",
+            isActive ? "bg-[#6d5efc]" : "bg-slate-300"
+          )}
+        />
+        {label}
+      </button>
+    );
+  };
 
-      <nav className="admNav">
-        <button
-          className={`admNavItem ${active === "dashboard" ? "admNavItemActive" : ""}`}
+  return (
+    <aside className="w-[280px] border-r border-slate-200 bg-white p-[18px]">
+      <div className="grid h-full grid-rows-[auto_1fr_auto] gap-2">
+        {/* Brand */}
+        <div
           onClick={() => nav("/admin")}
+          className="flex cursor-pointer items-center gap-3 rounded-[14px] px-2 py-2"
         >
-          <span className="admNavDot" />
-          Dashboard
-        </button>
-
-        <button
-          className={`admNavItem ${active === "supervisors" ? "admNavItemActive" : ""}`}
-          onClick={() => nav("/admin/supervisors")}
-        >
-          <span className="admNavDot" />
-          Supervisors
-        </button>
-
-        <button
-          className={`admNavItem ${active === "boards" ? "admNavItemActive" : ""}`}
-          onClick={() => nav("/admin/boards")}
-        >
-          <span className="admNavDot" />
-          Boards
-        </button>
-        <button
-  className={`admNavItem ${active === "assign" ? "admNavItemActive" : ""}`}
-  onClick={() => nav("/admin/assign")}
->
-  <span className="admNavDot" />
-  Assign
-</button>
-
-        <button
-          className={`admNavItem ${active === "reports" ? "admNavItemActive" : ""}`}
-          onClick={() => nav("/admin/reports")}
-        >
-          <span className="admNavDot" />
-          Reports
-        </button>
-      </nav>
-
-      <div className="admSideFooter">
-        <div className="admMiniUser">
-          <div className="admAvatar" />
+          <div className="h-10 w-10 rounded-[14px] bg-gradient-to-br from-[#6d5efc] to-[#9a8cff] shadow-[0_10px_25px_rgba(15,23,42,0.06)]" />
           <div>
-            <div className="admMiniUserName">Admin</div>
-            <div className="admMiniUserSub">System access</div>
+            <div className="font-black tracking-[-0.2px] text-slate-900">TaskFlow</div>
+            <div className="mt-0.5 text-[12px] font-bold text-slate-500">Admin Console</div>
           </div>
         </div>
 
-        <button
-          className="admSideBtn"
-          onClick={() => nav("/admin/supervisors")}
-        >
-          Manage supervisors
-        </button>
+        {/* Nav */}
+        <nav className="grid gap-2 px-2 py-2">
+          <Item id="dashboard" label="Dashboard" to="/admin" />
+          <Item id="supervisors" label="Supervisors" to="/admin/supervisors" />
+          <Item id="boards" label="Boards" to="/admin/boards" />
+          <Item id="assign" label="Assign" to="/admin/assign" />
+          <Item id="reports" label="Reports" to="/admin/reports" />
+        </nav>
+
+        {/* Footer */}
+        <div className="border-t border-slate-200 p-2">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full border border-slate-200 bg-[#e8ecff]" />
+            <div>
+              <div className="text-[13px] font-extrabold text-slate-900">Admin</div>
+              <div className="mt-0.5 text-[12px] font-bold text-slate-500">System access</div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => nav("/admin/supervisors")}
+            className={cn(
+              "h-11 w-full rounded-[14px] border border-slate-200 bg-slate-50",
+              "font-extrabold text-slate-900 transition",
+              "hover:border-[#6d5efc]/25 hover:bg-[#f2f5ff]"
+            )}
+          >
+            Manage supervisors
+          </button>
+        </div>
       </div>
     </aside>
   );

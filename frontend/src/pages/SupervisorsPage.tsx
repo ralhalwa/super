@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import AdminLayout from "../components/AdminLayout";
-import "../admin.css";
 
 type SupervisorRow = {
   supervisor_user_id: number;
@@ -20,11 +19,7 @@ function initials(name: string) {
 function SearchIcon({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
+      <path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z" stroke="currentColor" strokeWidth="2" />
       <path
         d="M21 21l-4.3-4.3"
         stroke="currentColor"
@@ -113,30 +108,32 @@ export default function SupervisorsPage() {
       title="Supervisors"
       subtitle={subtitle}
       right={
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button className="admGhostBtn" onClick={() => nav("/admin")}>
+        <div className="flex items-center gap-2">
+          <button
+            className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-900 hover:border-violet-300 hover:bg-violet-50"
+            onClick={() => nav("/admin")}
+          >
             Back
           </button>
-          {/* <button className="admPrimaryBtn" onClick={load} disabled={loading}>
-            {loading ? "Refreshing..." : "Refresh"}
-          </button> */}
         </div>
       }
     >
-      {/* Search */}
-      <div className="admCard" style={{ marginBottom: 14 }}>
-        <div className="admCardTitleRow" style={{ marginBottom: 0 }}>
+      {/* Search card */}
+      <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="admCardTitle">Directory</div>
-            <div className="admMuted">Search by name or email, then open the workspace.</div>
+            <div className="text-base font-black text-slate-900">Directory</div>
+            <div className="mt-2 text-sm font-semibold text-slate-500">
+              Search by name or email, then open the workspace.
+            </div>
           </div>
 
-          <div className="admSearch" style={{ minWidth: 380 }}>
-            <span className="admSearchIcon" aria-hidden="true">
+          <div className="flex h-11 w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-[0_10px_25px_rgba(15,23,42,0.06)] lg:w-[380px]">
+            <span className="text-slate-400" aria-hidden="true">
               <SearchIcon />
             </span>
             <input
-              className="admSearchInput"
+              className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none placeholder:font-semibold placeholder:text-slate-400"
               placeholder="Search supervisors…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -145,185 +142,65 @@ export default function SupervisorsPage() {
         </div>
       </div>
 
-      {/* List (more “dashboard-y” than plain table) */}
-      <div className="admCard">
+      {/* List card */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
         {err && (
-          <div className="admAlert admAlertBad" style={{ marginBottom: 12 }}>
+          <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
             {err}
           </div>
         )}
 
         {loading ? (
-          <div className="admMuted">Loading…</div>
+          <div className="text-sm font-semibold text-slate-500">Loading…</div>
         ) : filtered.length === 0 ? (
-          <div className="admMuted">No supervisors found.</div>
+          <div className="text-sm font-semibold text-slate-500">No supervisors found.</div>
         ) : (
-          <div className="admDirGrid">
+          <div className="grid gap-2.5">
             {filtered.map((s) => (
               <button
                 key={s.supervisor_user_id}
-                className="admDirRow"
                 onClick={() => nav(`/admin/files/${s.file_id}`)}
                 title="Open workspace"
+                className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.06)] transition hover:-translate-y-[1px] hover:border-violet-200 hover:bg-violet-50/30 hover:shadow-[0_16px_32px_rgba(109,94,252,0.12)] active:translate-y-0 active:shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
               >
-                <div className="admDirLeft">
-                  <div className="admAvatar" aria-hidden="true">
+                <div className="flex min-w-0 items-center gap-3">
+                  {/* Avatar */}
+                  <div className="grid h-10 w-10 flex-none place-items-center rounded-full border border-slate-200 bg-slate-100 font-black text-slate-700">
                     {initials(s.full_name)}
                   </div>
 
-                  <div className="admDirText">
-                    <div className="admDirName">{s.full_name}</div>
+                  {/* Text */}
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-black text-slate-900">
+                      {s.full_name}
+                    </div>
 
-                    <div className="admDirMeta">
-                      <span className="admMetaPill">
-                        <MailIcon /> {s.email}
+                    <div className="mt-1.5 flex min-w-0 flex-wrap gap-2">
+                      <span className="inline-flex max-w-full items-center gap-2 truncate rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-extrabold text-slate-600">
+                        <MailIcon /> <span className="truncate">{s.email}</span>
                       </span>
 
-                      <span className="admMetaPill">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-extrabold text-slate-600">
                         <FolderIcon /> Workspace
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="admDirRight" aria-hidden="true">
-                  <span className="admOpenPill">Open</span>
-                  <span className="admChevron">›</span>
+                {/* Right */}
+                <div className="flex flex-none items-center gap-2">
+                  <span className="inline-flex items-center justify-center rounded-full border border-violet-200 bg-violet-100/60 px-3 py-1 text-xs font-black text-violet-700">
+                    Open
+                  </span>
+                  <span className="text-2xl font-semibold text-slate-300 transition group-hover:translate-x-[2px] group-hover:text-violet-400">
+                    ›
+                  </span>
                 </div>
               </button>
             ))}
           </div>
         )}
       </div>
-
-      {/* Paste-friendly CSS (move to admin.css later) */}
-      <style>{`
-        /* Avatar (white theme) */
-        .admAvatar{
-          width: 40px; height: 40px;
-          border-radius: 999px;
-          border: 1px solid rgba(15,23,42,0.14);
-          background: rgba(15,23,42,0.05);
-          display:grid;
-          place-items:center;
-          font-weight: 950;
-          color: rgba(15,23,42,0.85);
-          flex: 0 0 40px;
-        }
-
-        /* Directory grid */
-        .admDirGrid{
-          display: grid;
-          gap: 10px;
-        }
-
-        .admDirRow{
-          width: 100%;
-          border-radius: 16px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: #fff;
-          box-shadow: 0 10px 26px rgba(15,23,42,0.06);
-          padding: 12px;
-          cursor: pointer;
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap: 12px;
-          text-align: left;
-          transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
-        }
-        .admDirRow:hover{
-          transform: translateY(-1px);
-          border-color: rgba(59,130,246,0.18);
-          box-shadow: 0 16px 32px rgba(59,130,246,0.10);
-          background: rgba(59,130,246,0.02);
-        }
-        .admDirRow:active{
-          transform: translateY(0px);
-          box-shadow: 0 10px 24px rgba(15,23,42,0.06);
-        }
-
-        .admDirLeft{
-          display:flex;
-          align-items:center;
-          gap: 12px;
-          min-width: 0;
-        }
-
-        .admDirText{
-          min-width: 0;
-          display:grid;
-          gap: 6px;
-        }
-
-        .admDirName{
-          font-weight: 950;
-          color: rgba(15,23,42,0.92);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .admDirMeta{
-          display:flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          min-width: 0;
-        }
-
-        .admMetaPill{
-          display:inline-flex;
-          align-items:center;
-          gap: 8px;
-          padding: 6px 10px;
-          border-radius: 999px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: rgba(15,23,42,0.03);
-          color: rgba(15,23,42,0.70);
-          font-size: 12px;
-          font-weight: 700;
-          max-width: 100%;
-        }
-        .admMetaPill svg{ flex: 0 0 auto; }
-        .admMetaPill{
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .admDirRight{
-          display:flex;
-          align-items:center;
-          gap: 10px;
-          flex: 0 0 auto;
-        }
-
-        .admOpenPill{
-          display:inline-flex;
-          align-items:center;
-          justify-content:center;
-          padding: 7px 12px;
-          border-radius: 999px;
-          border: 1px solid rgba(59,130,246,0.18);
-          background: rgba(59,130,246,0.06);
-          color: rgba(37,99,235,0.92);
-          font-weight: 900;
-          font-size: 12px;
-        }
-
-        .admChevron{
-          font-size: 22px;
-          color: rgba(15,23,42,0.35);
-          transition: transform .14s ease, color .14s ease;
-        }
-        .admDirRow:hover .admChevron{
-          transform: translateX(2px);
-          color: rgba(37,99,235,0.75);
-        }
-
-        /* Search icon compatibility */
-        .admSearchIcon svg{ display:block; }
-      `}</style>
     </AdminLayout>
   );
 }

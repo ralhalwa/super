@@ -1,16 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
-import "../admin.css";
-// import "../board-pill.css";
-
 
 import {
   DndContext,
   type DragEndEvent,
   type DragStartEvent,
-  type DragOverEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -29,7 +25,6 @@ import { CSS } from "@dnd-kit/utilities";
 import CardModal from "../components/CardModal";
 
 type List = { id: number; board_id: number; title: string; position: number };
-
 type Label = { id: number; board_id: number; name: string; color: string };
 type CardLabel = { label_id: number; name: string; color: string };
 
@@ -98,7 +93,11 @@ function isDateToday(due: string) {
   const today = new Date();
   const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const dueD = new Date(due + "T00:00:00");
-  return dueD.getFullYear() === t.getFullYear() && dueD.getMonth() === t.getMonth() && dueD.getDate() === t.getDate();
+  return (
+    dueD.getFullYear() === t.getFullYear() &&
+    dueD.getMonth() === t.getMonth() &&
+    dueD.getDate() === t.getDate()
+  );
 }
 
 function prettyStatus(s?: string) {
@@ -114,6 +113,44 @@ function prettyPriority(p?: string) {
   if (x === "high") return "High";
   if (x === "urgent") return "Urgent";
   return "Medium";
+}
+
+/** Tailwind label dot colors */
+function labelDotClass(color: string) {
+  switch ((color || "").toLowerCase()) {
+    case "indigo":
+      return "bg-indigo-600";
+    case "sky":
+      return "bg-sky-600";
+    case "emerald":
+      return "bg-emerald-500";
+    case "amber":
+      return "bg-amber-500";
+    case "rose":
+      return "bg-rose-500";
+    case "violet":
+      return "bg-violet-600";
+    case "slate":
+      return "bg-slate-600";
+    default:
+      return "bg-slate-400";
+  }
+}
+
+/** Tailwind pill styles (status + priority) */
+function statusPillClass(status: string) {
+  const s = (status || "todo").toLowerCase();
+  if (s === "doing") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (s === "blocked") return "bg-rose-50 text-rose-700 border-rose-200";
+  if (s === "done") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  return "bg-slate-50 text-slate-700 border-slate-200";
+}
+function priorityPillClass(priority: string) {
+  const p = (priority || "medium").toLowerCase();
+  if (p === "low") return "bg-sky-50 text-sky-700 border-sky-200";
+  if (p === "high") return "bg-amber-50 text-amber-800 border-amber-200";
+  if (p === "urgent") return "bg-rose-50 text-rose-700 border-rose-200";
+  return "bg-slate-50 text-slate-700 border-slate-200";
 }
 
 function CardItem({
@@ -139,87 +176,164 @@ function CardItem({
     opacity: sortable.isDragging ? 0.65 : 1,
   };
 
-  const progressPct = preview && preview.total > 0 ? Math.round((preview.done / preview.total) * 100) : 0;
+  const progressPct =
+    preview && preview.total > 0 ? Math.round((preview.done / preview.total) * 100) : 0;
+
   const due = card.due_date || "";
   const labels = preview?.labels ?? [];
   const status = preview?.status || card.status || "todo";
   const priority = preview?.priority || card.priority || "medium";
 
+  const dueClass = isDateOverdue(due)
+    ? "border-rose-200 bg-rose-50 text-rose-700"
+    : isDateToday(due)
+    ? "border-amber-200 bg-amber-50 text-amber-800"
+    : "border-slate-200 bg-slate-50 text-slate-700";
+
   return (
-    <div ref={sortable.setNodeRef} style={style} className={`tCard ${isOverlay ? "tCardOverlay" : ""}`}>
-      <div className="tCardInner">
-        <div className="cardTopRow">
-          {!isOverlay && (
-            <div className="dragHandle" {...sortable.attributes} {...sortable.listeners} title="Drag">
-              <span style={{ opacity: 0.7, fontSize: 14 }}>⋮⋮</span>
+    <div
+      ref={sortable.setNodeRef}
+      style={style}
+      className={[
+        "rounded-2xl border bg-white shadow-sm transition",
+        "border-slate-200/70 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-md",
+        isOverlay ? "shadow-lg ring-1 ring-slate-200/70" : "",
+      ].join(" ")}
+    >
+      <div className="p-3 flex gap-3 items-start">
+        {!isOverlay && (
+          <button
+            type="button"
+            className={[
+              "h-9 w-9 rounded-xl border border-slate-200 bg-slate-50",
+              "grid place-items-center cursor-grab active:cursor-grabbing",
+              "hover:border-blue-200 hover:bg-blue-50 transition",
+              "shrink-0",
+            ].join(" ")}
+            {...sortable.attributes}
+            {...sortable.listeners}
+            title="Drag"
+          >
+            <span className="text-slate-500 text-sm leading-none">⋮⋮</span>
+          </button>
+        )}
+
+        <div className="flex-1 min-w-0">
+          {/* labels */}
+          {labels.length > 0 && (
+            <div className="flex items-center gap-1.5 mb-2">
+              {labels.slice(0, 4).map((l) => (
+                <span
+                  key={l.label_id}
+                  title={l.name}
+                  className={[
+                    "inline-block h-2.5 w-2.5 rounded-full",
+                    "shadow-[0_0_0_2px_rgba(255,255,255,0.95)]",
+                    labelDotClass(l.color),
+                  ].join(" ")}
+                />
+              ))}
+              {labels.length > 4 && (
+                <span className="text-[11px] font-extrabold text-slate-500">
+                  +{labels.length - 4}
+                </span>
+              )}
             </div>
           )}
 
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {/* labels row */}
-            {labels.length > 0 && (
-              <div className="cardLabelRow">
-                {labels.slice(0, 4).map((l) => (
-                  <span key={l.label_id} className={`labelDot label-${l.color}`} title={l.name} />
-                ))}
-                {labels.length > 4 && <span className="labelMore">+{labels.length - 4}</span>}
+          <div
+            className="font-extrabold text-slate-900 truncate cursor-default"
+            onDoubleClick={() => onOpen(card.id)}
+            title="Double click to open"
+          >
+            {card.title}
+          </div>
+
+          {/* status + priority */}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span
+              className={[
+                "h-7 px-2.5 inline-flex items-center rounded-full border text-xs font-extrabold",
+                statusPillClass(status),
+              ].join(" ")}
+              title="Status"
+            >
+              {prettyStatus(status)}
+            </span>
+            <span
+              className={[
+                "h-7 px-2.5 inline-flex items-center rounded-full border text-xs font-extrabold",
+                priorityPillClass(priority),
+              ].join(" ")}
+              title="Priority"
+            >
+              {prettyPriority(priority)}
+            </span>
+          </div>
+
+          {/* progress */}
+          {preview && preview.total > 0 && (
+            <div className="mt-2">
+              <div className="h-2 rounded-full bg-slate-200/70 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-blue-600/90 to-blue-400/70 transition-[width] duration-200"
+                  style={{ width: `${progressPct}%` }}
+                />
               </div>
-            )}
+            </div>
+          )}
 
-            <div className="cardTitle" onDoubleClick={() => onOpen(card.id)} title="Double click to open">
-              {card.title}
+          {/* meta */}
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {preview && preview.total > 0 && (
+                <span className="h-7 px-2.5 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 text-xs font-extrabold text-slate-700">
+                  {preview.done}/{preview.total}
+                </span>
+              )}
+
+              {due && (
+                <span
+                  className={[
+                    "h-7 px-2.5 inline-flex items-center gap-2 rounded-full border text-xs font-extrabold",
+                    dueClass,
+                  ].join(" ")}
+                  title={`Due ${due}`}
+                >
+                  <ClockIcon />
+                  {due}
+                </span>
+              )}
             </div>
 
-            {/* status + priority */}
-            <div className="cardPillRow">
-              <span className={`pill pillStatus pill-status-${status}`} title="Status">
-                {prettyStatus(status)}
-              </span>
-              <span className={`pill pillPriority pill-priority-${priority}`} title="Priority">
-                {prettyPriority(priority)}
-              </span>
-            </div>
-
-            {preview && preview.total > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <div className="progressBar">
-                  <div className="progressFill" style={{ width: `${progressPct}%` }} />
+            <div className="flex items-center">
+              {(preview?.assignees ?? []).slice(0, 3).map((a, idx) => (
+                <div
+                  key={a.user_id}
+                  title={a.full_name}
+                  className={[
+                    "h-7 w-7 rounded-full border border-slate-200 bg-slate-100",
+                    "grid place-items-center text-[11px] font-extrabold text-slate-700",
+                    idx === 0 ? "" : "-ml-2",
+                  ].join(" ")}
+                >
+                  {initials(a.full_name)}
                 </div>
-              </div>
-            )}
-
-            <div style={{ marginTop: 8 }} className="cardMetaRow">
-              <div className="metaLeft">
-                {preview && preview.total > 0 && <span className="miniTag">{preview.done}/{preview.total}</span>}
-
-                {due && (
-                  <span
-                    className={`pill ${isDateOverdue(due) ? "clockPillOverdue" : isDateToday(due) ? "clockPillSoon" : ""}`}
-                    title={`Due ${due}`}
-                  >
-                    <ClockIcon />
-                    {due}
-                  </span>
-                )}
-              </div>
-
-              <div className="avatars">
-                {(preview?.assignees ?? []).slice(0, 3).map((a) => (
-                  <div key={a.user_id} className="avatarDot" title={a.full_name}>
-                    {initials(a.full_name)}
-                  </div>
-                ))}
-                {(preview?.assignees?.length ?? 0) > 3 && (
-                  <div className="avatarDot" title="More">
-                    +{preview!.assignees.length - 3}
-                  </div>
-                )}
-              </div>
+              ))}
+              {(preview?.assignees?.length ?? 0) > 3 && (
+                <div className="-ml-2 h-7 w-7 rounded-full border border-slate-200 bg-slate-100 grid place-items-center text-[11px] font-extrabold text-slate-700">
+                  +{preview!.assignees.length - 3}
+                </div>
+              )}
             </div>
           </div>
-        </div>
 
-        {!isOverlay && <div style={{ color: "rgba(15,23,42,0.55)", fontSize: 11 }}>Double click to open</div>}
+          {!isOverlay && (
+            <div className="mt-2 text-[11px] font-semibold text-slate-500">
+              Double click to open
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -244,19 +358,31 @@ function ListColumn({
   });
 
   return (
-    <div className="column" style={{ borderColor: drop.isOver ? "rgba(37,99,235,0.35)" : undefined }}>
-      <div className="columnHeader">
-        <div className="columnTitleRow">
-          <div className="columnTitle">{list.title}</div>
-          <span className="colCountPill">{cards.length}</span>
+    <div
+      className={[
+        "w-[340px] shrink-0 rounded-2xl border bg-white shadow-md overflow-hidden",
+        "border-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-lg",
+        drop.isOver ? "border-blue-300 ring-2 ring-blue-100" : "",
+      ].join(" ")}
+    >
+      <div className="px-3 py-3 flex items-center justify-between gap-2 border-b border-slate-200/70 bg-gradient-to-b from-blue-50/30 to-white">
+        <div className="min-w-0 flex items-center gap-2">
+          <div className="font-extrabold text-slate-900 truncate">{list.title}</div>
+          <span className="h-6 px-2 inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-extrabold text-slate-600">
+            {cards.length}
+          </span>
         </div>
 
-        <button className="admSoftBtn" onClick={() => onAddCard(list.id)}>
+        <button
+          type="button"
+          onClick={() => onAddCard(list.id)}
+          className="h-10 px-3 rounded-xl border border-slate-200 bg-white text-slate-900 font-extrabold hover:bg-slate-50 transition"
+        >
           + Card
         </button>
       </div>
 
-      <div ref={drop.setNodeRef} className="columnBody">
+      <div ref={drop.setNodeRef} className="p-3 grid gap-2 min-h-[120px]">
         <SortableContext items={cards.map((c) => `card:${c.id}`)} strategy={verticalListSortingStrategy}>
           {cards.map((c) => (
             <CardItem key={c.id} card={c} preview={previews[c.id]} onOpen={onOpenCard} />
@@ -264,9 +390,7 @@ function ListColumn({
         </SortableContext>
 
         {cards.length === 0 && (
-          <div style={{ color: "rgba(15,23,42,0.55)", fontSize: 13, padding: "10px 6px" }}>
-            Drop cards here
-          </div>
+          <div className="text-slate-500 text-sm px-1 py-2">Drop cards here</div>
         )}
       </div>
     </div>
@@ -315,8 +439,16 @@ export default function BoardPage() {
         const full = await apiFetch(`/admin/card/full?card_id=${c.id}`);
         const done = (full.subtasks ?? []).filter((s: any) => s.is_done).length;
         const total = (full.subtasks ?? []).length;
-        const assignees = (full.assignees ?? []).map((a: any) => ({ user_id: a.user_id, full_name: a.full_name }));
-        const labels = (full.labels ?? []).map((l: any) => ({ label_id: l.label_id, name: l.name, color: l.color }));
+        const assignees = (full.assignees ?? []).map((a: any) => ({
+          user_id: a.user_id,
+          full_name: a.full_name,
+        }));
+        const labels = (full.labels ?? []).map((l: any) => ({
+          label_id: l.label_id,
+          name: l.name,
+          color: l.color,
+        }));
+
         next[c.id] = {
           card_id: c.id,
           done,
@@ -495,14 +627,12 @@ export default function BoardPage() {
       title={pageTitle}
       subtitle="Double click a card to open"
       right={
-        <>
-          <button className="admGhostBtn" onClick={() => nav(-1)}>
-            Back
-          </button>
-          {/* <button className="admPrimaryBtn" onClick={load} disabled={loading}>
-            {loading ? "Refreshing..." : "Refresh"}
-          </button> */}
-        </>
+        <button
+          className="h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 font-extrabold hover:bg-slate-100 transition"
+          onClick={() => nav(-1)}
+        >
+          Back
+        </button>
       }
     >
       <CardModal
@@ -516,42 +646,47 @@ export default function BoardPage() {
       />
 
       {err && (
-        <div className="admAlert admAlertBad" style={{ marginBottom: 12 }}>
+        <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">
           {err}
         </div>
       )}
-      {loading && <div className="admMuted">Loading board...</div>}
+
+      {loading && <div className="text-slate-500 font-semibold">Loading board...</div>}
 
       {!loading && data && (
-        <div className="boardWrap">
-          <div className="admCard boardAddListCard">
-            <form onSubmit={createList} className="boardTopBar">
-              <div className="boardTopIcon" aria-hidden="true">
+        <div className="grid gap-4">
+          {/* add list */}
+          <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm p-3">
+            <form onSubmit={createList} className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 grid place-items-center">
                 <PlusIcon />
               </div>
 
               <input
-                className="admInput"
+                className="h-11 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 outline-none focus:bg-white focus:ring-4 focus:ring-violet-100 focus:border-violet-300"
                 placeholder="Add a list (To Do, Doing, Done...)"
                 value={newListTitle}
                 onChange={(e) => setNewListTitle(e.target.value)}
-                style={{ flex: 1 }}
               />
 
-              <button className="admPrimaryBtn" disabled={creatingList || !newListTitle.trim()}>
+              <button
+                className="h-11 px-4 rounded-xl font-extrabold text-white bg-gradient-to-r from-violet-600 to-violet-400 shadow-sm disabled:opacity-70"
+                disabled={creatingList || !newListTitle.trim()}
+              >
                 {creatingList ? "..." : "Add"}
               </button>
             </form>
           </div>
 
+          {/* board */}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCorners}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
           >
-            <div className="boardScroller">
-              <div className="columnsRow">
+            <div className="overflow-x-auto pb-2">
+              <div className="flex gap-4 items-start min-h-[380px] p-1">
                 {listsSorted.map((l) => (
                   <ListColumn
                     key={l.id}
@@ -564,16 +699,16 @@ export default function BoardPage() {
                 ))}
 
                 {listsSorted.length === 0 && (
-                  <div className="column">
-                    <div className="columnHeader">
-                      <div className="columnTitleRow">
-                        <div className="columnTitle">No lists yet</div>
-                        <span className="colCountPill">0</span>
+                  <div className="w-[340px] shrink-0 rounded-2xl border border-slate-200/70 bg-white shadow-md overflow-hidden">
+                    <div className="px-3 py-3 border-b border-slate-200/70">
+                      <div className="flex items-center gap-2">
+                        <div className="font-extrabold text-slate-900">No lists yet</div>
+                        <span className="h-6 px-2 rounded-full border border-slate-200 bg-slate-50 text-xs font-extrabold text-slate-600">
+                          0
+                        </span>
                       </div>
                     </div>
-                    <div style={{ color: "rgba(15,23,42,0.55)", fontSize: 13, padding: 12 }}>
-                      Add your first list above.
-                    </div>
+                    <div className="p-3 text-slate-500 text-sm">Add your first list above.</div>
                   </div>
                 )}
               </div>
@@ -591,7 +726,9 @@ export default function BoardPage() {
             </DragOverlay>
           </DndContext>
 
-          {activeCardId && <div className="admTdMuted">Moving card #{activeCardId}</div>}
+          {activeCardId && (
+            <div className="text-slate-500 text-sm font-semibold">Moving card #{activeCardId}</div>
+          )}
         </div>
       )}
     </AdminLayout>

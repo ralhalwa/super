@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
 import { apiFetch } from "../lib/api";
-import "../boards.css";
 
 type Card = {
   id: number;
@@ -110,7 +109,11 @@ function isDateToday(due: string) {
   const today = new Date();
   const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const dueD = new Date(due + "T00:00:00");
-  return dueD.getFullYear() === t.getFullYear() && dueD.getMonth() === t.getMonth() && dueD.getDate() === t.getDate();
+  return (
+    dueD.getFullYear() === t.getFullYear() &&
+    dueD.getMonth() === t.getMonth() &&
+    dueD.getDate() === t.getDate()
+  );
 }
 
 function ClockIcon({ size = 14 }: { size?: number }) {
@@ -208,6 +211,69 @@ function prettyPriority(p: Card["priority"]) {
   return "Medium";
 }
 
+function pillStatusClass(s: Card["status"]) {
+  switch (s) {
+    case "doing":
+      return "bg-blue-500/10 border-blue-500/25 text-slate-900";
+    case "blocked":
+      return "bg-rose-500/10 border-rose-500/25 text-slate-900";
+    case "done":
+      return "bg-emerald-500/10 border-emerald-500/25 text-slate-900";
+    default:
+      return "bg-slate-900/5 border-slate-900/10 text-slate-900";
+  }
+}
+
+function pillPriorityClass(p: Card["priority"]) {
+  switch (p) {
+    case "low":
+      return "bg-sky-500/10 border-sky-500/25 text-slate-900";
+    case "high":
+      return "bg-amber-500/15 border-amber-500/30 text-slate-900";
+    case "urgent":
+      return "bg-red-500/15 border-red-500/30 text-slate-900";
+    default:
+      return "bg-slate-500/10 border-slate-500/25 text-slate-900";
+  }
+}
+
+function duePillClass(kind: "overdue" | "soon" | "none") {
+  if (kind === "overdue") return "border-red-500/25 bg-red-500/10 text-red-700";
+  if (kind === "soon") return "border-amber-500/25 bg-amber-500/10 text-amber-700";
+  return "border-slate-900/10 bg-slate-900/5 text-slate-700";
+}
+
+function labelDotClass(color: string) {
+  const map: Record<string, string> = {
+    indigo: "bg-indigo-600",
+    sky: "bg-sky-600",
+    emerald: "bg-emerald-500",
+    amber: "bg-amber-500",
+    rose: "bg-rose-500",
+    violet: "bg-violet-600",
+    slate: "bg-slate-600",
+  };
+  return map[color] || "bg-indigo-600";
+}
+
+const inputBase =
+  "h-11 w-full rounded-[14px] border border-slate-900/10 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-indigo-500/35 focus:bg-white focus:ring-4 focus:ring-indigo-500/15";
+
+const btnPrimary =
+  "h-11 rounded-[14px] px-4 font-extrabold text-white disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_18px_45px_rgba(15,23,42,0.08)] bg-gradient-to-br from-indigo-600 to-violet-500";
+
+const btnGhost =
+  "h-10 rounded-[14px] px-4 font-extrabold border border-slate-900/10 bg-slate-50 hover:border-indigo-500/20 hover:bg-indigo-500/10";
+
+const btnSoft =
+  "h-11 rounded-[14px] px-4 font-extrabold border border-slate-900/10 bg-white hover:bg-indigo-500/[0.04]";
+
+const pillBase =
+  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-extrabold";
+
+const section =
+  "rounded-[18px] border border-slate-900/10 bg-white p-3 shadow-[0_14px_34px_rgba(15,23,42,0.06)]";
+
 export default function CardModal({
   open,
   cardId,
@@ -258,7 +324,10 @@ export default function CardModal({
 
   const assigneeIds = useMemo(() => new Set(assignees.map((a) => a.user_id)), [assignees]);
 
-  const isOverdue = useMemo(() => (card?.due_date ? isDateOverdue(card.due_date) : false), [card?.due_date]);
+  const isOverdue = useMemo(
+    () => (card?.due_date ? isDateOverdue(card.due_date) : false),
+    [card?.due_date]
+  );
 
   const progress = useMemo(() => {
     if (subtasks.length === 0) return null;
@@ -378,7 +447,8 @@ export default function CardModal({
 
   async function addSubtask() {
     if (!card || !subtaskTitle.trim()) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
 
     try {
       await apiFetch("/admin/card/subtasks", {
@@ -394,7 +464,8 @@ export default function CardModal({
   }
 
   async function toggleSubtask(id: number, isDone: boolean) {
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     setDoneAnimId(id);
     setTimeout(() => setDoneAnimId(null), 280);
 
@@ -411,7 +482,8 @@ export default function CardModal({
   }
 
   async function updateSubtaskDue(id: number, due: string) {
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, due_date: due } : s)));
 
     try {
@@ -427,7 +499,8 @@ export default function CardModal({
   }
 
   async function deleteSubtask(id: number) {
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await apiFetch("/admin/card/subtasks/delete", {
         method: "POST",
@@ -442,7 +515,8 @@ export default function CardModal({
 
   async function removeAssignee(userId: number) {
     if (!card) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await apiFetch("/admin/card/assignees/remove", {
         method: "POST",
@@ -456,7 +530,8 @@ export default function CardModal({
 
   async function addAssignee(userId: number) {
     if (!card) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await apiFetch("/admin/card/assignees/add", {
         method: "POST",
@@ -472,7 +547,8 @@ export default function CardModal({
 
   async function createLabel() {
     if (!boardId || !newLabelName.trim()) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
 
     try {
       await apiFetch("/admin/labels", {
@@ -489,7 +565,8 @@ export default function CardModal({
 
   async function toggleLabel(labelId: number) {
     if (!card) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     const has = cardLabelIds.has(labelId);
 
     try {
@@ -505,7 +582,8 @@ export default function CardModal({
 
   async function addComment() {
     if (!card || !commentBody.trim()) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await apiFetch("/admin/card/comments", {
         method: "POST",
@@ -525,7 +603,8 @@ export default function CardModal({
 
   async function saveEditComment() {
     if (!card || !editingCommentId || !editingBody.trim()) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await apiFetch("/admin/card/comments", {
         method: "PUT",
@@ -541,7 +620,8 @@ export default function CardModal({
 
   async function deleteComment(id: number) {
     if (!card) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await apiFetch("/admin/card/comments/delete", {
         method: "POST",
@@ -555,7 +635,8 @@ export default function CardModal({
 
   async function uploadAttachment(file: File) {
     if (!card) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     setUploading(true);
     try {
       const fd = new FormData();
@@ -573,13 +654,13 @@ export default function CardModal({
   }
 
   function downloadAttachment(id: number) {
-    // apiFetch is JSON oriented; for download we can just open a URL
     window.open(`/admin/card/attachments/download?attachment_id=${id}`, "_blank");
   }
 
   async function deleteAttachment(id: number) {
     if (!card) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await apiFetch("/admin/card/attachments/delete", {
         method: "POST",
@@ -593,7 +674,8 @@ export default function CardModal({
 
   async function addReminder() {
     if (!card || !remindAt.trim()) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await apiFetch("/admin/card/reminders", {
         method: "POST",
@@ -608,7 +690,8 @@ export default function CardModal({
 
   async function deleteReminder(id: number) {
     if (!card) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await apiFetch("/admin/card/reminders/delete", {
         method: "POST",
@@ -620,7 +703,8 @@ export default function CardModal({
     }
   }
 
-  const cardDueClass = isOverdue ? "clockPillOverdue" : card?.due_date ? "clockPillSoon" : "";
+  const cardDueKind: "overdue" | "soon" | "none" =
+    isOverdue ? "overdue" : card?.due_date ? "soon" : "none";
 
   return (
     <Modal
@@ -629,47 +713,53 @@ export default function CardModal({
       onClose={onClose}
       footer={
         <>
-          <button className="admGhostBtn" onClick={onClose}>
+          <button className={btnGhost} onClick={onClose}>
             Cancel
           </button>
-          <button className="admPrimaryBtn" onClick={saveCard} disabled={saving || loading || !card?.title?.trim()}>
+          <button
+            className={btnPrimary}
+            onClick={saveCard}
+            disabled={saving || loading || !card?.title?.trim()}
+          >
             {saving ? "Saving..." : "Save"}
           </button>
         </>
       }
     >
       {loading ? (
-        <div className="admMuted">Loading...</div>
+        <div className="text-[13px] font-semibold text-slate-500">Loading...</div>
       ) : (
-        <div className="modalBodyScroll">
+        <div className="max-h-[72vh] overflow-y-auto overflow-x-hidden pr-[2px]">
           {err && (
-            <div className="admAlert admAlertBad" style={{ marginBottom: 10 }}>
+            <div className="mb-[10px] rounded-[14px] border border-red-500/25 bg-red-500/10 px-3 py-2 text-[13px] font-semibold text-red-700">
               {err}
             </div>
           )}
           {msg && (
-            <div className="admAlert admAlertGood" style={{ marginBottom: 10 }}>
+            <div className="mb-[10px] rounded-[14px] border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[13px] font-semibold text-emerald-700">
               {msg}
             </div>
           )}
 
           {!card ? (
-            <div className="admMuted">No card loaded.</div>
+            <div className="text-[13px] font-semibold text-slate-500">No card loaded.</div>
           ) : (
-            <div className="cmGrid">
+            <div className="grid items-start gap-[14px] xl:grid-cols-[1.3fr_0.7fr]">
               {/* LEFT */}
-              <div style={{ display: "grid", gap: 14 }}>
+              <div className="grid gap-[14px]">
                 {/* Title */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle">Title</div>
-                      <div className="cmHeadSub">Short and clear</div>
+                      <div className="text-[14px] font-black text-slate-900">Title</div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                        Short and clear
+                      </div>
                     </div>
                   </div>
 
                   <input
-                    className="admInput"
+                    className={inputBase}
                     value={card.title}
                     onChange={(e) => setCard({ ...card, title: e.target.value })}
                     placeholder="Card title"
@@ -677,20 +767,26 @@ export default function CardModal({
                 </div>
 
                 {/* Status/Priority */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle">Status & Priority</div>
-                      <div className="cmHeadSub">Make it look like a real board</div>
+                      <div className="text-[14px] font-black text-slate-900">Status & Priority</div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                        Make it look like a real board
+                      </div>
                     </div>
-                    <span className="admPill">Meta</span>
+                    <span className={`${pillBase} border-indigo-500/25 bg-indigo-500/10 text-slate-900`}>
+                      Meta
+                    </span>
                   </div>
 
-                  <div className="cmTwoCols">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <div className="admTdMuted" style={{ marginBottom: 6 }}>Status</div>
+                      <div className="mb-1.5 text-[12px] font-semibold text-slate-500">
+                        Status
+                      </div>
                       <select
-                        className="admInput"
+                        className={inputBase}
                         value={card.status || "todo"}
                         onChange={(e) => setCard({ ...card, status: e.target.value as any })}
                       >
@@ -702,9 +798,11 @@ export default function CardModal({
                     </div>
 
                     <div>
-                      <div className="admTdMuted" style={{ marginBottom: 6 }}>Priority</div>
+                      <div className="mb-1.5 text-[12px] font-semibold text-slate-500">
+                        Priority
+                      </div>
                       <select
-                        className="admInput"
+                        className={inputBase}
                         value={card.priority || "medium"}
                         onChange={(e) => setCard({ ...card, priority: e.target.value as any })}
                       >
@@ -716,74 +814,97 @@ export default function CardModal({
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 10 }} className="cardPillRow">
-                    <span className={`pill pillStatus pill-status-${card.status}`}>{prettyStatus(card.status)}</span>
-                    <span className={`pill pillPriority pill-priority-${card.priority}`}>{prettyPriority(card.priority)}</span>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className={`${pillBase} ${pillStatusClass(card.status)}`}>
+                      {prettyStatus(card.status)}
+                    </span>
+                    <span className={`${pillBase} ${pillPriorityClass(card.priority)}`}>
+                      {prettyPriority(card.priority)}
+                    </span>
                   </div>
                 </div>
 
                 {/* Labels */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle"><TagIcon /> Labels</div>
-                      <div className="cmHeadSub">Colors + quick meaning</div>
+                      <div className="flex items-center gap-2 text-[14px] font-black text-slate-900">
+                        <TagIcon /> Labels
+                      </div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                        Colors + quick meaning
+                      </div>
                     </div>
-                    <span className="admPill">{cardLabels.length}</span>
+                    <span className={`${pillBase} border-indigo-500/25 bg-indigo-500/10 text-slate-900`}>
+                      {cardLabels.length}
+                    </span>
                   </div>
 
                   {cardLabels.length === 0 ? (
-                    <div className="admTdMuted" style={{ fontSize: 13 }}>
-                      No labels yet.
-                    </div>
+                    <div className="text-[13px] font-semibold text-slate-500">No labels yet.</div>
                   ) : (
-                    <div className="labelGrid">
+                    <div className="flex flex-wrap gap-2">
                       {cardLabels.map((l) => (
-                        <div key={l.label_id} className={`labelChip label-${l.color}`} title={l.name}>
-                          <span className="labelDotSolid" />
-                          <span>{l.name}</span>
+                        <div
+                          key={l.label_id}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-white/80 px-3 py-2 text-[12px] font-extrabold"
+                          title={l.name}
+                        >
+                          <span className={`h-2.5 w-2.5 rounded-full ${labelDotClass(l.color)}`} />
+                          <span className="max-w-[220px] truncate">{l.name}</span>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  <div style={{ height: 12 }} />
+                  <div className="h-3" />
 
-                  <div className="labelPicker">
-                    {boardLabels.length === 0 ? (
-                      <div className="admTdMuted">No labels on this board yet.</div>
-                    ) : (
-                      <div className="labelPickerGrid">
-                        {boardLabels.map((l) => {
-                          const active = cardLabelIds.has(l.id);
-                          return (
-                            <button
-                              key={l.id}
-                              className={`labelPickBtn ${active ? "active" : ""}`}
-                              onClick={() => toggleLabel(l.id)}
-                              type="button"
-                              title={active ? "Remove" : "Add"}
-                            >
-                              <span className={`labelDot label-${l.color}`} />
-                              <span className="labelPickName">{l.name}</span>
-                              <span className="labelPickState">{active ? "On" : "Off"}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                  {boardLabels.length === 0 ? (
+                    <div className="text-[13px] font-semibold text-slate-500">
+                      No labels on this board yet.
+                    </div>
+                  ) : (
+                    <div className="grid gap-2">
+                      {boardLabels.map((l) => {
+                        const active = cardLabelIds.has(l.id);
+                        return (
+                          <button
+                            key={l.id}
+                            type="button"
+                            onClick={() => toggleLabel(l.id)}
+                            className={[
+                              "flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left font-extrabold",
+                              active
+                                ? "border-indigo-500/35 bg-indigo-500/10 shadow-[0_8px_18px_rgba(37,99,235,0.10)]"
+                                : "border-slate-900/10 bg-white/85 hover:bg-indigo-500/[0.04]",
+                            ].join(" ")}
+                            title={active ? "Remove" : "Add"}
+                          >
+                            <span className={`h-2.5 w-2.5 rounded-full ${labelDotClass(l.color)}`} />
+                            <span className="min-w-0 flex-1 truncate">{l.name}</span>
+                            <span className="text-[11px] font-extrabold text-slate-500">
+                              {active ? "On" : "Off"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
-                  <div style={{ height: 12 }} />
+                  <div className="h-3" />
 
-                  <div className="cmRow">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
-                      className="admInput"
+                      className={inputBase}
                       placeholder="Create new label..."
                       value={newLabelName}
                       onChange={(e) => setNewLabelName(e.target.value)}
                     />
-                    <select className="admInput" value={newLabelColor} onChange={(e) => setNewLabelColor(e.target.value)} style={{ maxWidth: 170 }}>
+                    <select
+                      className={inputBase + " max-w-[170px]"}
+                      value={newLabelColor}
+                      onChange={(e) => setNewLabelColor(e.target.value)}
+                    >
                       <option value="indigo">Indigo</option>
                       <option value="sky">Sky</option>
                       <option value="emerald">Emerald</option>
@@ -792,100 +913,133 @@ export default function CardModal({
                       <option value="violet">Violet</option>
                       <option value="slate">Slate</option>
                     </select>
-                    <button className="admPrimaryBtn" type="button" onClick={createLabel} disabled={!newLabelName.trim() || !boardId}>
+                    <button
+                      className={btnPrimary}
+                      type="button"
+                      onClick={createLabel}
+                      disabled={!newLabelName.trim() || !boardId}
+                    >
                       Create
                     </button>
                   </div>
                 </div>
 
                 {/* Description */}
-                <div className="cmSection">
-                  <div className="cmHead">
-                    <div>
-                      <div className="cmHeadTitle">Description</div>
-                      <div className="cmHeadSub">Notes, requirements, links</div>
+                <div className={section}>
+                  <div className="mb-[10px]">
+                    <div className="text-[14px] font-black text-slate-900">Description</div>
+                    <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                      Notes, requirements, links
                     </div>
                   </div>
 
                   <textarea
-                    className="admInput"
+                    className={inputBase + " h-auto min-h-[160px] py-3"}
                     value={card.description}
                     onChange={(e) => setCard({ ...card, description: e.target.value })}
                     placeholder="Write details..."
                     rows={8}
-                    style={{ resize: "vertical", height: "auto", minHeight: 160, paddingTop: 10, paddingBottom: 10 }}
                   />
                 </div>
 
                 {/* Comments */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle"><ChatIcon /> Comments</div>
-                      <div className="cmHeadSub">Like Trello discussion</div>
+                      <div className="flex items-center gap-2 text-[14px] font-black text-slate-900">
+                        <ChatIcon /> Comments
+                      </div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                        Like Trello discussion
+                      </div>
                     </div>
-                    <span className="admPill">{comments.length}</span>
+                    <span className={`${pillBase} border-indigo-500/25 bg-indigo-500/10 text-slate-900`}>
+                      {comments.length}
+                    </span>
                   </div>
 
-                  <div className="commentComposer">
+                  <div className="grid gap-2">
                     <textarea
-                      className="admInput"
+                      className={inputBase + " h-auto py-3"}
                       placeholder="Write a comment..."
                       value={commentBody}
                       onChange={(e) => setCommentBody(e.target.value)}
                       rows={3}
-                      style={{ resize: "vertical" }}
                     />
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-                      <button className="admPrimaryBtn" type="button" onClick={addComment} disabled={!commentBody.trim()}>
+                    <div className="flex justify-end">
+                      <button
+                        className={btnPrimary}
+                        type="button"
+                        onClick={addComment}
+                        disabled={!commentBody.trim()}
+                      >
                         Add comment
                       </button>
                     </div>
                   </div>
 
                   {comments.length === 0 ? (
-                    <div className="admTdMuted" style={{ fontSize: 13 }}>
-                      No comments yet.
-                    </div>
+                    <div className="mt-3 text-[13px] font-semibold text-slate-500">No comments yet.</div>
                   ) : (
-                    <div className="commentList">
+                    <div className="mt-3 grid gap-3">
                       {comments.slice(0, 40).map((c) => (
-                        <div key={c.id} className="commentItem">
-                          <div className="commentAvatar">{initials(c.actor_name)}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="commentTop">
-                              <div className="commentName">{c.actor_name}</div>
-                              <div className="commentTime">{c.created_at}</div>
+                        <div
+                          key={c.id}
+                          className="flex gap-3 rounded-[14px] border border-slate-900/10 bg-white/85 p-3"
+                        >
+                          <div className="grid h-[34px] w-[34px] place-items-center rounded-full border border-slate-900/10 bg-slate-900/5 text-[12px] font-black text-slate-800">
+                            {initials(c.actor_name)}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <div className="truncate font-black text-slate-900">{c.actor_name}</div>
+                              <div className="shrink-0 text-[12px] font-semibold text-slate-500">
+                                {c.created_at}
+                              </div>
                             </div>
 
                             {editingCommentId === c.id ? (
-                              <div>
+                              <div className="mt-2 grid gap-2">
                                 <textarea
-                                  className="admInput"
+                                  className={inputBase + " h-auto py-3"}
                                   value={editingBody}
                                   onChange={(e) => setEditingBody(e.target.value)}
                                   rows={3}
-                                  style={{ resize: "vertical" }}
                                 />
-                                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                                  <button className="admGhostBtn" type="button" onClick={() => { setEditingCommentId(null); setEditingBody(""); }}>
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    className={btnGhost}
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingCommentId(null);
+                                      setEditingBody("");
+                                    }}
+                                  >
                                     Cancel
                                   </button>
-                                  <button className="admPrimaryBtn" type="button" onClick={saveEditComment} disabled={!editingBody.trim()}>
+                                  <button
+                                    className={btnPrimary}
+                                    type="button"
+                                    onClick={saveEditComment}
+                                    disabled={!editingBody.trim()}
+                                  >
                                     Save
                                   </button>
                                 </div>
                               </div>
                             ) : (
-                              <div className="commentBody">{c.body}</div>
+                              <div className="mt-2 whitespace-pre-wrap text-[14px] font-semibold text-slate-900">
+                                {c.body}
+                              </div>
                             )}
 
                             {editingCommentId !== c.id && (
-                              <div className="commentActions">
-                                <button className="admSoftBtn" type="button" onClick={() => startEditComment(c)}>
+                              <div className="mt-2 flex gap-2">
+                                <button className={btnSoft} type="button" onClick={() => startEditComment(c)}>
                                   Edit
                                 </button>
-                                <button className="admSoftBtn" type="button" onClick={() => deleteComment(c.id)}>
+                                <button className={btnSoft} type="button" onClick={() => deleteComment(c.id)}>
                                   Delete
                                 </button>
                               </div>
@@ -898,32 +1052,38 @@ export default function CardModal({
                 </div>
 
                 {/* Checklist */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle">
+                      <div className="flex items-center gap-2 text-[14px] font-black text-slate-900">
                         <CheckIcon /> Checklist
                       </div>
-                      <div className="cmHeadSub">{progress ? `${progress.done}/${progress.total} completed` : "No subtasks yet"}</div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                        {progress ? `${progress.done}/${progress.total} completed` : "No subtasks yet"}
+                      </div>
                     </div>
-                    <span className="admPill">{subtasks.length}</span>
+                    <span className={`${pillBase} border-indigo-500/25 bg-indigo-500/10 text-slate-900`}>
+                      {subtasks.length}
+                    </span>
                   </div>
 
                   {progress && (
-                    <>
-                      <div style={{ height: 8 }} />
-                      <div className="progressBar">
-                        <div className="progressFill" style={{ width: `${progress.pct}%` }} />
+                    <div className="mt-2">
+                      <div className="h-2 rounded-full bg-slate-900/10 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-600/90 to-sky-500/60 transition-[width] duration-200"
+                          style={{ width: `${progress.pct}%` }}
+                        />
                       </div>
-                    </>
+                    </div>
                   )}
 
-                  <div style={{ height: 12 }} />
+                  <div className="h-3" />
 
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <div className="cmRow">
+                  <div className="grid gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <input
-                        className="admInput"
+                        className={inputBase}
                         placeholder="Add a subtask..."
                         value={subtaskTitle}
                         onChange={(e) => setSubtaskTitle(e.target.value)}
@@ -934,82 +1094,93 @@ export default function CardModal({
                           }
                         }}
                       />
-                      <button className="admPrimaryBtn" onClick={addSubtask} disabled={!subtaskTitle.trim()}>
+                      <button className={btnPrimary} onClick={addSubtask} disabled={!subtaskTitle.trim()}>
                         Add
                       </button>
                     </div>
 
-                    <div className="cmSplit">
-                      <span className="admPill" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`${pillBase} border-slate-900/10 bg-slate-900/5 text-slate-700`}>
                         <ClockIcon /> Due (optional)
                       </span>
 
                       <input
-                        className="admInput"
+                        className={inputBase + " max-w-[220px]"}
                         type="date"
                         value={subtaskDue}
                         onChange={(e) => setSubtaskDue(e.target.value)}
-                        style={{ maxWidth: 220 }}
                       />
 
-                      <button className="admSoftBtn" type="button" onClick={() => setSubtaskDue("")}>
+                      <button className={btnSoft} type="button" onClick={() => setSubtaskDue("")}>
                         Clear
                       </button>
                     </div>
                   </div>
 
-                  <div style={{ height: 12 }} />
+                  <div className="h-3" />
 
                   {subtasks.length > 0 && (
-                    <div style={{ display: "grid", gap: 10 }}>
+                    <div className="grid gap-2">
                       {subtasks.map((s) => {
                         const overdue = s.due_date ? isDateOverdue(s.due_date) : false;
                         const today = s.due_date ? isDateToday(s.due_date) : false;
 
                         return (
-                          <div key={s.id} className={`cmSubtaskRow ${doneAnimId === s.id ? "animDone" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <input type="checkbox" checked={s.is_done} onChange={(e) => toggleSubtask(s.id, e.target.checked)} />
+                          <div
+                            key={s.id}
+                            className={[
+                              "rounded-[16px] border border-slate-900/10 bg-blue-500/[0.03] p-3 transition",
+                              "hover:-translate-y-[1px] hover:border-blue-500/20 hover:bg-blue-500/[0.05]",
+                              doneAnimId === s.id ? "animate-[cmPop_0.28s_ease]" : "",
+                            ].join(" ")}
+                          >
+                            <style>{`@keyframes cmPop{from{transform:scale(.98)}to{transform:scale(1)}}`}</style>
+
+                            <div className="flex flex-wrap items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={s.is_done}
+                                onChange={(e) => toggleSubtask(s.id, e.target.checked)}
+                              />
 
                               <div
-                                style={{
-                                  flex: 1,
-                                  color: s.is_done ? "rgba(15,23,42,0.6)" : "rgba(15,23,42,0.92)",
-                                  textDecoration: s.is_done ? "line-through" : "none",
-                                  fontSize: 14,
-                                }}
+                                className={[
+                                  "flex-1 text-[14px] font-semibold",
+                                  s.is_done ? "text-slate-500 line-through" : "text-slate-900",
+                                ].join(" ")}
                               >
                                 {s.title}
                               </div>
 
                               <span
-                                className={`admPill ${overdue ? "clockPillOverdue" : today ? "clockPillSoon" : ""}`}
+                                className={[
+                                  pillBase,
+                                  duePillClass(overdue ? "overdue" : today ? "soon" : "none"),
+                                  "opacity-100",
+                                ].join(" ")}
                                 title={s.due_date ? `Due ${s.due_date}` : "No due date"}
-                                style={{ opacity: s.due_date ? 1 : 0.7, display: "inline-flex", alignItems: "center", gap: 8 }}
+                                style={{ opacity: s.due_date ? 1 : 0.7 }}
                               >
                                 <ClockIcon />
                                 {s.due_date || "No due"}
                               </span>
 
-                              <button className="admSoftBtn" type="button" onClick={() => deleteSubtask(s.id)}>
+                              <button className={btnSoft} type="button" onClick={() => deleteSubtask(s.id)}>
                                 Remove
                               </button>
                             </div>
 
-                            <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                              <div className="admTdMuted" style={{ fontSize: 12 }}>
-                                Subtask due date
-                              </div>
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <div className="text-[12px] font-semibold text-slate-500">Subtask due date</div>
 
                               <input
-                                className="admInput"
+                                className={inputBase + " max-w-[220px]"}
                                 type="date"
                                 value={s.due_date || ""}
                                 onChange={(e) => updateSubtaskDue(s.id, e.target.value)}
-                                style={{ maxWidth: 220 }}
                               />
 
-                              <button className="admSoftBtn" type="button" onClick={() => updateSubtaskDue(s.id, "")}>
+                              <button className={btnSoft} type="button" onClick={() => updateSubtaskDue(s.id, "")}>
                                 Clear
                               </button>
                             </div>
@@ -1021,36 +1192,37 @@ export default function CardModal({
                 </div>
 
                 {/* Activity */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle">
+                      <div className="flex items-center gap-2 text-[14px] font-black text-slate-900">
                         <ActivityIcon /> Activity
                       </div>
-                      <div className="cmHeadSub">Latest changes</div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                        Latest changes
+                      </div>
                     </div>
-                    <span className="admPill">{activities.length}</span>
+                    <span className={`${pillBase} border-indigo-500/25 bg-indigo-500/10 text-slate-900`}>
+                      {activities.length}
+                    </span>
                   </div>
 
                   {activities.length === 0 ? (
-                    <div className="admTdMuted" style={{ fontSize: 13 }}>
-                      No activity yet.
-                    </div>
+                    <div className="text-[13px] font-semibold text-slate-500">No activity yet.</div>
                   ) : (
-                    <div style={{ display: "grid", gap: 10 }}>
+                    <div className="grid gap-2">
                       {activities.slice(0, 25).map((a) => (
-                        <div key={a.id} className="admAlert" style={{ background: "#fbfcff" }}>
-                          <div style={{ fontWeight: 950, fontSize: 13 }}>
+                        <div
+                          key={a.id}
+                          className="rounded-[14px] border border-slate-900/10 bg-slate-50 px-3 py-2 text-[13px]"
+                        >
+                          <div className="text-[13px] font-black text-slate-900">
                             {a.actor_name} — {formatActivity(a)}
                           </div>
                           {a.meta ? (
-                            <div className="admTdMuted" style={{ marginTop: 4 }}>
-                              {a.meta}
-                            </div>
+                            <div className="mt-1 text-[13px] font-semibold text-slate-500">{a.meta}</div>
                           ) : null}
-                          <div className="admTdMuted" style={{ marginTop: 6, fontSize: 12 }}>
-                            {a.created_at}
-                          </div>
+                          <div className="mt-1.5 text-[12px] font-semibold text-slate-500">{a.created_at}</div>
                         </div>
                       ))}
                     </div>
@@ -1059,69 +1231,80 @@ export default function CardModal({
               </div>
 
               {/* RIGHT */}
-              <div style={{ display: "grid", gap: 14 }}>
+              <div className="grid gap-[14px]">
                 {/* Card due */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle">
+                      <div className="flex items-center gap-2 text-[14px] font-black text-slate-900">
                         <ClockIcon /> Card due date
                       </div>
-                      <div className="cmHeadSub">{isOverdue ? "Overdue" : " "}</div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                        {isOverdue ? "Overdue" : " "}
+                      </div>
                     </div>
 
-                    <span className={`admPill ${cardDueClass}`} style={{ display: "inline-flex", gap: 8 }}>
+                    <span className={`${pillBase} ${duePillClass(cardDueKind)} gap-2`}>
                       <ClockIcon />
                       {card.due_date || "None"}
                     </span>
                   </div>
 
-                  <div style={{ display: "grid", gap: 10 }}>
+                  <div className="grid gap-2">
                     <input
-                      className="admInput"
+                      className={inputBase}
                       type="date"
                       value={card.due_date || ""}
                       onChange={(e) => setCard({ ...card, due_date: e.target.value })}
                     />
-                    <button className="admSoftBtn" type="button" onClick={() => setCard({ ...card, due_date: "" })}>
+                    <button className={btnSoft} type="button" onClick={() => setCard({ ...card, due_date: "" })}>
                       Clear
                     </button>
                   </div>
                 </div>
 
                 {/* Reminders */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle">Reminders</div>
-                      <div className="cmHeadSub">Stored now, cron later</div>
+                      <div className="text-[14px] font-black text-slate-900">Reminders</div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">Stored now, cron later</div>
                     </div>
-                    <span className="admPill">{reminders.length}</span>
+                    <span className={`${pillBase} border-indigo-500/25 bg-indigo-500/10 text-slate-900`}>
+                      {reminders.length}
+                    </span>
                   </div>
 
-                  <div className="cmRow">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
-                      className="admInput"
+                      className={inputBase}
                       placeholder="2026-03-10T09:00:00"
                       value={remindAt}
                       onChange={(e) => setRemindAt(e.target.value)}
                     />
-                    <button className="admPrimaryBtn" type="button" onClick={addReminder} disabled={!remindAt.trim()}>
+                    <button className={btnPrimary} type="button" onClick={addReminder} disabled={!remindAt.trim()}>
                       Add
                     </button>
                   </div>
 
                   {reminders.length === 0 ? (
-                    <div className="admTdMuted" style={{ fontSize: 13 }}>No reminders yet.</div>
+                    <div className="mt-3 text-[13px] font-semibold text-slate-500">No reminders yet.</div>
                   ) : (
-                    <div style={{ display: "grid", gap: 10 }}>
+                    <div className="mt-3 grid gap-2">
                       {reminders.map((r) => (
-                        <div key={r.id} className="admAlert" style={{ background: "#fbfcff", display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-                          <div>
-                            <div style={{ fontWeight: 900 }}>{r.remind_at}</div>
-                            <div className="admTdMuted" style={{ fontSize: 12 }}>{r.is_sent ? "Sent" : "Pending"}</div>
+                        <div
+                          key={r.id}
+                          className="flex items-center justify-between gap-3 rounded-[14px] border border-slate-900/10 bg-slate-50 p-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate font-black text-slate-900">{r.remind_at}</div>
+                            <div className="mt-1 text-[12px] font-semibold text-slate-500">
+                              {r.is_sent ? "Sent" : "Pending"}
+                            </div>
                           </div>
-                          <button className="admSoftBtn" type="button" onClick={() => deleteReminder(r.id)}>Remove</button>
+                          <button className={btnSoft} type="button" onClick={() => deleteReminder(r.id)}>
+                            Remove
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1129,19 +1312,25 @@ export default function CardModal({
                 </div>
 
                 {/* Attachments */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle"><PaperclipIcon /> Attachments</div>
-                      <div className="cmHeadSub">Upload files to this card</div>
+                      <div className="flex items-center gap-2 text-[14px] font-black text-slate-900">
+                        <PaperclipIcon /> Attachments
+                      </div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                        Upload files to this card
+                      </div>
                     </div>
-                    <span className="admPill">{attachments.length}</span>
+                    <span className={`${pillBase} border-indigo-500/25 bg-indigo-500/10 text-slate-900`}>
+                      {attachments.length}
+                    </span>
                   </div>
 
-                  <div className="cmRow">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
                       ref={fileRef}
-                      className="admInput"
+                      className={inputBase}
                       type="file"
                       onChange={(e) => {
                         const f = e.target.files?.[0];
@@ -1149,28 +1338,43 @@ export default function CardModal({
                       }}
                       disabled={uploading}
                     />
-                    <button className="admSoftBtn" type="button" onClick={() => { if (fileRef.current) fileRef.current.value = ""; }}>
+                    <button
+                      className={btnSoft}
+                      type="button"
+                      onClick={() => {
+                        if (fileRef.current) fileRef.current.value = "";
+                      }}
+                    >
                       Clear
                     </button>
                   </div>
 
-                  {uploading && <div className="admTdMuted">Uploading...</div>}
+                  {uploading && <div className="mt-2 text-[13px] font-semibold text-slate-500">Uploading...</div>}
 
                   {attachments.length === 0 ? (
-                    <div className="admTdMuted" style={{ fontSize: 13 }}>No attachments yet.</div>
+                    <div className="mt-3 text-[13px] font-semibold text-slate-500">No attachments yet.</div>
                   ) : (
-                    <div style={{ display: "grid", gap: 10 }}>
+                    <div className="mt-3 grid gap-2">
                       {attachments.map((a) => (
-                        <div key={a.id} className="attachmentRow">
-                          <div style={{ minWidth: 0 }}>
-                            <div className="attachmentName" title={a.original_name}>{a.original_name}</div>
-                            <div className="admTdMuted" style={{ fontSize: 12 }}>
+                        <div
+                          key={a.id}
+                          className="flex items-center justify-between gap-3 rounded-[14px] border border-slate-900/10 bg-white/85 p-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="max-w-[420px] truncate font-black text-slate-900" title={a.original_name}>
+                              {a.original_name}
+                            </div>
+                            <div className="mt-1 text-[12px] font-semibold text-slate-500">
                               {a.uploader_name} • {a.created_at} • {Math.round((a.size_bytes || 0) / 1024)} KB
                             </div>
                           </div>
-                          <div style={{ display: "flex", gap: 10 }}>
-                            <button className="admSoftBtn" type="button" onClick={() => downloadAttachment(a.id)}>Download</button>
-                            <button className="admSoftBtn" type="button" onClick={() => deleteAttachment(a.id)}>Delete</button>
+                          <div className="flex gap-2">
+                            <button className={btnSoft} type="button" onClick={() => downloadAttachment(a.id)}>
+                              Download
+                            </button>
+                            <button className={btnSoft} type="button" onClick={() => deleteAttachment(a.id)}>
+                              Delete
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1179,51 +1383,33 @@ export default function CardModal({
                 </div>
 
                 {/* Assignees */}
-                <div className="cmSection">
-                  <div className="cmHead">
+                <div className={section}>
+                  <div className="mb-[10px] flex items-center justify-between gap-3">
                     <div>
-                      <div className="cmHeadTitle">Assignees</div>
-                      <div className="cmHeadSub">Assign students to this card</div>
+                      <div className="text-[14px] font-black text-slate-900">Assignees</div>
+                      <div className="mt-[2px] text-[12px] font-semibold text-slate-500">
+                        Assign students to this card
+                      </div>
                     </div>
-                    <span className="admPill">{assignees.length}</span>
+                    <span className={`${pillBase} border-indigo-500/25 bg-indigo-500/10 text-slate-900`}>
+                      {assignees.length}
+                    </span>
                   </div>
 
                   {assignees.length === 0 ? (
-                    <div className="admTdMuted" style={{ fontSize: 13 }}>
-                      No assignees yet.
-                    </div>
+                    <div className="text-[13px] font-semibold text-slate-500">No assignees yet.</div>
                   ) : (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    <div className="flex flex-wrap gap-2">
                       {assignees.map((a) => (
-                        <div
-                          key={a.user_id}
-                          className="admPill"
-                          style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
-                          title={a.email}
-                        >
-                          <span
-                            style={{
-                              width: 22,
-                              height: 22,
-                              borderRadius: 999,
-                              border: "1px solid rgba(15,23,42,0.14)",
-                              background: "rgba(15,23,42,0.06)",
-                              display: "grid",
-                              placeItems: "center",
-                              fontWeight: 900,
-                              fontSize: 11,
-                            }}
-                          >
+                        <div key={a.user_id} className={`${pillBase} border-indigo-500/25 bg-indigo-500/10`}>
+                          <span className="grid h-[22px] w-[22px] place-items-center rounded-full border border-slate-900/10 bg-slate-900/5 text-[11px] font-black">
                             {initials(a.full_name)}
                           </span>
-
-                          <span style={{ fontSize: 12, fontWeight: 900 }}>{a.full_name}</span>
-
+                          <span className="text-[12px] font-black">{a.full_name}</span>
                           <button
-                            className="admSoftBtn"
+                            className="h-[34px] rounded-[12px] border border-slate-900/10 bg-white/70 px-3 font-black hover:bg-rose-500/10"
                             type="button"
                             onClick={() => removeAssignee(a.user_id)}
-                            style={{ padding: "6px 10px", height: 34 }}
                             title="Remove"
                           >
                             ×
@@ -1233,16 +1419,16 @@ export default function CardModal({
                     </div>
                   )}
 
-                  <div style={{ height: 12 }} />
+                  <div className="h-3" />
 
                   {studentsOnly.length === 0 ? (
-                    <div className="admTdMuted" style={{ fontSize: 13 }}>
+                    <div className="text-[13px] font-semibold text-slate-500">
                       No students in this board yet. Add them from “Members”.
                     </div>
                   ) : (
-                    <div style={{ position: "relative" }}>
+                    <div className="relative">
                       <input
-                        className="admInput"
+                        className={inputBase}
                         placeholder="Search student to assign..."
                         value={assigneeQuery}
                         onChange={(e) => {
@@ -1254,49 +1440,34 @@ export default function CardModal({
                       />
 
                       {assigneeOpen && availableStudents.length > 0 && (
-                        <div className="cmDrop">
-                          <div style={{ display: "grid", gap: 8 }}>
+                        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 rounded-[18px] border border-slate-900/10 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.10)]">
+                          <div className="grid gap-2">
                             {availableStudents.map((m) => (
                               <button
                                 key={m.user_id}
-                                className="admSoftBtn"
-                                style={{
-                                  justifyContent: "space-between",
-                                  width: "100%",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 10,
-                                  height: 44,
-                                }}
+                                type="button"
+                                className="flex h-11 w-full items-center justify-between gap-3 rounded-[14px] border border-slate-900/10 bg-white px-3 text-left font-extrabold hover:bg-indigo-500/[0.04]"
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => addAssignee(m.user_id)}
                               >
-                                <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                  <span
-                                    style={{
-                                      width: 26,
-                                      height: 26,
-                                      borderRadius: 999,
-                                      border: "1px solid rgba(15,23,42,0.14)",
-                                      background: "rgba(15,23,42,0.06)",
-                                      display: "grid",
-                                      placeItems: "center",
-                                      fontWeight: 900,
-                                      fontSize: 12,
-                                    }}
-                                  >
+                                <span className="flex min-w-0 items-center gap-3">
+                                  <span className="grid h-[26px] w-[26px] place-items-center rounded-full border border-slate-900/10 bg-slate-900/5 text-[12px] font-black">
                                     {initials(m.full_name)}
                                   </span>
 
-                                  <span style={{ display: "grid", textAlign: "left" }}>
-                                    <span style={{ fontWeight: 950, fontSize: 13 }}>{m.full_name}</span>
-                                    <span className="admTdMuted" style={{ fontSize: 12 }}>
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-[13px] font-black text-slate-900">
+                                      {m.full_name}
+                                    </span>
+                                    <span className="block truncate text-[12px] font-semibold text-slate-500">
                                       {m.email}
                                     </span>
                                   </span>
                                 </span>
 
-                                <span className="admPill">Add</span>
+                                <span className={`${pillBase} border-indigo-500/25 bg-indigo-500/10 text-slate-900`}>
+                                  Add
+                                </span>
                               </button>
                             ))}
                           </div>
@@ -1305,7 +1476,9 @@ export default function CardModal({
                     </div>
                   )}
 
-                  {boardId && <div className="admTdMuted" style={{ marginTop: 10 }}>Board: #{boardId}</div>}
+                  {boardId && (
+                    <div className="mt-2 text-[12px] font-semibold text-slate-500">Board: #{boardId}</div>
+                  )}
                 </div>
               </div>
             </div>

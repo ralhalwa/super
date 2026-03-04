@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
-import "../admin.css";
 
 type BoardRow = {
   id: number;
@@ -18,7 +17,11 @@ function formatDate(iso: string) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
 }
 
 function clampText(s: string, fallback: string) {
@@ -159,11 +162,28 @@ function StatPill({
   value: number | string;
 }) {
   return (
-    <span className="boardStatPill" title={label}>
-      <span className="boardStatIcon">{icon}</span>
-      <span className="boardStatText">
-        <span className="boardStatValue">{value}</span>
-        <span className="boardStatLabel">{label}</span>
+    <span
+      className="
+        inline-flex items-center gap-3
+        rounded-2xl border border-slate-900/10
+        bg-white/90 shadow-[0_10px_26px_rgba(15,23,42,0.06)]
+        px-3 py-2
+      "
+      title={label}
+    >
+      <span
+        className="
+          grid place-items-center
+          h-9 w-9 rounded-2xl
+          border border-slate-900/10 bg-slate-900/3 text-slate-900/65
+        "
+      >
+        {icon}
+      </span>
+
+      <span className="flex flex-col leading-[1.05]">
+        <span className="text-[14px] font-black text-slate-900/90">{value}</span>
+        <span className="text-[12px] font-extrabold text-slate-900/50">{label}</span>
       </span>
     </span>
   );
@@ -171,17 +191,46 @@ function StatPill({
 
 function SkeletonCard() {
   return (
-    <div className="boardCard boardCardSkeleton">
-      <div className="boardCardTop">
-        <div className="skLine skW60" />
-        <div className="skLine skW40" />
+    <div
+      className="
+        relative overflow-hidden
+        rounded-[18px] border border-slate-900/10
+        bg-white/95 shadow-[0_14px_34px_rgba(15,23,42,0.07)]
+        p-4
+      "
+    >
+      <div className="space-y-3">
+        <div className="h-3 w-3/5 rounded-full bg-slate-900/10 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-[60%] animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+        </div>
+        <div className="h-3 w-2/5 rounded-full bg-slate-900/10 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-[60%] animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+        </div>
+
+        <div className="h-3 w-[85%] rounded-full bg-slate-900/10 relative overflow-hidden mt-3">
+          <div className="absolute inset-0 -translate-x-[60%] animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+        </div>
+        <div className="h-3 w-[70%] rounded-full bg-slate-900/10 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-[60%] animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+        </div>
+
+        <div className="mt-4 flex gap-3">
+          <div className="h-[30px] w-[92px] rounded-full bg-slate-900/10 relative overflow-hidden">
+            <div className="absolute inset-0 -translate-x-[60%] animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+          </div>
+          <div className="h-[30px] w-[92px] rounded-full bg-slate-900/10 relative overflow-hidden">
+            <div className="absolute inset-0 -translate-x-[60%] animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+          </div>
+        </div>
       </div>
-      <div className="skLine skW85" style={{ marginTop: 12 }} />
-      <div className="skLine skW70" />
-      <div className="boardCardBottom" style={{ marginTop: 14 }}>
-        <div className="skPill" />
-        <div className="skPill" />
-      </div>
+
+      {/* keyframes for shimmer (Tailwind arbitrary) */}
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-60%); }
+          100% { transform: translateX(160%); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -233,37 +282,62 @@ export default function AdminBoardsPage() {
   }, [boards]);
 
   return (
-    <AdminLayout
-      active="boards"
-      title="Boards"
-      subtitle="All boards across supervisors"
-    //   right={
-    //     // <button className="admPrimaryBtn" onClick={load} disabled={loading}>
-    //     //   {loading ? "Refreshing..." : "Refresh"}
-    //     // </button>
-    //   }
-    >
-      <div className="admPageWrap">
-        {/* Top toolbar */}
-        <div className="boardsToolbar">
-          <div className="boardsSearch">
-            <span className="boardsSearchIcon" aria-hidden="true">
+    <AdminLayout active="boards" title="Boards" subtitle="All boards across supervisors">
+      <div className="w-full">
+        {/* Toolbar */}
+        <div className="mb-4 flex items-start justify-between gap-3 max-[1020px]:flex-col">
+          {/* Search */}
+          <div
+            className="
+              flex-1 min-w-[340px] flex items-center gap-2.5
+              rounded-2xl border border-slate-900/10
+              bg-white/92 shadow-[0_10px_26px_rgba(15,23,42,0.06)]
+              px-3 py-2.5
+              max-[1020px]:min-w-0
+            "
+          >
+            <span
+              className="
+                grid place-items-center h-9 w-9 rounded-xl
+                border border-slate-900/10 bg-slate-900/3 text-slate-900/55
+              "
+              aria-hidden="true"
+            >
               <SearchIcon />
             </span>
+
             <input
-              className="boardsSearchInput"
+              className="
+                flex-1 bg-transparent outline-none
+                text-[14px] font-extrabold text-slate-900/90
+                placeholder:text-slate-900/40 placeholder:font-bold
+              "
               placeholder="Search boards, supervisors, or descriptions…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+
             {search.trim() && (
-              <button className="boardsClearBtn" type="button" onClick={() => setSearch("")}>
+              <button
+                className="
+                  h-9 px-3 rounded-xl
+                  border border-slate-900/12 bg-white/90
+                  font-black text-slate-900/70
+                  transition
+                  hover:-translate-y-[1px]
+                  hover:border-slate-900/18
+                  hover:shadow-[0_10px_18px_rgba(15,23,42,0.08)]
+                "
+                type="button"
+                onClick={() => setSearch("")}
+              >
                 Clear
               </button>
             )}
           </div>
 
-          <div className="boardsKpis">
+          {/* KPIs */}
+          <div className="flex flex-wrap justify-end gap-2.5">
             <StatPill icon={<BoardIcon />} label="Boards" value={totals.totalBoards} />
             <StatPill icon={<LayersIcon />} label="Lists" value={totals.totalLists} />
             <StatPill icon={<CardStackIcon />} label="Cards" value={totals.totalCards} />
@@ -271,92 +345,197 @@ export default function AdminBoardsPage() {
         </div>
 
         {err && (
-          <div className="admAlert admAlertBad" style={{ marginBottom: 12 }}>
+          <div
+            className="
+              mb-3 rounded-2xl border
+              border-red-500/25 bg-red-500/5
+              px-3 py-2 text-[13px]
+            "
+          >
             {err}
           </div>
         )}
 
         {/* Grid */}
         {loading ? (
-          <div className="boardsGrid">
+          <div className="grid grid-cols-3 gap-3 max-[1200px]:grid-cols-2 max-[780px]:grid-cols-1">
             {Array.from({ length: 8 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="boardsEmpty">
-            <div className="boardsEmptyIcon">
+          <div
+            className="
+              grid gap-2
+              rounded-[18px] border border-dashed border-slate-900/16
+              bg-white/75 px-5 py-5
+            "
+          >
+            <div
+              className="
+                grid place-items-center
+                h-11 w-11 rounded-2xl
+                border border-slate-900/10 bg-slate-900/3 text-slate-900/70
+              "
+            >
               <BoardIcon size={22} />
             </div>
-            <div className="boardsEmptyTitle">No boards found</div>
-            <div className="boardsEmptyHint">
+            <div className="text-[16px] font-black text-slate-900/90">No boards found</div>
+            <div className="text-[13px] font-extrabold text-slate-900/58">
               Try searching by <b>board name</b> or <b>supervisor</b>.
             </div>
+
             {search.trim() && (
-              <button className="admPrimaryBtn" onClick={() => setSearch("")}>
+              <button
+                className="
+                  mt-2 inline-flex h-11 items-center justify-center
+                  rounded-2xl px-4 font-black text-white
+                  bg-gradient-to-br from-violet-600 to-violet-400
+                  shadow-[0_18px_45px_rgba(15,23,42,0.08)]
+                  hover:opacity-95
+                "
+                onClick={() => setSearch("")}
+              >
                 Clear search
               </button>
             )}
           </div>
         ) : (
-          <div className="boardsGrid">
-            {filtered.map((b, idx) => {
+          <div className="grid grid-cols-3 gap-3 max-[1200px]:grid-cols-2 max-[780px]:grid-cols-1">
+            {filtered.map((b) => {
               const desc = clampText(b.description, "No description provided.");
               const sup = clampText(b.supervisor_name, "Unknown supervisor");
 
               return (
                 <div
                   key={b.id}
-                  className="boardCard"
-                  style={{ animationDelay: `${Math.min(idx, 10) * 35}ms` }}
-                  onClick={() => nav(`/admin/boards/${b.id}`)}
                   role="button"
                   tabIndex={0}
+                  onClick={() => nav(`/admin/boards/${b.id}`)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       nav(`/admin/boards/${b.id}`);
                     }
                   }}
+                  className="
+                    group relative cursor-pointer
+                    rounded-[18px] border border-slate-900/10
+                    bg-white/95 shadow-[0_14px_34px_rgba(15,23,42,0.07)]
+                    p-4
+                    transition
+                    hover:-translate-y-[2px]
+                    hover:border-slate-900/18
+                    hover:shadow-[0_20px_44px_rgba(15,23,42,0.10)]
+                    focus-visible:outline-none
+                    focus-visible:ring-4 focus-visible:ring-slate-900/10
+                  "
                 >
-                  <div className="boardCardGlow" aria-hidden="true" />
-
-                  <div className="boardCardTop">
-                    <div className="boardCardTitleRow">
-                      <span className="boardCardIcon" aria-hidden="true">
+                  {/* Top */}
+                  <div className="flex flex-col gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className="
+                          grid place-items-center
+                          h-10 w-10 rounded-2xl
+                          border border-slate-900/10 bg-slate-900/3 text-slate-900/70
+                          flex-none
+                        "
+                        aria-hidden="true"
+                      >
                         <BoardIcon />
                       </span>
-                      <div className="boardCardTitle" title={b.name}>
-                        {b.name}
+
+                      <div className="min-w-0">
+                        <div
+                          className="truncate text-[16px] font-black text-slate-900/92"
+                          title={b.name}
+                        >
+                          {b.name}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="boardCardMeta">
-                      <span className="boardMetaChip" title="Supervisor">
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className="
+                          inline-flex items-center gap-2
+                          h-[30px] px-3 rounded-full
+                          border border-slate-900/10 bg-slate-900/3
+                          text-[12px] font-black text-slate-900/65
+                        "
+                        title="Supervisor"
+                      >
                         <UserIcon />
                         {sup}
                       </span>
-                      <span className="boardMetaChip" title="Created">
+                      <span
+                        className="
+                          inline-flex items-center
+                          h-[30px] px-3 rounded-full
+                          border border-slate-900/10 bg-slate-900/3
+                          text-[12px] font-black text-slate-900/65
+                        "
+                        title="Created"
+                      >
                         {formatDate(b.created_at)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="boardCardDesc">{desc}</div>
+                  {/* Desc */}
+                  <div
+                    className="
+                      mt-3 text-[13px] font-extrabold text-slate-900/60 leading-[1.45]
+                      overflow-hidden
+                    "
+                    style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3 as any,
+                      WebkitBoxOrient: "vertical" as any,
+                      minHeight: 56,
+                    }}
+                  >
+                    {desc}
+                  </div>
 
-                  <div className="boardCardBottom">
-                    <div className="boardStatsRow">
-                      <span className="boardMiniStat">
+                  {/* Bottom */}
+                  <div className="mt-4 flex items-end justify-between gap-3">
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className="
+                          inline-flex items-center gap-2
+                          h-[30px] px-3 rounded-full
+                          border border-slate-900/10 bg-slate-900/3
+                          text-[12px] font-extrabold text-slate-900/70
+                        "
+                      >
                         <LayersIcon />
-                        <b>{b.lists_count}</b>&nbsp;Lists
+                        <b className="font-black text-slate-900/92">{b.lists_count}</b> Lists
                       </span>
-                      <span className="boardMiniStat">
+
+                      <span
+                        className="
+                          inline-flex items-center gap-2
+                          h-[30px] px-3 rounded-full
+                          border border-slate-900/10 bg-slate-900/3
+                          text-[12px] font-extrabold text-slate-900/70
+                        "
+                      >
                         <CardStackIcon />
-                        <b>{b.cards_count}</b>&nbsp;Cards
+                        <b className="font-black text-slate-900/92">{b.cards_count}</b> Cards
                       </span>
                     </div>
 
-                    <div className="boardOpenHint">
+                    <div
+                      className="
+                        inline-flex items-center gap-2
+                        text-[12px] font-black text-slate-900/62
+                        transition
+                        group-hover:translate-x-[2px]
+                        group-hover:text-slate-900/75
+                      "
+                    >
                       Open board <ArrowIcon />
                     </div>
                   </div>

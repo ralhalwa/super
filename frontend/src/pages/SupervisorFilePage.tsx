@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
-import "../admin.css";
 
 type Board = {
   id: number;
@@ -144,79 +143,96 @@ export default function SupervisorFilePage() {
       title="Workspace"
       subtitle={loading ? "Loading…" : `Supervisor File #${fileID} • ${boards.length} board(s)`}
       right={
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button className="admGhostBtn" onClick={() => nav("/admin/supervisors")}>
+        <div className="flex items-center gap-2">
+          <button
+            className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-900 hover:border-violet-200 hover:bg-violet-50"
+            onClick={() => nav("/admin/supervisors")}
+          >
             Back
           </button>
-          {/* <button className="admPrimaryBtn" onClick={loadBoards} disabled={loading}>
-            {loading ? "Refreshing..." : "Refresh"}
-          </button> */}
         </div>
       }
     >
-      <section className="admGrid">
-        {/* Left: Create Board (same structure, cleaner) */}
-        <div className="admCol">
-          <section className="admCard">
-            <div className="admCardTitleRow">
+      <section className="grid gap-4 lg:grid-cols-[1.25fr_0.95fr]">
+        {/* Left */}
+        <div className="grid gap-4">
+          <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+            <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <div className="admCardTitle" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className="admTinyIcon" aria-hidden="true">
+                <div className="flex items-center gap-2 text-[16px] font-black tracking-[-0.2px] text-slate-900">
+                  <span className="grid h-7 w-7 place-items-center rounded-full border border-slate-200 bg-slate-50 text-slate-600">
                     <BoardIcon />
                   </span>
                   Create board
                 </div>
-                <div className="admMuted">Name + optional description.</div>
+                <div className="mt-2 text-[13px] text-slate-500">Name + optional description.</div>
               </div>
-              <span className="admPill">New</span>
+
+              <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[12px] font-black text-slate-900">
+                New
+              </span>
             </div>
 
-            <form onSubmit={createBoard} className="admForm">
-              <div className="admRow2">
-                <label className="admField" style={{ gridColumn: "1 / -1" }}>
-                  <div className="admLabelRow">
-                    <span className="admLabel">Board name</span>
-                    <span className="admCount">{name.trim().length}/{nameMax}</span>
-                  </div>
+            <form onSubmit={createBoard} className="grid gap-3">
+              <label className="grid gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[12px] font-extrabold text-slate-500">Board name</span>
+                  <span className="text-[12px] font-extrabold text-slate-400">
+                    {name.trim().length}/{nameMax}
+                  </span>
+                </div>
 
-                  <input
-                    className="admInput"
-                    placeholder="e.g. Social Network"
-                    value={name}
-                    maxLength={nameMax}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  <span className="admHelp">Make it short and clear.</span>
-                </label>
+                <input
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-200/50"
+                  placeholder="e.g. Social Network"
+                  value={name}
+                  maxLength={nameMax}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <span className="text-[12px] text-slate-500">Make it short and clear.</span>
+              </label>
 
-                <label className="admField" style={{ gridColumn: "1 / -1" }}>
-                  <div className="admLabelRow">
-                    <span className="admLabel">Description</span>
-                    <span className="admCount">{description.trim().length}/{descMax}</span>
-                  </div>
+              <label className="grid gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[12px] font-extrabold text-slate-500">Description</span>
+                  <span className="text-[12px] font-extrabold text-slate-400">
+                    {description.trim().length}/{descMax}
+                  </span>
+                </div>
 
-                  <input
-                    className="admInput"
-                    placeholder="Optional (example: tasks to finish before Sunday)"
-                    value={description}
-                    maxLength={descMax}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                  <span className="admHelp">Optional — helps students understand the board.</span>
-                </label>
-              </div>
+                <input
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-200/50"
+                  placeholder="Optional (example: tasks to finish before Sunday)"
+                  value={description}
+                  maxLength={descMax}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+                <span className="text-[12px] text-slate-500">Optional — helps students understand the board.</span>
+              </label>
 
-              {err && <div className="admAlert admAlertBad">{err}</div>}
-              {msg && <div className="admAlert admAlertGood">{msg}</div>}
+              {err ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-slate-900">
+                  {err}
+                </div>
+              ) : null}
 
-              <div className="admFormActions">
-                <button className="admPrimaryBtn" disabled={creating || !name.trim()}>
+              {msg ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] text-slate-900">
+                  {msg}
+                </div>
+              ) : null}
+
+              <div className="mt-1 flex items-center gap-2">
+                <button
+                  className="h-11 rounded-xl bg-gradient-to-br from-violet-600 to-violet-400 px-4 text-sm font-black text-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={creating || !name.trim()}
+                >
                   {creating ? "Creating..." : "Create"}
                 </button>
 
                 <button
                   type="button"
-                  className="admSoftBtn"
+                  className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-900 hover:bg-slate-50"
                   onClick={() => {
                     setName("");
                     setDescription("");
@@ -231,55 +247,63 @@ export default function SupervisorFilePage() {
           </section>
         </div>
 
-        {/* Right: Boards list (UNCHANGED) */}
-        <div className="admCol">
-          <section className="admCard">
-            <div className="admCardTitleRow" style={{ marginBottom: 0 }}>
+        {/* Right */}
+        <div className="grid gap-4">
+          <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="admCardTitle">Boards</div>
-                <div className="admMuted">Open a board or manage members.</div>
+                <div className="text-[16px] font-black tracking-[-0.2px] text-slate-900">Boards</div>
+                <div className="mt-2 text-[13px] text-slate-500">Open a board or manage members.</div>
               </div>
-
-              <span className="admPill">{loading ? "…" : boards.length}</span>
+              <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[12px] font-black text-slate-900">
+                {loading ? "…" : boards.length}
+              </span>
             </div>
 
-            <div style={{ height: 12 }} />
+            <div className="h-3" />
 
-            {err && (
-              <div className="admAlert admAlertBad" style={{ marginBottom: 12 }}>
+            {err ? (
+              <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-slate-900">
                 {err}
               </div>
-            )}
+            ) : null}
 
             {loading ? (
-              <div className="admMuted">Loading…</div>
+              <div className="text-[13px] text-slate-500">Loading…</div>
             ) : boardsSorted.length === 0 ? (
-              <div className="admMuted">No boards yet.</div>
+              <div className="text-[13px] text-slate-500">No boards yet.</div>
             ) : (
-              <div className="admDirGrid">
+              <div className="grid gap-2">
                 {boardsSorted.map((b) => {
                   const created = new Date(b.created_at);
                   const desc = (b.description || "").trim();
 
                   return (
-                    <div key={b.id} className="admBoardRow">
-                      <div className="admDirLeft" style={{ minWidth: 0 }}>
-                        <div className="admAvatar" aria-hidden="true">
+                    <div
+                      key={b.id}
+                      className={[
+                        "flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left",
+                        "shadow-[0_10px_26px_rgba(15,23,42,0.06)] transition",
+                        "hover:-translate-y-[1px] hover:border-violet-200 hover:bg-violet-50/30 hover:shadow-[0_16px_32px_rgba(109,94,252,0.12)]",
+                      ].join(" ")}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="grid h-10 w-10 flex-none place-items-center rounded-full border border-slate-200 bg-slate-50 font-black text-slate-700">
                           {initials(b.name)}
                         </div>
 
-                        <div className="admDirText">
-                          <div className="admDirName">{b.name}</div>
+                        <div className="min-w-0">
+                          <div className="truncate font-black text-slate-900">{b.name}</div>
 
-                          <div className="admBoardMetaLine">
-                            <span className="admMetaInline">
+                          <div className="mt-1 flex min-w-0 items-center gap-2 text-[12px] font-extrabold text-slate-500">
+                            <span className="inline-flex items-center gap-2">
                               <ClockIcon /> {created.toLocaleDateString()}
                             </span>
 
                             {desc ? (
                               <>
-                                <span className="admMetaDot">•</span>
-                                <span className="admMetaInline" title={desc}>
+                                <span className="opacity-50">•</span>
+                                <span className="min-w-0 truncate" title={desc}>
                                   {desc}
                                 </span>
                               </>
@@ -288,9 +312,9 @@ export default function SupervisorFilePage() {
                         </div>
                       </div>
 
-                      <div className="admBoardActions">
+                      <div className="flex flex-none items-center gap-2">
                         <button
-                          className="admOpenPill"
+                          className="inline-flex h-8 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-3 text-[12px] font-black text-blue-700 hover:bg-blue-100"
                           type="button"
                           onClick={() => nav(`/admin/boards/${b.id}`)}
                           title="Open board"
@@ -299,7 +323,7 @@ export default function SupervisorFilePage() {
                         </button>
 
                         <button
-                          className="admIconPill"
+                          className="grid h-8 w-10 place-items-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 transition hover:-translate-y-[1px] hover:border-emerald-200 hover:bg-emerald-50"
                           type="button"
                           onClick={() => nav(`/admin/boards/${b.id}/members`)}
                           title="Members"
@@ -308,9 +332,7 @@ export default function SupervisorFilePage() {
                           <UsersIcon />
                         </button>
 
-                        <span className="admChevron" aria-hidden="true">
-                          ›
-                        </span>
+                        <span className="select-none text-2xl text-slate-300">›</span>
                       </div>
                     </div>
                   );
@@ -320,164 +342,6 @@ export default function SupervisorFilePage() {
           </section>
         </div>
       </section>
-
-      <style>{`
-        /* ===== list styles (same as yours) ===== */
-        .admDirGrid{ display:grid; gap:10px; }
-
-        .admAvatar{
-          width: 40px; height: 40px;
-          border-radius: 999px;
-          border: 1px solid rgba(15,23,42,0.14);
-          background: rgba(15,23,42,0.05);
-          display:grid;
-          place-items:center;
-          font-weight: 950;
-          color: rgba(15,23,42,0.85);
-          flex: 0 0 40px;
-        }
-
-        .admBoardRow{
-          width: 100%;
-          border-radius: 16px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: #fff;
-          box-shadow: 0 10px 26px rgba(15,23,42,0.06);
-          padding: 12px;
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap: 12px;
-          text-align: left;
-          transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
-        }
-        .admBoardRow:hover{
-          transform: translateY(-1px);
-          border-color: rgba(59,130,246,0.18);
-          box-shadow: 0 16px 32px rgba(59,130,246,0.10);
-          background: rgba(59,130,246,0.02);
-        }
-
-        .admDirLeft{
-          display:flex;
-          align-items:center;
-          gap: 12px;
-          min-width: 0;
-        }
-        .admDirText{ min-width:0; display:grid; gap:6px; }
-
-        .admDirName{
-          font-weight: 950;
-          color: rgba(15,23,42,0.92);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .admBoardMetaLine{
-          display:flex;
-          align-items:center;
-          gap: 8px;
-          min-width: 0;
-          color: rgba(15,23,42,0.60);
-          font-size: 12px;
-          font-weight: 700;
-        }
-        .admMetaInline{
-          display:inline-flex;
-          align-items:center;
-          gap: 8px;
-          min-width: 0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .admMetaInline svg{ display:block; opacity: .85; }
-        .admMetaDot{ opacity: .55; }
-
-        .admBoardActions{
-          display:flex;
-          align-items:center;
-          gap: 10px;
-          flex: 0 0 auto;
-        }
-
-        .admOpenPill{
-          display:inline-flex;
-          align-items:center;
-          justify-content:center;
-          padding: 7px 12px;
-          border-radius: 999px;
-          border: 1px solid rgba(59,130,246,0.18);
-          background: rgba(59,130,246,0.06);
-          color: rgba(37,99,235,0.92);
-          font-weight: 900;
-          font-size: 12px;
-          cursor: pointer;
-        }
-
-        .admIconPill{
-          width: 38px; height: 32px;
-          border-radius: 999px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: rgba(15,23,42,0.03);
-          color: rgba(15,23,42,0.72);
-          display:grid;
-          place-items:center;
-          cursor:pointer;
-          transition: transform .14s ease, border-color .14s ease, background .14s ease;
-        }
-        .admIconPill:hover{
-          transform: translateY(-1px);
-          border-color: rgba(16,185,129,0.18);
-          background: rgba(16,185,129,0.06);
-        }
-        .admIconPill svg{ display:block; }
-
-        .admChevron{
-          font-size: 22px;
-          color: rgba(15,23,42,0.35);
-          transition: transform .14s ease, color .14s ease;
-        }
-        .admBoardRow:hover .admChevron{
-          transform: translateX(2px);
-          color: rgba(37,99,235,0.75);
-        }
-
-        @media (max-width: 900px){
-          .admBoardRow{ flex-direction: column; align-items: stretch; }
-          .admBoardActions{ justify-content: flex-end; }
-        }
-
-        /* ===== small form enhancements only ===== */
-        .admTinyIcon{
-          width: 28px; height: 28px;
-          border-radius: 999px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: rgba(15,23,42,0.03);
-          display:grid;
-          place-items:center;
-          color: rgba(15,23,42,0.75);
-        }
-
-        .admLabelRow{
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap: 10px;
-        }
-        .admCount{
-          font-size: 12px;
-          font-weight: 800;
-          color: rgba(15,23,42,0.45);
-        }
-        .admHelp{
-          display:block;
-          margin-top: 6px;
-          font-size: 12px;
-          color: rgba(15,23,42,0.55);
-        }
-      `}</style>
     </AdminLayout>
   );
 }

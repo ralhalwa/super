@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
-import "../admin.css";
 
 type SupervisorRow = {
   supervisor_user_id: number;
@@ -16,7 +15,6 @@ type Role = "supervisor" | "student";
 
 function RoleIcon({ role }: { role: Role }) {
   if (role === "supervisor") {
-    // Shield
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path
@@ -36,7 +34,6 @@ function RoleIcon({ role }: { role: Role }) {
     );
   }
 
-  // Graduation cap
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
@@ -59,7 +56,6 @@ function RoleIcon({ role }: { role: Role }) {
 export default function AdminDashboard() {
   const nav = useNavigate();
 
-  // Create user form
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("supervisor");
@@ -69,34 +65,30 @@ export default function AdminDashboard() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Dashboard data
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
-
-  // student count placeholder until backend exists
   const [studentCount, setStudentCount] = useState<number>(0);
 
-async function loadDashboardStats() {
-  setStatsLoading(true);
-  try {
-    const [sups, students] = await Promise.all([
-      apiFetch("/admin/supervisors"),
-      apiFetch("/admin/assign/students")  // reuse existing endpoint
-    ]);
+  async function loadDashboardStats() {
+    setStatsLoading(true);
+    try {
+      const [sups, students] = await Promise.all([
+        apiFetch("/admin/supervisors"),
+        apiFetch("/admin/assign/students"),
+      ]);
 
-    setSupervisors(sups || []);
-    setStudentCount((students || []).length);
-
-  } catch (e: any) {
-    console.error(e);
-  } finally {
-    setStatsLoading(false);
+      setSupervisors(sups || []);
+      setStudentCount((students || []).length);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setStatsLoading(false);
+    }
   }
-}
 
-useEffect(() => {
-  loadDashboardStats();
-}, []);
+  useEffect(() => {
+    loadDashboardStats();
+  }, []);
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
@@ -115,8 +107,8 @@ useEffect(() => {
       setEmail("");
       setPassword("");
 
-      if (role === "supervisor") await loadDashboardStats();
-if (role === "student") await loadDashboardStats();    } catch (e: any) {
+      await loadDashboardStats();
+    } catch (e: any) {
       setErr(e.message || "Failed");
     } finally {
       setLoading(false);
@@ -131,7 +123,6 @@ if (role === "student") await loadDashboardStats();    } catch (e: any) {
     password.trim().length >= 4 &&
     !loading;
 
-  // purely for UI preview
   const initials = useMemo(() => {
     const n = fullName.trim();
     if (!n) return role === "supervisor" ? "SU" : "ST";
@@ -147,354 +138,242 @@ if (role === "student") await loadDashboardStats();    } catch (e: any) {
       active="dashboard"
       title="Admin Dashboard"
       subtitle="Manage users and supervise the system."
-      // right={
-      //   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-      //     <button className="admSoftBtn" onClick={() => nav("/admin/supervisors")}>
-      //       Supervisors
-      //     </button>
-      //     <button className="admPrimaryBtn" onClick={loadSupervisors} disabled={statsLoading}>
-      //       {statsLoading ? "Refreshing..." : "Refresh"}
-      //     </button>
-      //   </div>
-      // }
     >
-      {/* KPI row (Supervisors + Students + Admin) */}
-      <section className="admKpis">
+      {/* KPI row */}
+      <section className="grid grid-cols-1 gap-3.5 lg:grid-cols-3">
         {/* Supervisors */}
-        <div className="admCard admKpi">
-          <div className="admCardHead">
+        <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="admCardK">Supervisors</div>
-              <div className="admCardV">{statsLoading ? "…" : totalSupervisors}</div>
+              <div className="text-xs font-extrabold text-slate-500">Supervisors</div>
+              <div className="mt-1.5 text-2xl font-black text-slate-900">
+                {statsLoading ? "…" : totalSupervisors}
+              </div>
             </div>
-
-            <div className="admKpiIcon" aria-hidden="true" title="Supervisors">
-              <span className="admPulseDot" />
+            <div className="grid h-11 w-11 place-items-center rounded-[14px] border border-slate-200 bg-slate-50">
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-600 shadow-[0_0_0_0_rgba(37,99,235,0.25)] animate-[admPulse_1.5s_ease-in-out_infinite]" />
             </div>
           </div>
-          <div className="admMuted">Each supervisor has a workspace</div>
+          <div className="mt-2 text-[13px] text-slate-500">Each supervisor has a workspace</div>
         </div>
 
         {/* Students */}
-        <div className="admCard admKpi">
-          <div className="admCardHead">
+        <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="admCardK">Students</div>
-              <div className="admCardV">{statsLoading ? "…" : studentCount}</div>
+              <div className="text-xs font-extrabold text-slate-500">Students</div>
+              <div className="mt-1.5 text-2xl font-black text-slate-900">
+                {statsLoading ? "…" : studentCount}
+              </div>
             </div>
-
-            <div className="admKpiIcon admKpiIconStu" aria-hidden="true" title="Students">
-              <span className="admBounceBar" />
-              <span className="admBounceBar" />
-              <span className="admBounceBar" />
+            <div className="flex h-11 w-11 items-end justify-center gap-1 rounded-[14px] border border-slate-200 bg-slate-50 px-2">
+              <span className="h-2.5 w-1.5 rounded bg-emerald-500 animate-bounce [animation-duration:1.1s]" />
+              <span className="h-4 w-1.5 rounded bg-emerald-500 animate-bounce [animation-duration:1.1s] [animation-delay:.12s]" />
+              <span className="h-3 w-1.5 rounded bg-emerald-500 animate-bounce [animation-duration:1.1s] [animation-delay:.24s]" />
             </div>
           </div>
-          <div className="admMuted">Connect to stats endpoint later</div>
+          <div className="mt-2 text-[13px] text-slate-500">Connect to stats endpoint later</div>
         </div>
 
         {/* Admin */}
-        <div className="admCard admKpi">
-          <div className="admCardHead">
+        <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="admCardK">Admin</div>
-              <div className="admCardV">System</div>
+              <div className="text-xs font-extrabold text-slate-500">Admin</div>
+              <div className="mt-1.5 text-2xl font-black text-slate-900">System</div>
             </div>
-
-            <div className="admKpiIcon" aria-hidden="true" title="Admin">
-              <span className="admSpinRing" />
+            <div className="grid h-11 w-11 place-items-center rounded-[14px] border border-slate-200 bg-slate-50">
+              <span className="h-[18px] w-[18px] rounded-full border-2 border-slate-300 border-t-violet-500 animate-spin" />
             </div>
           </div>
-          <div className="admMuted">You’re managing the platform</div>
+          <div className="mt-2 text-[13px] text-slate-500">You’re managing the platform</div>
         </div>
       </section>
 
-      {/* ONLY: Create user (no Quick actions, no Recent supervisors) */}
-      <section className="admGrid">
-        <div className="admCol" style={{ gridColumn: "1 / -1" }}>
-          <section className="admCard">
-            <div className="admCardTitleRow">
-              <div>
-                <div className="admCardTitle">Create user</div>
-                <div className="admMuted">Pick a role first, then add details.</div>
+      {/* Create user */}
+      <section className="mt-3.5">
+        <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-base font-black text-slate-900">Create user</div>
+              <div className="mt-1 text-[13px] text-slate-500">
+                Pick a role first, then add details.
               </div>
-
-              <button
-                className="admGhostBtn"
-                type="button"
-                onClick={() => {
-                  setFullName("");
-                  setEmail("");
-                  setPassword("");
-                  setErr("");
-                  setMsg("");
-                }}
-              >
-                Reset
-              </button>
             </div>
 
-            {/* role selector */}
-            <div className="admRoleRow">
-              <button
-                type="button"
-                className={`admRoleChip ${role === "supervisor" ? "isActive sup" : ""}`}
-                onClick={() => setRole("supervisor")}
-              >
-                <span className="admRoleChipIcon">
-                  <RoleIcon role="supervisor" />
-                </span>
-                <span className="admRoleChipText">
-                  <span className="admRoleChipTitle">Supervisor</span>
-                  <span className="admRoleChipSub">Creates a new workspace file</span>
-                </span>
-              </button>
+            <button
+              className="h-10 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-800 hover:border-violet-200 hover:bg-violet-50"
+              type="button"
+              onClick={() => {
+                setFullName("");
+                setEmail("");
+                setPassword("");
+                setErr("");
+                setMsg("");
+              }}
+            >
+              Reset
+            </button>
+          </div>
 
-              <button
-                type="button"
-                className={`admRoleChip ${role === "student" ? "isActive stu" : ""}`}
-                onClick={() => setRole("student")}
-              >
-                <span className="admRoleChipIcon">
-                  <RoleIcon role="student" />
+          {/* role selector */}
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setRole("supervisor")}
+              className={[
+                "flex w-full gap-3 rounded-[16px] border bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.06)] transition",
+                "hover:-translate-y-[1px] hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)]",
+                role === "supervisor"
+                  ? "border-blue-200 shadow-[0_18px_38px_rgba(37,99,235,0.12)]"
+                  : "border-slate-200",
+              ].join(" ")}
+            >
+              <span className="grid h-[42px] w-[42px] place-items-center rounded-[14px] border border-slate-200 bg-slate-50 text-slate-800">
+                <RoleIcon role="supervisor" />
+              </span>
+
+              <span className="grid">
+                <span className="leading-tight font-black text-slate-900">Supervisor</span>
+                <span className="mt-0.5 text-xs font-bold text-slate-500">
+                  Creates a new workspace file
                 </span>
-                <span className="admRoleChipText">
-                  <span className="admRoleChipTitle">Student</span>
-                  <span className="admRoleChipSub">Can be added to boards & tasks</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRole("student")}
+              className={[
+                "flex w-full gap-3 rounded-[16px] border bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.06)] transition",
+                "hover:-translate-y-[1px] hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)]",
+                role === "student"
+                  ? "border-emerald-200 shadow-[0_18px_38px_rgba(16,185,129,0.12)]"
+                  : "border-slate-200",
+              ].join(" ")}
+            >
+              <span className="grid h-[42px] w-[42px] place-items-center rounded-[14px] border border-slate-200 bg-slate-50 text-slate-800">
+                <RoleIcon role="student" />
+              </span>
+
+              <span className="grid">
+                <span className="leading-tight font-black text-slate-900">Student</span>
+                <span className="mt-0.5 text-xs font-bold text-slate-500">
+                  Can be added to boards & tasks
                 </span>
-              </button>
+              </span>
+            </button>
+          </div>
+
+          <form onSubmit={createUser} className="mt-3.5 grid gap-3">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <label className="grid gap-1.5">
+                <span className="text-xs font-extrabold text-slate-500">Full name</span>
+                <input
+                  className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                  placeholder="e.g. Reem Alhalwachi"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  autoComplete="name"
+                />
+                <span className="text-xs font-bold text-slate-500">Minimum 2 characters.</span>
+              </label>
+
+              <label className="grid gap-1.5">
+                <span className="text-xs font-extrabold text-slate-500">Email</span>
+                <input
+                  className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                />
+                <span className="text-xs font-bold text-slate-500">Must include “@”.</span>
+              </label>
             </div>
 
-            <form onSubmit={createUser} className="admForm" style={{ marginTop: 14 }}>
-              <div className="admRow2">
-                <label className="admField">
-                  <span className="admLabel">Full name</span>
-                  <input
-                    className="admInput"
-                    placeholder="e.g. Reem Alhalwachi"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    autoComplete="name"
-                  />
-                  <span className="admHelp">Minimum 2 characters.</span>
-                </label>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <label className="grid gap-1.5">
+                <span className="text-xs font-extrabold text-slate-500">Temporary password</span>
+                <input
+                  className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                  placeholder="Set a temp password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <span className="text-xs font-bold text-slate-500">Minimum 4 characters.</span>
+              </label>
 
-                <label className="admField">
-                  <span className="admLabel">Email</span>
-                  <input
-                    className="admInput"
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
-                  />
-                  <span className="admHelp">Must include “@”.</span>
-                </label>
-              </div>
+              <div className="grid gap-1.5">
+                <span className="text-xs font-extrabold text-slate-500">Preview</span>
 
-              <div className="admRow2">
-                <label className="admField">
-                  <span className="admLabel">Temporary password</span>
-                  <input
-                    className="admInput"
-                    placeholder="Set a temp password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                  />
-                  <span className="admHelp">Minimum 4 characters.</span>
-                </label>
-
-                <div className="admField">
-                  <span className="admLabel">Preview</span>
-
-                  <div className="admPreviewBox">
-                    <div className="admPreviewAvatar" aria-hidden="true">
-                      {initials}
-                    </div>
-
-                    <div style={{ minWidth: 0 }}>
-                      <div className="admPreviewName">
-                        {fullName.trim() || (role === "supervisor" ? "New Supervisor" : "New Student")}
-                      </div>
-
-                      <div className="admPreviewMeta">
-                        <span className={`admPill ${role === "supervisor" ? "sup" : "stu"}`}>
-                          <RoleIcon role={role} /> {role}
-                        </span>
-
-                        <span className="admTdMuted" style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {email.trim() || "email@example.com"}
-                        </span>
-                      </div>
-                    </div>
+                <div className="flex items-center gap-3 rounded-[16px] border border-slate-200 bg-slate-50 p-3">
+                  <div className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white font-black text-slate-800">
+                    {initials}
                   </div>
 
-                  <div className="admMuted" style={{ marginTop: 10 }}>
-                    Tip: Use the “Supervisors” button above to open workspaces after creating.
+                  <div className="min-w-0">
+                    <div className="truncate font-black text-slate-900">
+                      {fullName.trim() || (role === "supervisor" ? "New Supervisor" : "New Student")}
+                    </div>
+
+                    <div className="mt-1.5 flex min-w-0 items-center gap-2">
+                      <span
+                        className={[
+                          "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-black",
+                          role === "supervisor"
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                        ].join(" ")}
+                      >
+                        <RoleIcon role={role} /> {role}
+                      </span>
+
+                      <span className="min-w-0 truncate text-xs font-bold text-slate-500">
+                        {email.trim() || "email@example.com"}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                <div className="mt-2 text-[13px] text-slate-500">
+                  Tip: Use the “Supervisors” button above to open workspaces after creating.
+                </div>
               </div>
+            </div>
 
-              {err && <div className="admAlert admAlertBad">{err}</div>}
-              {msg && <div className="admAlert admAlertGood">{msg}</div>}
-
-              <div className="admFormActions">
-                <button className="admPrimaryBtn" disabled={!canSubmit}>
-                  {loading ? "Creating..." : `Create ${role}`}
-                </button>
-
-                {/* <button type="button" className="admSoftBtn" onClick={loadSupervisors}>
-                  Refresh supervisors count
-                </button> */}
+            {err && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {err}
               </div>
-            </form>
-          </section>
+            )}
+            {msg && (
+              <div className="rounded-[14px] border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {msg}
+              </div>
+            )}
+
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <button
+                className="h-11 rounded-[14px] px-4 font-black text-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] disabled:opacity-70 disabled:cursor-not-allowed"
+                style={{ background: "linear-gradient(135deg, #6d5efc, #9a8cff)" }}
+                disabled={!canSubmit}
+              >
+                {loading ? "Creating..." : `Create ${role}`}
+              </button>
+
+              <button
+                type="button"
+                className="h-11 rounded-[14px] border border-slate-200 bg-white px-4 font-black text-slate-900 hover:bg-slate-50"
+                onClick={() => nav("/admin/supervisors")}
+              >
+                Open Supervisors
+              </button>
+            </div>
+          </form>
         </div>
       </section>
-
-      {/* small styles (paste-friendly). Move into admin.css later if you want */}
-      <style>{`
-        /* KPI icons */
-        .admKpiIcon{
-          width: 44px; height: 44px;
-          border-radius: 14px;
-          display: grid;
-          place-items: center;
-          background: rgba(15,23,42,0.04);
-          border: 1px solid rgba(15,23,42,0.10);
-        }
-        .admPulseDot{
-          width: 10px; height: 10px;
-          border-radius: 999px;
-          background: rgba(37,99,235,0.95);
-          box-shadow: 0 0 0 0 rgba(37,99,235,0.25);
-          animation: admPulse 1.5s ease-in-out infinite;
-        }
-        @keyframes admPulse{
-          0%{ box-shadow: 0 0 0 0 rgba(37,99,235,0.25); transform: scale(1); }
-          70%{ box-shadow: 0 0 0 14px rgba(37,99,235,0.00); transform: scale(1.05); }
-          100%{ box-shadow: 0 0 0 0 rgba(37,99,235,0.00); transform: scale(1); }
-        }
-        .admKpiIconStu{ display:flex; gap:5px; align-items:flex-end; justify-content:center; }
-        .admBounceBar{
-          width: 6px; border-radius: 6px;
-          background: rgba(16,185,129,0.85);
-          height: 10px;
-          animation: admBounce 1.1s ease-in-out infinite;
-        }
-        .admBounceBar:nth-child(2){ animation-delay: .12s; height: 16px; opacity:.95; }
-        .admBounceBar:nth-child(3){ animation-delay: .24s; height: 12px; opacity:.9; }
-        @keyframes admBounce{
-          0%,100%{ transform: translateY(0); }
-          50%{ transform: translateY(-6px); }
-        }
-        .admSpinRing{
-          width: 18px; height: 18px;
-          border-radius: 999px;
-          border: 2px solid rgba(15,23,42,0.18);
-          border-top-color: rgba(168,85,247,0.9);
-          animation: admSpin 1.2s linear infinite;
-        }
-        @keyframes admSpin{ to{ transform: rotate(360deg); } }
-
-        /* Role selector */
-        .admRoleRow{
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          margin-top: 2px;
-        }
-        @media (max-width: 900px){
-          .admRoleRow{ grid-template-columns: 1fr; }
-        }
-        .admRoleChip{
-          width: 100%;
-          border-radius: 16px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: #fff;
-          display: flex;
-          gap: 12px;
-          padding: 12px;
-          cursor: pointer;
-          transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
-          box-shadow: 0 10px 26px rgba(15,23,42,0.06);
-          text-align: left;
-        }
-        .admRoleChip:hover{ transform: translateY(-1px); box-shadow: 0 14px 30px rgba(15,23,42,0.08); }
-        .admRoleChip.isActive{
-          border-color: rgba(59,130,246,0.25);
-          box-shadow: 0 18px 38px rgba(59,130,246,0.10);
-        }
-        .admRoleChip.isActive.sup{ border-color: rgba(37,99,235,0.35); box-shadow: 0 18px 38px rgba(37,99,235,0.12); }
-        .admRoleChip.isActive.stu{ border-color: rgba(16,185,129,0.35); box-shadow: 0 18px 38px rgba(16,185,129,0.12); }
-        .admRoleChipIcon{
-          width: 42px; height: 42px;
-          border-radius: 14px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: rgba(15,23,42,0.03);
-          display: grid;
-          place-items: center;
-          color: rgba(15,23,42,0.85);
-          flex: 0 0 42px;
-        }
-        .admRoleChipTitle{ font-weight: 950; color: rgba(15,23,42,0.92); line-height: 1.1; }
-        .admRoleChipSub{ font-size: 12px; color: rgba(15,23,42,0.55); margin-top: 2px; }
-        .admRoleChipText{ display: grid; }
-
-        /* helper text */
-        .admHelp{
-          display:block;
-          margin-top: 6px;
-          font-size: 12px;
-          color: rgba(15,23,42,0.55);
-        }
-
-        /* Preview box */
-        .admPreviewBox{
-          display:flex;
-          gap: 12px;
-          align-items:center;
-          padding: 12px;
-          border-radius: 16px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: rgba(15,23,42,0.02);
-        }
-        .admPreviewAvatar{
-          width: 44px; height: 44px;
-          border-radius: 999px;
-          border: 1px solid rgba(15,23,42,0.14);
-          background: rgba(15,23,42,0.05);
-          display:grid;
-          place-items:center;
-          font-weight: 950;
-          color: rgba(15,23,42,0.85);
-        }
-        .admPreviewName{
-          font-weight: 950;
-          color: rgba(15,23,42,0.92);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .admPreviewMeta{
-          margin-top: 6px;
-          display:flex;
-          align-items:center;
-          gap: 8px;
-          min-width: 0;
-        }
-        .admPill.sup{
-          border-color: rgba(37,99,235,0.20);
-          background: rgba(37,99,235,0.06);
-          color: rgba(37,99,235,0.92);
-        }
-        .admPill.stu{
-          border-color: rgba(16,185,129,0.20);
-          background: rgba(16,185,129,0.06);
-          color: rgba(16,185,129,0.92);
-        }
-        .admPill svg{ vertical-align: middle; margin-right: 6px; }
-      `}</style>
     </AdminLayout>
   );
 }

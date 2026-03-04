@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
-import "../admin.css";
 
 type Member = {
   user_id: number;
@@ -29,17 +28,8 @@ function initials(name: string) {
 function SearchIcon({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-      <path
-        d="M21 21l-4.3-4.3"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z" stroke="currentColor" strokeWidth="2" />
+      <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -47,18 +37,8 @@ function SearchIcon({ size = 16 }: { size?: number }) {
 function MailIcon({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 6h16v12H4V6Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="m4 7 8 6 8-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
+      <path d="M4 6h16v12H4V6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="m4 7 8 6 8-6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -89,6 +69,80 @@ function CrownIcon({ size = 16 }: { size?: number }) {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+function RolePill({ role }: { role: string }) {
+  const r = (role || "").toLowerCase();
+
+  if (r === "admin") {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-extrabold text-violet-700">
+        <span className="grid place-items-center">
+          <CrownIcon />
+        </span>
+        admin
+      </span>
+    );
+  }
+
+  if (r === "supervisor") {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-extrabold text-blue-700">
+        <span className="grid place-items-center">
+          <UsersIcon />
+        </span>
+        supervisor
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-extrabold text-emerald-700">
+      <span className="grid place-items-center">
+        <UsersIcon />
+      </span>
+      student
+    </span>
+  );
+}
+
+function BoardRolePill({ roleInBoard }: { roleInBoard: string }) {
+  const r = (roleInBoard || "").toLowerCase();
+  if (r === "owner") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-extrabold text-amber-800">
+        owner
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-extrabold text-slate-700">
+      {r || "member"}
+    </span>
+  );
+}
+
+function Pill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-extrabold text-slate-900">
+      {children}
+    </span>
+  );
+}
+
+function RowCard({
+  left,
+  right,
+}: {
+  left: React.ReactNode;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.06)] transition hover:-translate-y-[1px] hover:border-blue-200 hover:bg-blue-50/20 hover:shadow-[0_16px_32px_rgba(59,130,246,0.10)]">
+      <div className="min-w-0">{left}</div>
+      {right ? <div className="flex flex-none items-center gap-2">{right}</div> : null}
+    </div>
   );
 }
 
@@ -126,20 +180,23 @@ export default function BoardMembersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardID]);
 
-async function searchUsers() {
-  setMsg("");
-  setErr("");
-  setSearching(true);
-  try {
-const url = `/admin/eligible-users?board_id=${boardID}&role=${encodeURIComponent(roleFilter)}&q=${encodeURIComponent(q)}`;
-    const res = await apiFetch(url);
-    setResults(res);
-  } catch (e: any) {
-    setErr(e.message || "Search failed");
-  } finally {
-    setSearching(false);
+  async function searchUsers() {
+    setMsg("");
+    setErr("");
+    setSearching(true);
+    try {
+      const url = `/admin/eligible-users?board_id=${boardID}&role=${encodeURIComponent(
+        roleFilter
+      )}&q=${encodeURIComponent(q)}`;
+      const res = await apiFetch(url);
+      setResults(res);
+    } catch (e: any) {
+      setErr(e.message || "Search failed");
+    } finally {
+      setSearching(false);
+    }
   }
-}
+
   async function addMember(userId: number) {
     setMsg("");
     setErr("");
@@ -166,57 +223,46 @@ const url = `/admin/eligible-users?board_id=${boardID}&role=${encodeURIComponent
     return `Board #${boardID} • ${members.length} member(s)`;
   }, [loading, boardID, members.length]);
 
-  function roleBadge(role: string) {
-    const r = (role || "").toLowerCase();
-    if (r === "admin") return { label: "admin", cls: "admRolePill admRoleAdmin", icon: <CrownIcon /> };
-    if (r === "supervisor")
-      return { label: "supervisor", cls: "admRolePill admRoleSup", icon: <UsersIcon /> };
-    return { label: "student", cls: "admRolePill admRoleStu", icon: <UsersIcon /> };
-  }
-
-  function boardRoleBadge(roleInBoard: string) {
-    const r = (roleInBoard || "").toLowerCase();
-    if (r === "owner") return { label: "owner", cls: "admBoardRolePill admBoardRoleOwner" };
-    return { label: r || "member", cls: "admBoardRolePill" };
-  }
-
   return (
     <AdminLayout
       active="supervisors"
       title="Board Members"
       subtitle={subtitle}
       right={
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button className="admGhostBtn" onClick={() => nav(-1)}>
+        <div className="flex items-center gap-2">
+          <button
+            className="h-10 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-900 transition hover:border-violet-200 hover:bg-violet-50"
+            onClick={() => nav(-1)}
+          >
             Back
           </button>
-          {/* <button className="admPrimaryBtn" onClick={loadMembers} disabled={loading}>
-            {loading ? "Refreshing..." : "Refresh"}
-          </button> */}
         </div>
       }
     >
-      <section className="admGrid">
-        {/* Left: Search + Results */}
-        <div className="admCol">
-          <section className="admCard">
-            <div className="admCardTitleRow" style={{ marginBottom: 0 }}>
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.25fr_0.95fr]">
+        {/* Left */}
+        <div className="grid gap-4">
+          <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="admCardTitle">Add members</div>
-                <div className="admMuted">Search by name or email, then add to this board.</div>
+                <div className="text-base font-black text-slate-900">Add members</div>
+                <div className="mt-1 text-sm font-semibold text-slate-500">
+                  Search by name or email, then add to this board.
+                </div>
               </div>
-              <span className="admPill">Add</span>
+              <Pill>Add</Pill>
             </div>
 
-            <div style={{ height: 12 }} />
+            <div className="h-3" />
 
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <div className="admSearch" style={{ minWidth: 0, flex: "1 1 320px" }}>
-                <span className="admSearchIcon" aria-hidden="true">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Search */}
+              <div className="flex h-11 flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 shadow-[0_10px_25px_rgba(15,23,42,0.06)] min-w-[220px]">
+                <span className="text-slate-500">
                   <SearchIcon />
                 </span>
                 <input
-                  className="admSearchInput"
+                  className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                   placeholder="Search ..."
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
@@ -229,12 +275,16 @@ const url = `/admin/eligible-users?board_id=${boardID}&role=${encodeURIComponent
                 />
               </div>
 
-              <button className="admPrimaryBtn" onClick={searchUsers} disabled={searching || q.trim().length < 2}>
+              <button
+                className="h-11 rounded-2xl bg-gradient-to-br from-violet-600 to-violet-400 px-4 text-sm font-black text-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={searchUsers}
+                disabled={searching || q.trim().length < 2}
+              >
                 {searching ? "Searching..." : "Search"}
               </button>
 
               <button
-                className="admSoftBtn"
+                className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-900 transition hover:bg-slate-50"
                 type="button"
                 onClick={() => {
                   setQ("");
@@ -246,326 +296,146 @@ const url = `/admin/eligible-users?board_id=${boardID}&role=${encodeURIComponent
               >
                 Clear
               </button>
-              <select
-  className="admInput"
-  value={roleFilter}
-  onChange={(e) => setRoleFilter(e.target.value as any)}
-  style={{ width: 170 }}
->
-  <option value="all">All roles</option>
-  <option value="student">Students</option>
-  <option value="supervisor">Supervisors</option>
-</select>
 
-              <div className="admHint" style={{ marginLeft: "auto" }}>
+              <select
+                className="h-11 w-[170px] rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-900 outline-none focus:ring-4 focus:ring-violet-200"
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value as any)}
+              >
+                <option value="all">All roles</option>
+                <option value="student">Students</option>
+                <option value="supervisor">Supervisors</option>
+              </select>
+
+              <div className="ml-auto whitespace-nowrap text-xs font-bold text-slate-500">
                 Tip: type at least 2 characters
               </div>
             </div>
 
-            {err && (
-              <div className="admAlert admAlertBad" style={{ marginTop: 12 }}>
+            {err ? (
+              <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
                 {err}
               </div>
-            )}
-            {msg && (
-              <div className="admAlert admAlertGood" style={{ marginTop: 12 }}>
+            ) : null}
+
+            {msg ? (
+              <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
                 {msg}
               </div>
-            )}
+            ) : null}
 
-            <div style={{ height: 14 }} />
+            <div className="h-4" />
 
-            <div className="admResultsHead">
-              <div style={{ fontWeight: 950 }}>Results</div>
-              <span className="admPill">{results.length}</span>
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-black text-slate-900">Results</div>
+              <Pill>{results.length}</Pill>
             </div>
 
-            <div style={{ height: 10 }} />
+            <div className="h-2.5" />
 
             {results.length === 0 ? (
-              <div className="admMuted" style={{ fontSize: 13 }}>
-                Search results will appear here.
-              </div>
+              <div className="text-sm font-semibold text-slate-500">Search results will appear here.</div>
             ) : (
-              <div className="admDirGrid">
-                {results.map((u) => {
-                  const rb = roleBadge(u.role);
-                  return (
-                    <div key={u.id} className="admRowCard">
-                      <div className="admDirLeft" style={{ minWidth: 0 }}>
-                        <div className="admAvatar" aria-hidden="true">
+              <div className="grid gap-2.5">
+                {results.map((u) => (
+                  <RowCard
+                    key={u.id}
+                    left={
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="grid h-10 w-10 flex-none place-items-center rounded-full border border-slate-200 bg-slate-50 font-black text-slate-800">
                           {initials(u.full_name)}
                         </div>
 
-                        <div className="admDirText">
-                          <div className="admDirName">{u.full_name}</div>
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-black text-slate-900">{u.full_name}</div>
 
-                          <div className="admMetaLine">
-                            <span className="admMetaInline" title={u.email}>
-                              <MailIcon /> {u.email}
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <span className="inline-flex min-w-0 items-center gap-2 truncate text-xs font-bold text-slate-500">
+                              <MailIcon /> <span className="truncate">{u.email}</span>
                             </span>
-                            <span className={rb.cls}>
-                              <span className="admRoleIcon" aria-hidden="true">
-                                {rb.icon}
-                              </span>
-                              {rb.label}
-                            </span>
+
+                            <RolePill role={u.role} />
                           </div>
                         </div>
                       </div>
-
-                      <div className="admRowActions">
-                        <button className="admOpenPill" onClick={() => addMember(u.id)} title="Add to board">
+                    }
+                    right={
+                      <>
+                        <button
+                          className="inline-flex h-8 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-3 text-xs font-black text-blue-700 hover:bg-blue-100"
+                          onClick={() => addMember(u.id)}
+                          title="Add to board"
+                        >
                           Add
                         </button>
-                        <span className="admChevron" aria-hidden="true">
+                        <span className="text-xl font-black text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-blue-400">
                           ›
                         </span>
-                      </div>
-                    </div>
-                  );
-                })}
+                      </>
+                    }
+                  />
+                ))}
               </div>
             )}
           </section>
         </div>
 
-        {/* Right: Current Members (NO stretched rows) */}
-        <div className="admCol">
-          <section className="admCard">
-            <div className="admCardTitleRow" style={{ marginBottom: 0 }}>
+        {/* Right */}
+        <div className="grid gap-4">
+          <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="admCardTitle">Current members</div>
-                <div className="admMuted">People who can access this board.</div>
+                <div className="text-base font-black text-slate-900">Current members</div>
+                <div className="mt-1 text-sm font-semibold text-slate-500">
+                  People who can access this board.
+                </div>
               </div>
-              <span className="admPill">{loading ? "…" : members.length}</span>
+              <Pill>{loading ? "…" : members.length}</Pill>
             </div>
 
-            <div style={{ height: 12 }} />
+            <div className="h-3" />
 
             {loading ? (
-              <div className="admMuted">Loading…</div>
+              <div className="text-sm font-semibold text-slate-500">Loading…</div>
             ) : members.length === 0 ? (
-              <div className="admMuted">No members yet.</div>
+              <div className="text-sm font-semibold text-slate-500">No members yet.</div>
             ) : (
-              <div className="admDirGrid">
-                {members.map((m) => {
-                  const rb = roleBadge(m.role);
-                  const brb = boardRoleBadge(m.role_in_board);
-
-                  return (
-                    <div key={m.user_id} className="admRowCard">
-                      <div className="admDirLeft" style={{ minWidth: 0 }}>
-                        <div className="admAvatar" aria-hidden="true">
+              <div className="grid gap-2.5">
+                {members.map((m) => (
+                  <RowCard
+                    key={m.user_id}
+                    left={
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="grid h-10 w-10 flex-none place-items-center rounded-full border border-slate-200 bg-slate-50 font-black text-slate-800">
                           {initials(m.full_name)}
                         </div>
 
-                        <div className="admDirText">
-                          <div className="admDirName">{m.full_name}</div>
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-black text-slate-900">{m.full_name}</div>
 
-                          <div className="admMetaLine">
-                            <span className="admMetaInline" title={m.email}>
-                              <MailIcon /> {m.email}
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <span className="inline-flex min-w-0 items-center gap-2 truncate text-xs font-bold text-slate-500">
+                              <MailIcon /> <span className="truncate">{m.email}</span>
                             </span>
 
-                            <span className={rb.cls}>
-                              <span className="admRoleIcon" aria-hidden="true">
-                                {rb.icon}
-                              </span>
-                              {rb.label}
-                            </span>
-
-                            <span className={brb.cls}>{brb.label}</span>
+                            <RolePill role={m.role} />
+                            <BoardRolePill roleInBoard={m.role_in_board} />
                           </div>
                         </div>
                       </div>
-
-                      <div className="admRowActions" aria-hidden="true">
-                        <span className="admChevron">›</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                    }
+                    right={
+                      <span className="text-xl font-black text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-blue-400">
+                        ›
+                      </span>
+                    }
+                  />
+                ))}
               </div>
             )}
           </section>
         </div>
       </section>
-
-      {/* Same “supervisors page” vibe + fixes the stretched row issue (no tables, no fixed heights). */}
-      <style>{`
-        .admDirGrid{ display:grid; gap:10px; }
-
-        .admAvatar{
-          width: 40px; height: 40px;
-          border-radius: 999px;
-          border: 1px solid rgba(15,23,42,0.14);
-          background: rgba(15,23,42,0.05);
-          display:grid;
-          place-items:center;
-          font-weight: 950;
-          color: rgba(15,23,42,0.85);
-          flex: 0 0 40px;
-        }
-
-        .admRowCard{
-          width: 100%;
-          border-radius: 16px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: #fff;
-          box-shadow: 0 10px 26px rgba(15,23,42,0.06);
-          padding: 12px;
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap: 12px;
-          text-align: left;
-          min-height: auto; /* IMPORTANT: no stretching */
-          height: auto;     /* IMPORTANT: no stretching */
-          transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
-        }
-        .admRowCard:hover{
-          transform: translateY(-1px);
-          border-color: rgba(59,130,246,0.18);
-          box-shadow: 0 16px 32px rgba(59,130,246,0.10);
-          background: rgba(59,130,246,0.02);
-        }
-
-        .admDirLeft{ display:flex; align-items:center; gap:12px; min-width:0; }
-        .admDirText{ min-width:0; display:grid; gap:6px; }
-        .admDirName{
-          font-weight: 950;
-          color: rgba(15,23,42,0.92);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .admMetaLine{
-          display:flex;
-          align-items:center;
-          gap: 10px;
-          flex-wrap: wrap;
-          min-width: 0;
-        }
-
-        .admMetaInline{
-          display:inline-flex;
-          align-items:center;
-          gap: 8px;
-          color: rgba(15,23,42,0.60);
-          font-size: 12px;
-          font-weight: 700;
-          min-width: 0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .admMetaInline svg{ display:block; opacity:.85; }
-
-        .admRowActions{
-          display:flex;
-          align-items:center;
-          gap: 10px;
-          flex: 0 0 auto;
-        }
-
-        .admOpenPill{
-          display:inline-flex;
-          align-items:center;
-          justify-content:center;
-          padding: 7px 12px;
-          border-radius: 999px;
-          border: 1px solid rgba(59,130,246,0.18);
-          background: rgba(59,130,246,0.06);
-          color: rgba(37,99,235,0.92);
-          font-weight: 900;
-          font-size: 12px;
-          cursor: pointer;
-        }
-
-        .admChevron{
-          font-size: 22px;
-          color: rgba(15,23,42,0.35);
-          transition: transform .14s ease, color .14s ease;
-        }
-        .admRowCard:hover .admChevron{
-          transform: translateX(2px);
-          color: rgba(37,99,235,0.75);
-        }
-
-        .admResultsHead{
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-        }
-
-        .admHint{
-          font-size: 12px;
-          color: rgba(15,23,42,0.55);
-          font-weight: 700;
-          white-space: nowrap;
-        }
-
-        /* Role pills */
-        .admRolePill{
-          display:inline-flex;
-          align-items:center;
-          gap: 8px;
-          padding: 6px 10px;
-          border-radius: 999px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: rgba(15,23,42,0.03);
-          color: rgba(15,23,42,0.70);
-          font-size: 12px;
-          font-weight: 800;
-        }
-        .admRoleIcon{ display:grid; place-items:center; }
-        .admRoleIcon svg{ display:block; }
-
-        .admRoleAdmin{
-          border-color: rgba(168,85,247,0.18);
-          background: rgba(168,85,247,0.06);
-          color: rgba(126,34,206,0.92);
-        }
-        .admRoleSup{
-          border-color: rgba(37,99,235,0.18);
-          background: rgba(37,99,235,0.06);
-          color: rgba(37,99,235,0.92);
-        }
-        .admRoleStu{
-          border-color: rgba(16,185,129,0.18);
-          background: rgba(16,185,129,0.06);
-          color: rgba(16,185,129,0.92);
-        }
-
-        /* Board role pill */
-        .admBoardRolePill{
-          display:inline-flex;
-          align-items:center;
-          padding: 6px 10px;
-          border-radius: 999px;
-          border: 1px solid rgba(15,23,42,0.10);
-          background: rgba(15,23,42,0.03);
-          color: rgba(15,23,42,0.70);
-          font-size: 12px;
-          font-weight: 800;
-          text-transform: lowercase;
-        }
-        .admBoardRoleOwner{
-          border-color: rgba(245,158,11,0.20);
-          background: rgba(245,158,11,0.07);
-          color: rgba(180,83,9,0.95);
-        }
-
-        /* Search icon compatibility */
-        .admSearchIcon svg{ display:block; }
-
-        @media (max-width: 900px){
-          .admRowCard{ flex-direction: column; align-items: stretch; }
-          .admRowActions{ justify-content: flex-end; }
-        }
-      `}</style>
     </AdminLayout>
   );
 }
