@@ -1,101 +1,57 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import placeholder from "../placeholder.png";
 
 const AUTH_URL = "https://learn.reboot01.com/api/auth/signin";
+const GRAPHQL_URL = "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
+
+const ROLE_QUERY = `
+query Event_user1 {
+  event_user {
+    userLogin
+    user {
+      email
+      id
+      login
+      role
+    }
+  }
+}
+`;
 
 function normalizeToken(raw: string) {
-  // API sometimes returns token like `"...."` (quoted string)
   return raw.trim().replace(/^"|"$/g, "");
 }
 
-// Base64URL decode helper for JWT payload
-function decodeJwtPayload(token: string): any | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length < 2) return null;
-
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-
-    const json = atob(padded);
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
-function getRoleFromPayload(payload: any): string | "" {
-  if (!payload || typeof payload !== "object") return "";
-
-  // Try common shapes
-  const direct = payload.role || payload.Role;
-  if (typeof direct === "string") return direct.toLowerCase();
-
-  const userRole = payload.user?.role || payload.user?.Role;
-  if (typeof userRole === "string") return userRole.toLowerCase();
-
-  const nestedRole = payload.profile?.role || payload.profile?.Role;
-  if (typeof nestedRole === "string") return nestedRole.toLowerCase();
-
-  return "";
+function norm(s: string) {
+  return (s || "").trim().toLowerCase();
 }
 
 export default function LoginPage() {
   const nav = useNavigate();
 
-  // keep variable name "email" to avoid changing your UI much
-  // but it is actually identifier (username or email)
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(""); // you might type login OR email here
   const [password, setPassword] = useState("");
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Auto-redirect if jwt exists and not expired
-  useEffect(() => {
-    const rawToken = localStorage.getItem("jwt");
-    const token = rawToken ? normalizeToken(rawToken) : "";
-
-    if (!token) return;
-
-    const payload = decodeJwtPayload(token);
-    if (!payload) return;
-
-    const currentTime = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp > currentTime) {
-      const role = getRoleFromPayload(payload);
-      if (role) localStorage.setItem("role", role);
-
-      if (role === "admin") nav("/admin", { replace: true });
-      else nav("/dashboard", { replace: true });
-    }
-  }, [nav]);
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const identifier = email.trim();
-    const pass = password;
-
-    if (!identifier) {
-      setError("Please enter your username or email.");
-      setLoading(false);
-      return;
-    }
-    if (!pass) {
-      setError("Please enter your password.");
+    if (!email || !password) {
+      setError("Please enter username/email and password");
       setLoading(false);
       return;
     }
 
     try {
-      const encoded = btoa(`${identifier}:${pass}`);
+      const encoded = btoa(`${email}:${password}`);
 
-      const res = await fetch(AUTH_URL, {
+      // 1) LOGIN → get JWT
+      const loginRes = await fetch(AUTH_URL, {
         method: "POST",
         headers: {
           Authorization: `Basic ${encoded}`,
@@ -103,32 +59,62 @@ export default function LoginPage() {
         },
       });
 
-      if (!res.ok) {
-        setError("Invalid login. Please try again.");
+      if (!loginRes.ok) {
+        setError("Invalid login");
         return;
       }
 
-      const raw = await res.text();
-      const token = normalizeToken(raw);
+      const rawToken = await loginRes.text();
+      const token = normalizeToken(rawToken);
 
-      // Store JWT
       localStorage.setItem("jwt", token);
 
-      // Optional: derive role from token payload if present
-      const payload = decodeJwtPayload(token);
-      const role = getRoleFromPayload(payload);
+      // 2) CALL GRAPHQL → get users list (event_user)
+      const gqlRes = await fetch(GRAPHQL_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: ROLE_QUERY }),
+      });
 
-      if (role) {
-        localStorage.setItem("role", role);
-        if (role === "admin") nav("/admin");
-        else nav("/dashboard");
-      } else {
-        // If token doesn't contain role, choose a default route
-        // (change this if you prefer /dashboard)
-        nav("/admin");
+      if (!gqlRes.ok) {
+        setError("Failed to fetch user role");
+        return;
       }
-    } catch (err: any) {
-      setError(err?.message || "Something went wrong. Please try again later.");
+
+      const gqlData = await gqlRes.json();
+      const rows: any[] = gqlData?.data?.event_user ?? [];
+
+      const input = norm(email);
+
+      // 3) FIND THE MATCHING USER (IMPORTANT FIX ✅)
+      const match = rows.find((r) => {
+        const user = r?.user || {};
+        return (
+          norm(user.email) === input ||
+          norm(user.login) === input ||
+          norm(r?.userLogin) === input
+        );
+      });
+
+      const role = norm(match?.user?.role || "");
+
+      if (!role) {
+        setError("Logged in, but could not find your role in GraphQL results.");
+        return;
+      }
+
+      // 4) SAVE ROLE (this will now be YOUR role ✅)
+      localStorage.setItem("role", role);
+
+      // redirect
+      if (role === "admin") nav("/admin");
+      else nav("/dashboard");
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -137,7 +123,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen grid place-items-center p-5 bg-white">
       <div className="w-full max-w-[980px] h-auto lg:h-[560px] grid grid-cols-1 lg:grid-cols-2 rounded-[28px] overflow-hidden bg-white shadow-[0_40px_100px_rgba(0,0,0,0.25)]">
-        {/* LEFT IMAGE */}
         <div
           className="relative h-[220px] lg:h-auto bg-center bg-cover"
           style={{ backgroundImage: `url(${placeholder})` }}
@@ -148,7 +133,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* RIGHT FORM */}
         <div className="grid place-items-center p-10">
           <div className="w-full max-w-[340px]">
             <h1 className="text-[28px] mb-1.5 text-[#222]">Sign In</h1>

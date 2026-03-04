@@ -9,6 +9,9 @@ import BoardPage from "./pages/BoardPage";
 import AdminBoardsPage from "./pages/AdminBoardsPage";
 import AssignPage from "./pages/AssignPage";
 
+// ✅ change this to your real dashboard page
+// import DashboardPage from "./pages/DashboardPage";
+
 function normalizeToken(raw: string) {
   return raw.trim().replace(/^"|"$/g, "");
 }
@@ -38,84 +41,129 @@ function hasValidJwt(): boolean {
   if (!payload) return false;
 
   const now = Math.floor(Date.now() / 1000);
-  if (!payload.exp) return true; // if exp missing, allow (dev)
+  if (!payload.exp) return true; // dev
   return payload.exp > now;
 }
 
+function getRole(): string {
+  return (localStorage.getItem("role") || "").trim().toLowerCase();
+}
+
+// ✅ must be logged in (JWT)
 function RequireAuth({ children }: { children: JSX.Element }) {
   if (!hasValidJwt()) return <Navigate to="/login" replace />;
   return children;
 }
 
+// ✅ must be admin
+function RequireAdmin({ children }: { children: JSX.Element }) {
+  if (!hasValidJwt()) return <Navigate to="/login" replace />;
+
+  const role = getRole();
+  if (role !== "admin") return <Navigate to="/dashboard" replace />;
+
+  return children;
+}
+
 export default function App() {
+  const role = getRole();
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
+      {/* ✅ Normal dashboard route (non-admin users land here) */}
       <Route
-        path="/admin/boards/:boardId"
+        path="/dashboard"
         element={
           <RequireAuth>
-            <BoardPage />
+            {/* Replace this with your actual dashboard component */}
+            <div className="p-6">Dashboard (role: {role || "unknown"})</div>
           </RequireAuth>
         }
       />
 
-      <Route
-        path="/admin/assign"
-        element={
-          <RequireAuth>
-            <AssignPage />
-          </RequireAuth>
-        }
-      />
-
+      {/* ✅ Admin routes are protected by RequireAdmin */}
       <Route
         path="/admin"
         element={
-          <RequireAuth>
+          <RequireAdmin>
             <AdminDashboard />
-          </RequireAuth>
+          </RequireAdmin>
         }
       />
 
       <Route
         path="/admin/supervisors"
         element={
-          <RequireAuth>
+          <RequireAdmin>
             <SupervisorsPage />
-          </RequireAuth>
+          </RequireAdmin>
         }
       />
 
       <Route
         path="/admin/files/:fileId"
         element={
-          <RequireAuth>
+          <RequireAdmin>
             <SupervisorFilePage />
-          </RequireAuth>
-        }
-      />
-
-      <Route
-        path="/admin/boards/:boardId/members"
-        element={
-          <RequireAuth>
-            <BoardMembersPage />
-          </RequireAuth>
+          </RequireAdmin>
         }
       />
 
       <Route
         path="/admin/boards"
         element={
-          <RequireAuth>
+          <RequireAdmin>
             <AdminBoardsPage />
-          </RequireAuth>
+          </RequireAdmin>
         }
       />
 
-      <Route path="*" element={<Navigate to="/admin" replace />} />
+      <Route
+        path="/admin/boards/:boardId"
+        element={
+          <RequireAdmin>
+            <BoardPage />
+          </RequireAdmin>
+        }
+      />
+
+      <Route
+        path="/admin/boards/:boardId/members"
+        element={
+          <RequireAdmin>
+            <BoardMembersPage />
+          </RequireAdmin>
+        }
+      />
+
+      <Route
+        path="/admin/assign"
+        element={
+          <RequireAdmin>
+            <AssignPage />
+          </RequireAdmin>
+        }
+      />
+
+      {/* ✅ Default redirect:
+          - if not logged in → /login
+          - if admin → /admin
+          - else → /dashboard
+      */}
+      <Route
+        path="*"
+        element={
+          !hasValidJwt() ? (
+            <Navigate to="/login" replace />
+          ) : getRole() === "admin" ? (
+            <Navigate to="/admin" replace />
+          ) : (
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
     </Routes>
   );
 }
