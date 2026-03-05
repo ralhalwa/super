@@ -53,16 +53,67 @@ function RoleIcon({ role }: { role: Role }) {
   );
 }
 
+const GQL_URL = "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
+
+async function fetchRebootUserByLogin(login: string) {
+  const jwt = (localStorage.getItem("jwt") || "").trim();
+  if (!jwt) throw new Error("Missing Reboot JWT in localStorage (jwt).");
+
+  const query = `
+    query Event_user1($login: String!) {
+      event_user(where: { userLogin: { _eq: $login } }, limit: 1) {
+        userLogin
+        user {
+          email
+          firstName
+          lastName
+        }
+      }
+    }
+  `;
+
+  const res = await fetch(GQL_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables: { login } }),
+  });
+
+  const json = await res.json();
+  const row = json?.data?.event_user?.[0];
+  const u = row?.user;
+
+  if (!row || !u?.email) return null;
+
+  const fullName = `${u.firstName || ""} ${u.lastName || ""}`.trim() || row.userLogin;
+
+  return {
+    login: row.userLogin,
+    email: u.email,
+    full_name: fullName,
+  };
+}
+
 export default function AdminDashboard() {
   const nav = useNavigate();
 
+  // ✅ Only field admin types
+  const [nickname, setNickname] = useState("");
+
+  // auto-filled from Reboot
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+
   const [role, setRole] = useState<Role>("supervisor");
-  const [password, setPassword] = useState("");
 
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+
+  const [checking, setChecking] = useState(false);
+  const [exists, setExists] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
@@ -90,6 +141,64 @@ export default function AdminDashboard() {
     loadDashboardStats();
   }, []);
 
+  // ✅ When nickname changes -> fetch from Reboot -> check exists in DB
+  useEffect(() => {
+    const login = nickname.trim();
+    if (!login) {
+      setFullName("");
+      setEmail("");
+      setExists(false);
+      setErr("");
+      setMsg("");
+      return;
+    }
+
+    let alive = true;
+
+    async function run() {
+      setChecking(true);
+      setErr("");
+      setMsg("");
+      setExists(false);
+
+      try {
+        const u = await fetchRebootUserByLogin(login);
+        if (!alive) return;
+
+        if (!u) {
+          setErr("User not found in Reboot API.");
+          setFullName("");
+          setEmail("");
+          return;
+        }
+
+        setFullName(u.full_name);
+        setEmail(u.email);
+
+        const res = await apiFetch(`/admin/users/exists?email=${encodeURIComponent(u.email)}`);
+        if (!alive) return;
+
+        if (res?.exists) {
+          setExists(true);
+          setMsg("User already added.");
+        } else {
+          setExists(false);
+        }
+      } catch (e: any) {
+        setErr(e?.message || "Failed to fetch user.");
+        setFullName("");
+        setEmail("");
+      } finally {
+        setChecking(false);
+      }
+    }
+
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [nickname]);
+
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
@@ -97,15 +206,27 @@ export default function AdminDashboard() {
     setLoading(true);
 
     try {
-      await apiFetch("/admin/users", {
+      if (!nickname.trim()) throw new Error("Enter nickname/login first.");
+      if (!email) throw new Error("User not found in Reboot API.");
+      if (exists) throw new Error("User already added.");
+
+      const res = await apiFetch("/admin/users", {
         method: "POST",
-        body: JSON.stringify({ full_name: fullName, email, password, role }),
+        body: JSON.stringify({
+          full_name: fullName, // from firstName+lastName
+          email,               // from Reboot
+          password: "",        // ✅ backend will generate
+          role,
+        }),
       });
 
-      setMsg(`${role === "supervisor" ? "Supervisor" : "Student"} created successfully.`);
+      const temp = res?.temp_password ? ` Temp password: ${res.temp_password}` : "";
+      setMsg(`${role === "supervisor" ? "Supervisor" : "Student"} created successfully.${temp}`);
+
+      setNickname("");
       setFullName("");
       setEmail("");
-      setPassword("");
+      setExists(false);
 
       await loadDashboardStats();
     } catch (e: any) {
@@ -118,20 +239,21 @@ export default function AdminDashboard() {
   const totalSupervisors = supervisors.length;
 
   const canSubmit =
-    fullName.trim().length >= 2 &&
+    nickname.trim().length >= 2 &&
     email.trim().includes("@") &&
-    password.trim().length >= 4 &&
+    !exists &&
+    !checking &&
     !loading;
 
   const initials = useMemo(() => {
-    const n = fullName.trim();
+    const n = (fullName || nickname).trim();
     if (!n) return role === "supervisor" ? "SU" : "ST";
     return n
       .split(/\s+/)
       .slice(0, 2)
       .map((p) => p[0]?.toUpperCase() ?? "")
       .join("");
-  }, [fullName, role]);
+  }, [fullName, nickname, role]);
 
   return (
     <AdminLayout
@@ -197,7 +319,7 @@ export default function AdminDashboard() {
             <div>
               <div className="text-base font-black text-slate-900">Create user</div>
               <div className="mt-1 text-[13px] text-slate-500">
-                Pick a role first, then add details.
+                Type nickname/login, we’ll auto-fill from Reboot.
               </div>
             </div>
 
@@ -205,11 +327,12 @@ export default function AdminDashboard() {
               className="h-10 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-800 hover:border-violet-200 hover:bg-violet-50"
               type="button"
               onClick={() => {
+                setNickname("");
                 setFullName("");
                 setEmail("");
-                setPassword("");
                 setErr("");
                 setMsg("");
+                setExists(false);
               }}
             >
               Reset
@@ -232,7 +355,6 @@ export default function AdminDashboard() {
               <span className="grid h-[42px] w-[42px] place-items-center rounded-[14px] border border-slate-200 bg-slate-50 text-slate-800">
                 <RoleIcon role="supervisor" />
               </span>
-
               <span className="grid">
                 <span className="leading-tight font-black text-slate-900">Supervisor</span>
                 <span className="mt-0.5 text-xs font-bold text-slate-500">
@@ -255,7 +377,6 @@ export default function AdminDashboard() {
               <span className="grid h-[42px] w-[42px] place-items-center rounded-[14px] border border-slate-200 bg-slate-50 text-slate-800">
                 <RoleIcon role="student" />
               </span>
-
               <span className="grid">
                 <span className="leading-tight font-black text-slate-900">Student</span>
                 <span className="mt-0.5 text-xs font-bold text-slate-500">
@@ -266,80 +387,64 @@ export default function AdminDashboard() {
           </div>
 
           <form onSubmit={createUser} className="mt-3.5 grid gap-3">
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <label className="grid gap-1.5">
-                <span className="text-xs font-extrabold text-slate-500">Full name</span>
-                <input
-                  className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
-                  placeholder="e.g. Reem Alhalwachi"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  autoComplete="name"
-                />
-                <span className="text-xs font-bold text-slate-500">Minimum 2 characters.</span>
-              </label>
+            {/* ✅ Only nickname input */}
+            <label className="grid gap-1.5">
+              <span className="text-xs font-extrabold text-slate-500">Nickname / Login</span>
+              <input
+                className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                placeholder="e.g. yalsari"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                autoComplete="off"
+              />
+              {checking ? (
+                <span className="text-xs font-bold text-slate-500">Checking Reboot API…</span>
+              ) : (
+                <span className="text-xs font-bold text-slate-500">We’ll auto-fill name + email.</span>
+              )}
+            </label>
 
-              <label className="grid gap-1.5">
-                <span className="text-xs font-extrabold text-slate-500">Email</span>
-                <input
-                  className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
-                <span className="text-xs font-bold text-slate-500">Must include “@”.</span>
-              </label>
-            </div>
+            {/* Preview (same card you had) */}
+            <div className="grid gap-1.5">
+              <span className="text-xs font-extrabold text-slate-500">Preview</span>
 
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <label className="grid gap-1.5">
-                <span className="text-xs font-extrabold text-slate-500">Temporary password</span>
-                <input
-                  className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
-                  placeholder="Set a temp password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-                <span className="text-xs font-bold text-slate-500">Minimum 4 characters.</span>
-              </label>
-
-              <div className="grid gap-1.5">
-                <span className="text-xs font-extrabold text-slate-500">Preview</span>
-
-                <div className="flex items-center gap-3 rounded-[16px] border border-slate-200 bg-slate-50 p-3">
-                  <div className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white font-black text-slate-800">
-                    {initials}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="truncate font-black text-slate-900">
-                      {fullName.trim() || (role === "supervisor" ? "New Supervisor" : "New Student")}
-                    </div>
-
-                    <div className="mt-1.5 flex min-w-0 items-center gap-2">
-                      <span
-                        className={[
-                          "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-black",
-                          role === "supervisor"
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-700",
-                        ].join(" ")}
-                      >
-                        <RoleIcon role={role} /> {role}
-                      </span>
-
-                      <span className="min-w-0 truncate text-xs font-bold text-slate-500">
-                        {email.trim() || "email@example.com"}
-                      </span>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-3 rounded-[16px] border border-slate-200 bg-slate-50 p-3">
+                <div className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white font-black text-slate-800">
+                  {initials}
                 </div>
 
-                <div className="mt-2 text-[13px] text-slate-500">
-                  Tip: Use the “Supervisors” button above to open workspaces after creating.
+                <div className="min-w-0">
+                  <div className="truncate font-black text-slate-900">
+                    {fullName || (nickname.trim() ? nickname.trim() : role === "supervisor" ? "New Supervisor" : "New Student")}
+                  </div>
+
+                  <div className="mt-1.5 flex min-w-0 items-center gap-2">
+                    <span
+                      className={[
+                        "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-black",
+                        role === "supervisor"
+                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                          : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                      ].join(" ")}
+                    >
+                      <RoleIcon role={role} /> {role}
+                    </span>
+
+                    <span className="min-w-0 truncate text-xs font-bold text-slate-500">
+                      {email || "email@example.com"}
+                    </span>
+                  </div>
+
+                  {exists && (
+                    <div className="mt-2 text-xs font-extrabold text-amber-700">
+                      Already added in TaskFlow.
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              <div className="mt-2 text-[13px] text-slate-500">
+                Tip: Use the “Supervisors” button above to open workspaces after creating.
               </div>
             </div>
 

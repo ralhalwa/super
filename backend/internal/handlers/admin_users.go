@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	// "crypto/rand"
+	// "encoding/base64"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,6 +21,9 @@ type createUserReq struct {
 	Password string `json:"password"`
 	Role     string `json:"role"` // supervisor|student
 }
+func genTempPassword() (string, error) {
+return "1111",nil
+}
 
 func (a *API) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	var req createUserReq
@@ -32,8 +37,8 @@ func (a *API) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	req.Password = strings.TrimSpace(req.Password)
 	req.Role = strings.TrimSpace(strings.ToLower(req.Role))
 
-	if req.FullName == "" || req.Email == "" || req.Password == "" {
-		writeErr(w, http.StatusBadRequest, "full_name, email, password required")
+	if req.FullName == "" || req.Email == "" {
+		writeErr(w, http.StatusBadRequest, "full_name and email required")
 		return
 	}
 	if req.Role != "supervisor" && req.Role != "student" {
@@ -41,7 +46,20 @@ func (a *API) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	passHash, err := auth.HashPassword(req.Password)
+	// ✅ password optional now (DB still needs password_hash)
+	tempPass := ""
+	passToHash := req.Password
+	if passToHash == "" {
+		p, err := genTempPassword()
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "failed to generate temp password")
+			return
+		}
+		tempPass = p
+		passToHash = p
+	}
+
+	passHash, err := auth.HashPassword(passToHash)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "password hash error")
 		return
@@ -61,11 +79,18 @@ func (a *API) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusCreated, map[string]any{
+	resp := map[string]any{
 		"id":   userID,
 		"role": req.Role,
-	})
+	}
+	// ✅ return generated password so admin can share it if needed
+	if tempPass != "" {
+		resp["temp_password"] = tempPass
+	}
+
+	writeJSON(w, http.StatusCreated, resp)
 }
+
 
 func (a *API) AdminListSupervisors(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.conn.Query(`
@@ -372,4 +397,19 @@ func (a *API) AdminEligibleUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, out)
+}
+func (a *API) AdminUserExists(w http.ResponseWriter, r *http.Request) {
+	email := strings.TrimSpace(r.URL.Query().Get("email"))
+	if email == "" {
+		writeErr(w, http.StatusBadRequest, "email required")
+		return
+	}
+
+	exists, err := db.UserExistsByEmail(a.conn, email) // ✅ FIX: a.conn not api.Conn
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "db error")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"exists": exists})
 }

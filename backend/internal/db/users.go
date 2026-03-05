@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"strings"
 
 	"taskflow/internal/models"
@@ -105,4 +106,24 @@ func SearchUsersStudentsAndSupervisors(conn DBTX, q string) ([]models.User, erro
 		out = append(out, u)
 	}
 	return out, nil
+}
+func UserExistsByEmail(conn DBTX, email string) (bool, error) {
+
+	var id int64
+
+	err := conn.QueryRow(`
+		SELECT id FROM users
+		WHERE LOWER(email)=LOWER(?)
+		LIMIT 1
+	`, email).Scan(&id)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return id > 0, nil
 }
