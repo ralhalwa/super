@@ -3,7 +3,14 @@ import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
 // import "../admin.css";
 
-type User = { id: number; full_name: string; email: string; role: string };
+type User = {
+  id: number;
+  full_name: string;
+  nickname: string;
+  email: string;
+  role: string;
+};
+
 type Role = "supervisor" | "student";
 
 function RoleIcon({ role }: { role: Role }) {
@@ -55,6 +62,16 @@ function initialsOf(name: string) {
 
 function cn(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
+}
+
+function safeLower(v: unknown) {
+  return String(v ?? "").toLowerCase();
+}
+
+function displayNickname(nickname: string) {
+  const n = (nickname || "").trim();
+  if (!n) return "";
+  return n.startsWith("@") ? n : `@${n}`;
 }
 
 export default function AssignPage() {
@@ -120,21 +137,31 @@ export default function AssignPage() {
 
   const assignedIds = useMemo(() => new Set(assigned.map((a) => a.id)), [assigned]);
 
+  // ✅ Search includes nickname
   const visibleSupervisors = useMemo(() => {
     const q = supQ.trim().toLowerCase();
     return supervisors.filter((s) => {
       if (!q) return true;
-      return s.full_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+      return (
+        safeLower(s.full_name).includes(q) ||
+        safeLower(s.email).includes(q) ||
+        safeLower(s.nickname).includes(q)
+      );
     });
   }, [supervisors, supQ]);
 
+  // ✅ Search includes nickname
   const visibleStudents = useMemo(() => {
     const q = stuQ.trim().toLowerCase();
     return students
       .filter((s) => !assignedIds.has(s.id))
       .filter((s) => {
         if (!q) return true;
-        return s.full_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+        return (
+          safeLower(s.full_name).includes(q) ||
+          safeLower(s.email).includes(q) ||
+          safeLower(s.nickname).includes(q)
+        );
       });
   }, [students, assignedIds, stuQ]);
 
@@ -216,20 +243,24 @@ export default function AssignPage() {
       title="Assign students"
       subtitle="Select a supervisor, then assign multiple students at once."
       right={
-        <button
-          className={cn(
-            "h-11 rounded-[14px] px-4 font-black text-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]",
-            "bg-gradient-to-br from-[#6d5efc] to-[#9a8cff]",
-            "disabled:cursor-not-allowed disabled:opacity-70"
-          )}
-          disabled={addDisabled}
-          onClick={addSelected}
-        >
-          {saving ? "Adding..." : `Add Selected (${selectedStuIds.size})`}
-        </button>
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-2 overflow-hidden">
+          <button
+            className={cn(
+              "h-10 md:h-11 rounded-[14px] px-3 md:px-4 text-[12.5px] md:text-[13px] font-black text-white",
+              "shadow-[0_18px_45px_rgba(15,23,42,0.08)]",
+              "bg-gradient-to-br from-[#6d5efc] to-[#9a8cff]",
+              "disabled:cursor-not-allowed disabled:opacity-70",
+              "max-w-full"
+            )}
+            disabled={addDisabled}
+            onClick={addSelected}
+          >
+            {saving ? "Adding..." : `Add Selected (${selectedStuIds.size})`}
+          </button>
+        </div>
       }
     >
-      <div className="w-full">
+      <div className="w-full max-w-full overflow-x-hidden">
         {err && (
           <div className="mb-3 rounded-[14px] border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-slate-800">
             {err}
@@ -241,21 +272,19 @@ export default function AssignPage() {
           </div>
         )}
 
-        {/* 3 columns, fixed viewport height; each column scrolls */}
-        <div className="grid h-[calc(100vh-220px)] grid-cols-1 gap-3 xl:grid-cols-[360px_1fr_1fr]">
+        <div className="grid min-w-0 h-[calc(100vh-220px)] grid-cols-1 gap-3 xl:grid-cols-[360px_minmax(0,1fr)_minmax(0,1fr)]">
           {/* ============== Column 1: Supervisors ============== */}
-<section className="min-h-0 flex flex-col rounded-[18px] border border-slate-200/70 bg-white/75 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur">            <div className="mb-2 flex items-start justify-between gap-2">
+          <section className="min-w-0 min-h-0 flex flex-col rounded-[18px] border border-slate-200/70 bg-white/75 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur">
+            <div className="mb-2 flex items-start justify-between gap-2">
               <div>
                 <div className="text-[16px] font-black text-slate-900">Supervisors</div>
-                <div className="mt-1 text-[12px] font-bold text-slate-500">
-                  {supervisors.length} total
-                </div>
+                <div className="mt-1 text-[12px] font-bold text-slate-500">{supervisors.length} total</div>
               </div>
             </div>
 
             <input
               className="mb-2 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
-              placeholder="Search supervisors by name/email..."
+              placeholder="Search supervisors by name/email/nickname..."
               value={supQ}
               onChange={(e) => setSupQ(e.target.value)}
             />
@@ -267,11 +296,14 @@ export default function AssignPage() {
             ) : (
               <div className="mb-2 rounded-[14px] border border-[#6d5efc]/25 bg-[#6d5efc]/10 px-3 py-2 text-[13px] font-extrabold text-slate-700">
                 Selected: <b>{selectedSup.full_name}</b>
+                {selectedSup.nickname ? (
+                  <span className="ml-2 text-[#6d5efc]">{displayNickname(selectedSup.nickname)}</span>
+                ) : null}
               </div>
             )}
 
-<div className="mt-2 flex-1 min-h-0 space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
-                {visibleSupervisors.map((s) => {
+            <div className="mt-2 flex-1 min-h-0 min-w-0 space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
+              {visibleSupervisors.map((s) => {
                 const active = selectedSup?.id === s.id;
                 return (
                   <button
@@ -292,9 +324,15 @@ export default function AssignPage() {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[14px] font-black text-slate-900">
-                        {s.full_name}
-                      </div>
+                      <div className="truncate text-[14px] font-black text-slate-900">{s.full_name}</div>
+
+                      {/* ✅ nickname line */}
+                      {s.nickname ? (
+                        <div className="mt-0.5 truncate text-[12px] font-extrabold text-[#6d5efc]">
+                          {displayNickname(s.nickname)}
+                        </div>
+                      ) : null}
+
                       <div className="mt-1 flex min-w-0 items-center gap-2">
                         <span className="inline-flex h-7 flex-none items-center gap-2 rounded-full border border-[#6d5efc]/25 bg-[#6d5efc]/10 px-2.5 text-[12px] font-black text-slate-900">
                           <span className="text-slate-900">
@@ -302,9 +340,7 @@ export default function AssignPage() {
                           </span>
                           supervisor
                         </span>
-                        <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">
-                          {s.email}
-                        </span>
+                        <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">{s.email}</span>
                       </div>
                     </div>
                   </button>
@@ -320,22 +356,21 @@ export default function AssignPage() {
           </section>
 
           {/* ============== Column 2: Available Students ============== */}
-<section className="min-h-0 flex flex-col rounded-[18px] border border-slate-200/70 bg-white/75 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur">            <div className="mb-2 flex items-start justify-between gap-2">
-              <div>
+          <section className="min-w-0 min-h-0 flex flex-col rounded-[18px] border border-slate-200/70 bg-white/75 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur">
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="min-w-0">
                 <div className="text-[16px] font-black text-slate-900">Available students</div>
-                <div className="mt-1 text-[12px] font-bold text-slate-500">
-                  Select students, then Add Selected.
-                </div>
+                <div className="mt-1 text-[12px] font-bold text-slate-500">Select students, then Add Selected.</div>
               </div>
 
-              <div className="flex items-center gap-2">
-          <button
-  className={cn(
-    "h-9 rounded-[10px] border px-4 text-[12.5px] font-semibold whitespace-nowrap",
-    "bg-white/90 text-slate-800 shadow-sm",
-    "hover:border-[#6d5efc]/25 hover:shadow-[0_10px_18px_rgba(15,23,42,0.08)]",
-    "disabled:cursor-not-allowed disabled:opacity-60"
-  )}
+              <div className="flex flex-none items-center gap-2">
+                <button
+                  className={cn(
+                    "h-9 rounded-[10px] border px-4 text-[12.5px] font-semibold whitespace-nowrap",
+                    "bg-white/90 text-slate-800 shadow-sm",
+                    "hover:border-[#6d5efc]/25 hover:shadow-[0_10px_18px_rgba(15,23,42,0.08)]",
+                    "disabled:cursor-not-allowed disabled:opacity-60"
+                  )}
                   type="button"
                   onClick={selectAllVisible}
                   disabled={!selectedSup || visibleStudents.length === 0}
@@ -364,7 +399,7 @@ export default function AssignPage() {
                 "focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10",
                 !selectedSup && "cursor-not-allowed opacity-60"
               )}
-              placeholder="Search students by name/email..."
+              placeholder="Search students by name/email/nickname..."
               value={stuQ}
               onChange={(e) => setStuQ(e.target.value)}
               disabled={!selectedSup}
@@ -375,8 +410,8 @@ export default function AssignPage() {
                 Select a supervisor first to enable student selection.
               </div>
             ) : (
-<div className="mt-2 flex-1 min-h-0 space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">    
-              {visibleStudents.map((s) => {
+              <div className="mt-2 flex-1 min-h-0 min-w-0 space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                {visibleStudents.map((s) => {
                   const checked = selectedStuIds.has(s.id);
                   return (
                     <label
@@ -388,21 +423,22 @@ export default function AssignPage() {
                           : "border-slate-200/70 bg-white/80 hover:-translate-y-[1px] hover:border-slate-300/70 hover:shadow-[0_10px_18px_rgba(15,23,42,0.08)]"
                       )}
                     >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleStudent(s.id)}
-                        className="h-4 w-4"
-                      />
+                      <input type="checkbox" checked={checked} onChange={() => toggleStudent(s.id)} className="h-4 w-4" />
 
                       <div className="grid h-10 w-10 flex-none place-items-center rounded-full border border-slate-200 bg-slate-50 font-black text-slate-800">
                         {initialsOf(s.full_name)}
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[14px] font-black text-slate-900">
-                          {s.full_name}
-                        </div>
+                        <div className="truncate text-[14px] font-black text-slate-900">{s.full_name}</div>
+
+                        {/* ✅ nickname line */}
+                        {s.nickname ? (
+                          <div className="mt-0.5 truncate text-[12px] font-extrabold text-[#6d5efc]">
+                            {displayNickname(s.nickname)}
+                          </div>
+                        ) : null}
+
                         <div className="mt-1 flex min-w-0 items-center gap-2">
                           <span className="inline-flex h-7 flex-none items-center gap-2 rounded-full border border-emerald-300/60 bg-emerald-50 px-2.5 text-[12px] font-black text-slate-900">
                             <span className="text-slate-900">
@@ -410,9 +446,7 @@ export default function AssignPage() {
                             </span>
                             student
                           </span>
-                          <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">
-                            {s.email}
-                          </span>
+                          <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">{s.email}</span>
                         </div>
                       </div>
                     </label>
@@ -429,16 +463,17 @@ export default function AssignPage() {
           </section>
 
           {/* ============== Column 3: Assigned Students ============== */}
-<section className="min-h-0 flex flex-col rounded-[18px] border border-slate-200/70 bg-white/75 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur">            <div className="mb-2 flex items-start justify-between gap-2">
-              <div>
+          <section className="min-w-0 min-h-0 flex flex-col rounded-[18px] border border-slate-200/70 bg-white/75 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur">
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="min-w-0">
                 <div className="text-[16px] font-black text-slate-900">Assigned</div>
-                <div className="mt-1 text-[12px] font-bold text-slate-500">
+                <div className="mt-1 truncate text-[12px] font-bold text-slate-500">
                   {selectedSup ? `Assigned to ${selectedSup.full_name}` : "Select supervisor to view assigned"}
                 </div>
               </div>
 
               {selectedSup && (
-                <span className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-[12px] font-black text-slate-600">
+                <span className="inline-flex h-7 flex-none items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-[12px] font-black text-slate-600">
                   {assigned.length}
                 </span>
               )}
@@ -453,11 +488,11 @@ export default function AssignPage() {
                 Loading...
               </div>
             ) : (
-<div className="mt-2 flex-1 min-h-0 space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
-                  {assigned.map((s) => (
+              <div className="mt-2 flex-1 min-h-0 min-w-0 space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                {assigned.map((s) => (
                   <div
                     key={s.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white/80 px-3 py-2.5"
+                    className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white/80 px-3 py-2.5"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <div className="grid h-10 w-10 flex-none place-items-center rounded-full border border-slate-200 bg-slate-50 font-black text-slate-800">
@@ -465,9 +500,15 @@ export default function AssignPage() {
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[14px] font-black text-slate-900">
-                          {s.full_name}
-                        </div>
+                        <div className="truncate text-[14px] font-black text-slate-900">{s.full_name}</div>
+
+                        {/* ✅ nickname line */}
+                        {s.nickname ? (
+                          <div className="mt-0.5 truncate text-[12px] font-extrabold text-[#6d5efc]">
+                            {displayNickname(s.nickname)}
+                          </div>
+                        ) : null}
+
                         <div className="mt-1 flex min-w-0 items-center gap-2">
                           <span className="inline-flex h-7 flex-none items-center gap-2 rounded-full border border-emerald-300/60 bg-emerald-50 px-2.5 text-[12px] font-black text-slate-900">
                             <span className="text-slate-900">
@@ -475,16 +516,14 @@ export default function AssignPage() {
                             </span>
                             student
                           </span>
-                          <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">
-                            {s.email}
-                          </span>
+                          <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">{s.email}</span>
                         </div>
                       </div>
                     </div>
 
                     <button
                       className={cn(
-                        "h-9 rounded-[10px] border px-3 text-[12.5px] font-black",
+                        "h-9 flex-none rounded-[10px] border px-3 text-[12.5px] font-black",
                         "border-red-300/60 bg-red-50 text-red-800",
                         "hover:border-red-400/70 hover:shadow-[0_10px_18px_rgba(239,68,68,0.10)]"
                       )}

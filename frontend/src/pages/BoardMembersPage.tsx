@@ -6,6 +6,7 @@ import { apiFetch } from "../lib/api";
 type Member = {
   user_id: number;
   full_name: string;
+  nickname?: string;
   email: string;
   role: string; // admin/supervisor/student
   role_in_board: string;
@@ -15,6 +16,7 @@ type Member = {
 type User = {
   id: number;
   full_name: string;
+  nickname?: string;
   email: string;
   role: string;
 };
@@ -24,7 +26,14 @@ function initials(name: string) {
   const v = parts.map((p) => p[0]?.toUpperCase() ?? "").join("");
   return v || "U";
 }
+function displayNick(nickname?: string, email?: string) {
+  const n = (nickname || "").trim();
+  if (n) return n;
 
+  const e = (email || "").trim();
+  if (!e) return "";
+  return e.split("@")[0]; // fallback: before @
+}
 function SearchIcon({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -347,15 +356,19 @@ export default function BoardMembersPage() {
                         </div>
 
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-black text-slate-900">{u.full_name}</div>
+                        <div className="truncate text-sm font-black text-slate-900">{u.full_name}</div>
 
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <span className="inline-flex min-w-0 items-center gap-2 truncate text-xs font-bold text-slate-500">
-                              <MailIcon /> <span className="truncate">{u.email}</span>
-                            </span>
+<div className="mt-0.5 truncate text-xs font-extrabold text-slate-500">
+  {displayNick(u.nickname, u.email)}
+</div>
 
-                            <RolePill role={u.role} />
-                          </div>
+<div className="mt-1 flex flex-wrap items-center gap-2">
+  <span className="inline-flex min-w-0 items-center gap-2 truncate text-xs font-bold text-slate-500">
+    <MailIcon /> <span className="truncate">{u.email}</span>
+  </span>
+
+  <RolePill role={u.role} />
+</div>
                         </div>
                       </div>
                     }
@@ -411,16 +424,22 @@ export default function BoardMembersPage() {
                         </div>
 
                         <div className="min-w-0">
+                          {/* <div className="truncate text-sm font-black text-slate-900">{m.full_name}</div> */}
+
                           <div className="truncate text-sm font-black text-slate-900">{m.full_name}</div>
 
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <span className="inline-flex min-w-0 items-center gap-2 truncate text-xs font-bold text-slate-500">
-                              <MailIcon /> <span className="truncate">{m.email}</span>
-                            </span>
+<div className="mt-0.5 truncate text-xs font-extrabold text-slate-500">
+  {displayNick(m.nickname, m.email)}
+</div>
 
-                            <RolePill role={m.role} />
-                            <BoardRolePill roleInBoard={m.role_in_board} />
-                          </div>
+<div className="mt-1 flex flex-wrap items-center gap-2">
+  <span className="inline-flex min-w-0 items-center gap-2 truncate text-xs font-bold text-slate-500">
+    <MailIcon /> <span className="truncate">{m.email}</span>
+  </span>
+
+  <RolePill role={m.role} />
+  <BoardRolePill roleInBoard={m.role_in_board} />
+</div>
                         </div>
                       </div>
                     }
