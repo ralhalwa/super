@@ -81,6 +81,7 @@ func main() {
 	// admin
 	r.Route("/admin", func(ar chi.Router) {
 		ar.Post("/users", api.AdminCreateUser)
+		ar.Post("/users/delete", api.AdminDeleteUser)
 		ar.Get("/users", api.AdminSearchUsers)
 
 		ar.Get("/supervisors", api.AdminListSupervisors)

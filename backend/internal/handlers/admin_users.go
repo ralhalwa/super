@@ -20,13 +20,17 @@ type createUserReq struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Role     string `json:"role"` // supervisor|student
-	Nickname  string `json:"nickname"`  
-	Cohort    string `json:"cohort"` 
-}
-func genTempPassword() (string, error) {
-return "1111",nil
+	Nickname string `json:"nickname"`
+	Cohort   string `json:"cohort"`
 }
 
+type deleteUserReq struct {
+	Email string `json:"email"`
+}
+
+func genTempPassword() (string, error) {
+	return "1111", nil
+}
 
 func (a *API) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	var req createUserReq
@@ -104,6 +108,38 @@ func (a *API) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+func (a *API) AdminDeleteUser(w http.ResponseWriter, r *http.Request) {
+	var req deleteUserReq
+	if err := utils.ReadJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad json")
+		return
+	}
+
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	if req.Email == "" {
+		writeErr(w, http.StatusBadRequest, "email required")
+		return
+	}
+
+	id, _, _, role, _, err := db.GetUserByEmail(a.conn, req.Email)
+	if err != nil || id == 0 {
+		writeErr(w, http.StatusNotFound, "user not found")
+		return
+	}
+
+	// Keep system/admin accounts protected.
+	if strings.ToLower(strings.TrimSpace(role)) == "admin" {
+		writeErr(w, http.StatusForbidden, "cannot delete admin user")
+		return
+	}
+
+	if err := db.DeleteUserByID(a.conn, id); err != nil {
+		writeErr(w, http.StatusInternalServerError, "failed to delete user")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
 
 func (a *API) AdminListSupervisors(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.conn.Query(`

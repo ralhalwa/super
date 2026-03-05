@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
@@ -153,8 +153,10 @@ export default function AdminDashboard() {
 
   const [checking, setChecking] = useState(false);
   const [exists, setExists] = useState(false);
+  const existsCheckSeq = useRef(0);
 
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -185,26 +187,26 @@ export default function AdminDashboard() {
   useEffect(() => {
     const login = nickname.trim();
     if (!login) {
+      existsCheckSeq.current += 1;
       setFullName("");
       setEmail("");
       setCohort("");
       setExists(false);
       setErr("");
-      setMsg("");
       return;
     }
 
     let alive = true;
 
     async function run() {
+      const seq = ++existsCheckSeq.current;
       setChecking(true);
       setErr("");
-      setMsg("");
       setExists(false);
 
       try {
         const u = await fetchRebootUserByLogin(login);
-        if (!alive) return;
+        if (!alive || seq !== existsCheckSeq.current) return;
 
         if (!u) {
           setErr("User not found in Reboot API.");
@@ -219,7 +221,7 @@ export default function AdminDashboard() {
         setCohort(u.cohort);
 
         const res = await apiFetch(`/admin/users/exists?email=${encodeURIComponent(u.email)}`);
-        if (!alive) return;
+        if (!alive || seq !== existsCheckSeq.current) return;
 
         if (res?.exists) {
           setExists(true);
@@ -228,12 +230,15 @@ export default function AdminDashboard() {
           setExists(false);
         }
       } catch (e: any) {
+        if (!alive || seq !== existsCheckSeq.current) return;
         setErr(e?.message || "Failed to fetch user.");
         setFullName("");
         setEmail("");
         setCohort("");
       } finally {
-        setChecking(false);
+        if (alive && seq === existsCheckSeq.current) {
+          setChecking(false);
+        }
       }
     }
 
@@ -266,8 +271,7 @@ export default function AdminDashboard() {
         }),
       });
 
-      const temp = res?.temp_password ? ` Temp password: ${res.temp_password}` : "";
-      setMsg(`${role === "supervisor" ? "Supervisor" : "Student"} created successfully.${temp}`);
+      setMsg(`${role === "supervisor" ? "Supervisor" : "Student"} created successfully.`);
 
       setNickname("");
       setFullName("");
@@ -280,6 +284,42 @@ export default function AdminDashboard() {
       setErr(e.message || "Failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function deleteExistingUser() {
+    setMsg("");
+    setErr("");
+
+    try {
+      if (!exists) throw new Error("User does not exist in TaskFlow.");
+      if (!email) throw new Error("No user email to delete.");
+      const ok = window.confirm(`Delete ${email} from TaskFlow? This cannot be undone.`);
+      if (!ok) return;
+
+      setDeleting(true);
+      existsCheckSeq.current += 1; // invalidate any pending "exists" checks
+      await apiFetch("/admin/users/delete", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+
+      // Immediate re-check to guarantee UI reflects DB state.
+      const verify = await apiFetch(`/admin/users/exists?email=${encodeURIComponent(email)}`);
+      const stillExists = !!verify?.exists;
+      setExists(stillExists);
+      setMsg(stillExists ? "Delete requested, but user still exists." : "User deleted successfully.");
+      if (!stillExists) {
+        setNickname("");
+        setFullName("");
+        setEmail("");
+        setCohort("");
+      }
+      await loadDashboardStats();
+    } catch (e: any) {
+      setErr(e?.message || "Failed to delete user.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -522,6 +562,17 @@ export default function AdminDashboard() {
               >
                 {loading ? "Creating..." : `Create ${role}`}
               </button>
+
+              {exists && (
+                <button
+                  type="button"
+                  onClick={deleteExistingUser}
+                  disabled={deleting || loading || checking}
+                  className="h-11 rounded-[14px] border border-rose-200 bg-rose-50 px-4 font-black text-rose-700 hover:bg-rose-100 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {deleting ? "Deleting..." : "Delete user"}
+                </button>
+              )}
 
               <button
                 type="button"
