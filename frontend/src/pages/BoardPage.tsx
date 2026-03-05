@@ -90,6 +90,22 @@ function CircleCheckIcon({ size = 14 }: { size?: number }) {
   );
 }
 
+function BinIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7h16" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M9 7V5.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" stroke="currentColor" strokeWidth="1.9" />
+      <path
+        d="M7.8 7.8 8.4 18a2 2 0 0 0 2 1.9h3.2a2 2 0 0 0 2-1.9l.6-10.2"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+      <path d="M10.5 11.2v5M13.5 11.2v5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function isDateOverdue(due: string) {
   if (!due) return false;
   const today = new Date();
@@ -196,7 +212,7 @@ function CardItem({
       style={style}
       className={[
         "boardCardIn rounded-xl border bg-white shadow-sm transition",
-        "border-slate-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50/40 hover:shadow-md",
+        "border-slate-200 hover:-translate-y-0.5 hover:border-[#6d5efc]/25 hover:bg-[#f7f6ff] hover:shadow-md",
         "active:scale-[0.997]",
         isOverlay ? "shadow-lg ring-1 ring-slate-200/70" : "",
       ].join(" ")}
@@ -353,6 +369,7 @@ function ListColumn({
   cards,
   previews,
   onAddCard,
+  onRenameList,
   onDeleteList,
   onOpenCard,
   onToggleDone,
@@ -362,6 +379,7 @@ function ListColumn({
   cards: Card[];
   previews: Record<number, CardPreview | undefined>;
   onAddCard: (listId: number) => void;
+  onRenameList: (listId: number, title: string) => Promise<boolean>;
   onDeleteList: (listId: number, listTitle: string) => void;
   onOpenCard: (cardId: number) => void;
   onToggleDone: (cardId: number, nextDone: boolean) => void;
@@ -371,6 +389,36 @@ function ListColumn({
     id: `list:${list.id}`,
     data: { type: "list", listId: list.id },
   });
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(list.title);
+  const [renaming, setRenaming] = useState(false);
+
+  useEffect(() => {
+    if (!isEditingTitle) setTitleDraft(list.title);
+  }, [list.title, isEditingTitle]);
+
+  async function commitTitle() {
+    const next = titleDraft.trim();
+    if (!next) {
+      setTitleDraft(list.title);
+      setIsEditingTitle(false);
+      return;
+    }
+    if (next === list.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+
+    setRenaming(true);
+    const ok = await onRenameList(list.id, next);
+    setRenaming(false);
+
+    if (ok) {
+      setIsEditingTitle(false);
+    } else {
+      setTitleDraft(list.title);
+    }
+  }
 
   return (
     <div
@@ -378,12 +426,39 @@ function ListColumn({
       className={[
         "boardColumnIn w-[332px] shrink-0 rounded-xl border bg-slate-100/90 shadow-sm overflow-hidden",
         "border-slate-200 transition hover:-translate-y-0.5 hover:shadow-md",
-        drop.isOver ? "border-sky-300 ring-2 ring-sky-100" : "",
+        drop.isOver ? "border-[#6d5efc]/45 ring-2 ring-[#6d5efc]/15" : "",
       ].join(" ")}
     >
-      <div className="px-3 py-3 flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-100">
-        <div className="min-w-0 flex items-center gap-2">
-          <div className="font-extrabold text-slate-900 truncate">{list.title}</div>
+      <div className="px-3 py-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-slate-200 bg-slate-100">
+        <div className="min-w-0 flex items-center gap-2 pr-1">
+          {isEditingTitle ? (
+            <input
+              autoFocus
+              value={titleDraft}
+              disabled={renaming}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={() => void commitTitle()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void commitTitle();
+                } else if (e.key === "Escape") {
+                  setTitleDraft(list.title);
+                  setIsEditingTitle(false);
+                }
+              }}
+              className="h-8 min-w-0 w-full max-w-[170px] rounded-[10px] border border-[#6d5efc]/35 bg-white px-2.5 text-[13px] font-extrabold text-slate-900 outline-none focus:ring-2 focus:ring-[#6d5efc]/20"
+            />
+          ) : (
+            <button
+              type="button"
+              onDoubleClick={() => setIsEditingTitle(true)}
+              className="max-w-[170px] font-extrabold text-slate-900 truncate text-left"
+              title="Double click to rename list"
+            >
+              {list.title}
+            </button>
+          )}
           <span className="h-6 px-2 inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-extrabold text-slate-600">
             {cards.length}
           </span>
@@ -393,17 +468,30 @@ function ListColumn({
           <button
             type="button"
             onClick={() => onAddCard(list.id)}
-            className="h-9 px-3 rounded-lg border border-slate-300 bg-white text-slate-700 font-extrabold hover:bg-slate-50 transition"
+            className={[
+              "h-9 px-3 rounded-[12px] border border-slate-200 bg-white",
+              "text-slate-700 text-[13px] font-extrabold inline-flex items-center gap-1.5 whitespace-nowrap",
+              "shadow-[0_4px_12px_rgba(15,23,42,0.05)] transition",
+              "hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50",
+              "active:translate-y-0",
+            ].join(" ")}
           >
-            + Card
+            <PlusIcon size={13} />
+            Add card
           </button>
           <button
             type="button"
             onClick={() => onDeleteList(list.id, list.title)}
-            className="h-9 px-2.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 text-[12px] font-extrabold hover:bg-rose-100 transition"
+            className={[
+              "h-9 w-9 rounded-[12px] border border-slate-200 bg-white text-slate-500 grid place-items-center",
+              "shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition",
+              "hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 hover:shadow-[0_10px_24px_rgba(251,113,133,0.24)]",
+              "active:translate-y-0",
+            ].join(" ")}
             title="Delete list"
+            aria-label="Delete list"
           >
-            Delete
+            <BinIcon />
           </button>
         </div>
       </div>
@@ -589,6 +677,29 @@ export default function BoardPage() {
     }
   }
 
+  async function renameList(listId: number, title: string): Promise<boolean> {
+    const previous = data;
+    setData((d) =>
+      d
+        ? {
+            ...d,
+            lists: d.lists.map((l) => (l.id === listId ? { ...l, title } : l)),
+          }
+        : d
+    );
+    try {
+      await apiFetch("/admin/lists/update", {
+        method: "POST",
+        body: JSON.stringify({ list_id: listId, title }),
+      });
+      return true;
+    } catch (e: any) {
+      setErr(e?.message || "Failed to rename list");
+      if (previous) setData(previous);
+      return false;
+    }
+  }
+
   function onOpenCard(cardId: number) {
     setOpenCardId(cardId);
     setIsCardModalOpen(true);
@@ -754,7 +865,7 @@ export default function BoardPage() {
 
       {!loading && data && (
         <div className="grid gap-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-[18px] font-black tracking-[-0.02em] text-slate-900">{data.name}</div>
@@ -764,7 +875,7 @@ export default function BoardPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="h-8 px-3 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 text-[12px] font-extrabold text-slate-700">
+                <span className="h-8 px-3 inline-flex items-center rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 text-[12px] font-extrabold text-slate-700">
                   {listsSorted.length} Lists
                 </span>
                 <span className="h-8 px-3 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 text-[12px] font-extrabold text-slate-700">
@@ -782,21 +893,21 @@ export default function BoardPage() {
           </div>
 
           {/* add list */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-3">
+          <div className="rounded-[18px] border border-slate-200 bg-white shadow-[0_10px_25px_rgba(15,23,42,0.06)] p-3">
             <form onSubmit={createList} className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 grid place-items-center">
+              <div className="h-10 w-10 rounded-[14px] border border-[#6d5efc]/20 bg-[#6d5efc]/10 text-[#6d5efc] grid place-items-center">
                 <PlusIcon />
               </div>
 
               <input
-                className="h-11 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 outline-none focus:bg-white focus:ring-4 focus:ring-sky-100 focus:border-sky-300"
+                className="h-11 flex-1 rounded-[14px] border border-slate-300 bg-slate-50 px-3 outline-none focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/15 focus:border-[#6d5efc]/35"
                 placeholder="Add a new list"
                 value={newListTitle}
                 onChange={(e) => setNewListTitle(e.target.value)}
               />
 
               <button
-                className="h-11 px-4 rounded-lg font-extrabold text-white bg-slate-800 shadow-sm hover:bg-slate-900 disabled:opacity-70"
+                className="h-11 px-4 rounded-[14px] font-extrabold text-white shadow-sm disabled:opacity-70 bg-gradient-to-r from-[#6d5efc] to-[#9a8cff]"
                 disabled={creatingList || !newListTitle.trim()}
               >
                 {creatingList ? "..." : "Add"}
@@ -811,7 +922,7 @@ export default function BoardPage() {
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
           >
-            <div className="overflow-x-auto pb-2 rounded-xl border border-slate-200 bg-[linear-gradient(180deg,#f6f7f8_0%,#eef1f3_100%)] p-3">
+            <div className="overflow-x-auto pb-2 rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#f7f8ff_0%,#eef1f8_100%)] p-3">
               <div className="flex gap-4 items-start min-h-[380px]">
                 {listsSorted.map((l, colIdx) => (
                   <ListColumn
@@ -820,6 +931,7 @@ export default function BoardPage() {
                     cards={cardsByList[l.id] ?? []}
                     previews={previews}
                     onAddCard={createCard}
+                    onRenameList={renameList}
                     onDeleteList={deleteList}
                     onOpenCard={onOpenCard}
                     onToggleDone={toggleCardDone}

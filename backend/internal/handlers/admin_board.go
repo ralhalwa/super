@@ -60,6 +60,11 @@ type createListReq struct {
 	Title   string `json:"title"`
 }
 
+type updateListReq struct {
+	ListID int64  `json:"list_id"`
+	Title  string `json:"title"`
+}
+
 type deleteListReq struct {
 	ListID int64 `json:"list_id"`
 }
@@ -84,6 +89,54 @@ func (a *API) AdminCreateList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]any{"id": id})
+}
+
+func (a *API) AdminUpdateList(w http.ResponseWriter, r *http.Request) {
+	var req updateListReq
+	if err := utils.ReadJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	req.Title = strings.TrimSpace(req.Title)
+	if req.ListID == 0 || req.Title == "" {
+		writeErr(w, http.StatusBadRequest, "list_id and title required")
+		return
+	}
+
+	role := strings.TrimSpace(strings.ToLower(r.Header.Get("X-User-Role")))
+	if role == "" {
+		role = "admin"
+	}
+	if role != "admin" && role != "supervisor" {
+		writeErr(w, http.StatusForbidden, "only admin or supervisor can update list")
+		return
+	}
+
+	actor := actorID(r, a.conn)
+	if role == "supervisor" {
+		boardID, err := db.GetBoardIDByListID(a.conn, req.ListID)
+		if err != nil || boardID == 0 {
+			writeErr(w, http.StatusBadRequest, "invalid list")
+			return
+		}
+
+		supID, err := db.GetBoardSupervisorUserID(a.conn, boardID)
+		if err != nil || supID == 0 {
+			writeErr(w, http.StatusBadRequest, "board has no supervisor")
+			return
+		}
+		if actor != supID {
+			writeErr(w, http.StatusForbidden, "not your board")
+			return
+		}
+	}
+
+	if err := db.UpdateListTitle(a.conn, req.ListID, req.Title); err != nil {
+		writeErr(w, http.StatusInternalServerError, "failed to update list")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (a *API) AdminDeleteList(w http.ResponseWriter, r *http.Request) {

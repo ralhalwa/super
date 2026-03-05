@@ -33,7 +33,7 @@ export default function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="h-8 rounded-[10px] border border-slate-300 bg-slate-50 px-3 text-[13px] font-extrabold text-slate-700 transition hover:bg-slate-100"
+            className="h-8 rounded-[10px] border border-slate-300 bg-slate-50 px-3 text-[13px] font-extrabold text-slate-700 transition hover:border-[#6d5efc]/25 hover:bg-[#f2f5ff]"
           >
             Close
           </button>

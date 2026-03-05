@@ -57,3 +57,9 @@ func DeleteList(conn *sql.DB, listID int64) error {
 	_, err := conn.Exec(`DELETE FROM lists WHERE id = ?`, listID)
 	return err
 }
+
+func UpdateListTitle(conn *sql.DB, listID int64, title string) error {
+	title = strings.TrimSpace(title)
+	_, err := conn.Exec(`UPDATE lists SET title = ? WHERE id = ?`, title, listID)
+	return err
+}

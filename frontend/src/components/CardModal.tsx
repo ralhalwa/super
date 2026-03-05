@@ -246,7 +246,7 @@ function labelDotClass(color: string) {
 
 /** slightly more compact controls */
 const inputBase =
-  "h-9 w-full rounded-[10px] border border-slate-300 bg-slate-50 px-3 text-[14px] text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-3 focus:ring-sky-100";
+  "h-9 w-full rounded-[10px] border border-slate-300 bg-slate-50 px-3 text-[14px] text-slate-900 outline-none transition focus:border-[#6d5efc]/35 focus:bg-white focus:ring-3 focus:ring-[#6d5efc]/15";
 
 const btnPrimary =
   "h-9 rounded-[10px] px-4 text-[14px] font-extrabold text-white disabled:opacity-70 disabled:cursor-not-allowed shadow-sm bg-slate-800 hover:bg-slate-900";
@@ -261,7 +261,7 @@ const pillBase =
   "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-extrabold";
 
 const section =
-  "rounded-[14px] border border-slate-200 bg-white p-2.5 shadow-[0_8px_22px_rgba(15,23,42,0.06)] transition hover:shadow-[0_12px_30px_rgba(15,23,42,0.09)]";
+  "rounded-[16px] border border-slate-200 bg-white p-2.5 shadow-[0_8px_22px_rgba(15,23,42,0.06)] transition hover:shadow-[0_12px_30px_rgba(15,23,42,0.09)]";
 const sectionHead = "mb-1.5 flex items-center justify-between gap-2";
 const sectionTitle = "text-[13px] font-black text-slate-900";
 
@@ -283,8 +283,8 @@ function TabButton({
       className={[
         "h-9 rounded-full px-3.5 text-[12px] font-extrabold transition border",
         active
-          ? "border-sky-300 bg-sky-50 text-slate-900"
-          : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50",
+          ? "border-[#6d5efc]/30 bg-[#6d5efc]/10 text-slate-900"
+          : "border-slate-300 bg-white text-slate-600 hover:border-[#6d5efc]/25 hover:bg-[#f7f6ff]",
       ].join(" ")}
     >
       {children}

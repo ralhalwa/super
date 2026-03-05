@@ -95,6 +95,7 @@ func main() {
 		ar.Get("/board", api.AdminGetBoardFull)
 
 		ar.Post("/lists", api.AdminCreateList)
+		ar.Post("/lists/update", api.AdminUpdateList)
 		ar.Post("/lists/delete", api.AdminDeleteList)
 		ar.Post("/cards", api.AdminCreateCard)
 
