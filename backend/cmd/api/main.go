@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/joho/godotenv"
+	_ "github.com/mattn/go-sqlite3"
 
 	"taskflow/internal/db"
 	"taskflow/internal/handlers"
@@ -95,12 +95,14 @@ func main() {
 		ar.Get("/board", api.AdminGetBoardFull)
 
 		ar.Post("/lists", api.AdminCreateList)
+		ar.Post("/lists/delete", api.AdminDeleteList)
 		ar.Post("/cards", api.AdminCreateCard)
 
 		ar.Post("/cards/move", api.AdminMoveCard)
 		ar.Post("/cards/reorder", api.AdminReorderCards)
 		ar.Get("/card", api.AdminGetCard)
 		ar.Put("/card", api.AdminUpdateCard)
+		ar.Post("/card/delete", api.AdminDeleteCard)
 		ar.Get("/card/full", api.AdminGetCardFull)
 
 		ar.Post("/card/subtasks", api.AdminCreateSubtask)
@@ -136,9 +138,7 @@ func main() {
 		ar.Post("/assign", api.AdminAssignAdd)
 		ar.Post("/assign/remove", api.AdminAssignRemove)
 		ar.Get("/eligible-users", api.AdminEligibleUsers)
-		    ar.Get("/users/exists", api.AdminUserExists)
-			
-
+		ar.Get("/users/exists", api.AdminUserExists)
 
 	})
 

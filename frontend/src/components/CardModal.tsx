@@ -297,16 +297,19 @@ export default function CardModal({
   cardId,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   open: boolean;
   cardId: number | null;
   onClose: () => void;
   onSaved: () => void;
+  onDeleted: () => void;
 }) {
   const [tab, setTab] = useState<TabKey>("overview");
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
 
@@ -689,9 +692,34 @@ export default function CardModal({
     }
   }
 
+  async function deleteCard() {
+    if (!card) return;
+    const ok = window.confirm("Delete this card? This action cannot be undone.");
+    if (!ok) return;
+
+    setErr("");
+    setMsg("");
+    setDeleting(true);
+
+    try {
+      await apiFetch("/admin/card/delete", {
+        method: "POST",
+        body: JSON.stringify({ card_id: card.id }),
+      });
+      onDeleted();
+      onClose();
+    } catch (e: any) {
+      setErr(e.message || "Failed to delete card");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const cardDueKind: "overdue" | "soon" | "none" =
     isOverdue ? "overdue" : card?.due_date ? "soon" : "none";
   const isDone = card?.status === "done";
+  const currentRole = (localStorage.getItem("role") || "").toLowerCase();
+  const canDeleteCard = currentRole === "admin" || currentRole === "supervisor";
 
   return (
     <Modal
@@ -700,10 +728,19 @@ export default function CardModal({
       onClose={onClose}
       footer={
         <>
+          {canDeleteCard && (
+            <button
+              className="h-9 rounded-[10px] px-4 text-[14px] font-extrabold border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 disabled:opacity-70"
+              onClick={deleteCard}
+              disabled={loading || saving || deleting || !card}
+            >
+              {deleting ? "Deleting..." : "Delete card"}
+            </button>
+          )}
           <button className={btnGhost} onClick={onClose}>
             Cancel
           </button>
-          <button className={btnPrimary} onClick={saveCard} disabled={saving || loading || !card?.title?.trim()}>
+          <button className={btnPrimary} onClick={saveCard} disabled={saving || deleting || loading || !card?.title?.trim()}>
             {saving ? "Saving..." : "Save"}
           </button>
         </>

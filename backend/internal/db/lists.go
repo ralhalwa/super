@@ -46,3 +46,14 @@ func ListLists(conn *sql.DB, boardID int64) ([]models.List, error) {
 	}
 	return out, nil
 }
+
+func GetBoardIDByListID(conn *sql.DB, listID int64) (int64, error) {
+	var boardID int64
+	err := conn.QueryRow(`SELECT board_id FROM lists WHERE id = ?`, listID).Scan(&boardID)
+	return boardID, err
+}
+
+func DeleteList(conn *sql.DB, listID int64) error {
+	_, err := conn.Exec(`DELETE FROM lists WHERE id = ?`, listID)
+	return err
+}

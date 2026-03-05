@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -58,6 +60,10 @@ type createListReq struct {
 	Title   string `json:"title"`
 }
 
+type deleteListReq struct {
+	ListID int64 `json:"list_id"`
+}
+
 func (a *API) AdminCreateList(w http.ResponseWriter, r *http.Request) {
 	var req createListReq
 	if err := utils.ReadJSON(r, &req); err != nil {
@@ -78,6 +84,53 @@ func (a *API) AdminCreateList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]any{"id": id})
+}
+
+func (a *API) AdminDeleteList(w http.ResponseWriter, r *http.Request) {
+	var req deleteListReq
+	if err := utils.ReadJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	if req.ListID == 0 {
+		writeErr(w, http.StatusBadRequest, "list_id required")
+		return
+	}
+
+	role := strings.TrimSpace(strings.ToLower(r.Header.Get("X-User-Role")))
+	if role == "" {
+		role = "admin"
+	}
+	if role != "admin" && role != "supervisor" {
+		writeErr(w, http.StatusForbidden, "only admin or supervisor can delete list")
+		return
+	}
+
+	actor := actorID(r, a.conn)
+	if role == "supervisor" {
+		boardID, err := db.GetBoardIDByListID(a.conn, req.ListID)
+		if err != nil || boardID == 0 {
+			writeErr(w, http.StatusBadRequest, "invalid list")
+			return
+		}
+
+		supID, err := db.GetBoardSupervisorUserID(a.conn, boardID)
+		if err != nil || supID == 0 {
+			writeErr(w, http.StatusBadRequest, "board has no supervisor")
+			return
+		}
+		if actor != supID {
+			writeErr(w, http.StatusForbidden, "not your board")
+			return
+		}
+	}
+
+	if err := db.DeleteList(a.conn, req.ListID); err != nil {
+		writeErr(w, http.StatusInternalServerError, "failed to delete list")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 type createCardReq struct {
@@ -177,6 +230,10 @@ type updateCardReq struct {
 	Priority    string `json:"priority"`
 }
 
+type deleteCardReq struct {
+	CardID int64 `json:"card_id"`
+}
+
 func (a *API) AdminGetCard(w http.ResponseWriter, r *http.Request) {
 	cardIDStr := r.URL.Query().Get("card_id")
 	if cardIDStr == "" {
@@ -235,6 +292,59 @@ func (a *API) AdminUpdateCard(w http.ResponseWriter, r *http.Request) {
 
 	actor := actorID(r, a.conn)
 	_ = db.InsertCardActivity(a.conn, req.CardID, actor, "card_updated", "Card updated")
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (a *API) AdminDeleteCard(w http.ResponseWriter, r *http.Request) {
+	var req deleteCardReq
+	if err := utils.ReadJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	if req.CardID == 0 {
+		writeErr(w, http.StatusBadRequest, "card_id required")
+		return
+	}
+
+	role := strings.TrimSpace(strings.ToLower(r.Header.Get("X-User-Role")))
+	if role == "" {
+		role = "admin"
+	}
+	if role != "admin" && role != "supervisor" {
+		writeErr(w, http.StatusForbidden, "only admin or supervisor can delete card")
+		return
+	}
+
+	actor := actorID(r, a.conn)
+	if role == "supervisor" {
+		boardID, err := db.GetBoardIDByCardID(a.conn, req.CardID)
+		if err != nil || boardID == 0 {
+			writeErr(w, http.StatusBadRequest, "invalid card")
+			return
+		}
+
+		supID, err := db.GetBoardSupervisorUserID(a.conn, boardID)
+		if err != nil || supID == 0 {
+			writeErr(w, http.StatusBadRequest, "board has no supervisor")
+			return
+		}
+		if actor != supID {
+			writeErr(w, http.StatusForbidden, "not your board")
+			return
+		}
+	}
+
+	// Best-effort cleanup of uploaded files before row delete (rows cascade).
+	atts, _ := db.ListAttachments(a.conn, req.CardID, 200)
+	for _, att := range atts {
+		_ = os.Remove(filepath.Join("./uploads", att.StoredName))
+	}
+
+	if err := db.DeleteCard(a.conn, req.CardID); err != nil {
+		writeErr(w, http.StatusInternalServerError, "failed to delete card")
+		return
+	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }

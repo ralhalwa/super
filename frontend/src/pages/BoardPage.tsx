@@ -353,6 +353,7 @@ function ListColumn({
   cards,
   previews,
   onAddCard,
+  onDeleteList,
   onOpenCard,
   onToggleDone,
   columnIndex,
@@ -361,6 +362,7 @@ function ListColumn({
   cards: Card[];
   previews: Record<number, CardPreview | undefined>;
   onAddCard: (listId: number) => void;
+  onDeleteList: (listId: number, listTitle: string) => void;
   onOpenCard: (cardId: number) => void;
   onToggleDone: (cardId: number, nextDone: boolean) => void;
   columnIndex: number;
@@ -387,13 +389,23 @@ function ListColumn({
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={() => onAddCard(list.id)}
-          className="h-9 px-3 rounded-lg border border-slate-300 bg-white text-slate-700 font-extrabold hover:bg-slate-50 transition"
-        >
-          + Card
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onAddCard(list.id)}
+            className="h-9 px-3 rounded-lg border border-slate-300 bg-white text-slate-700 font-extrabold hover:bg-slate-50 transition"
+          >
+            + Card
+          </button>
+          <button
+            type="button"
+            onClick={() => onDeleteList(list.id, list.title)}
+            className="h-9 px-2.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 text-[12px] font-extrabold hover:bg-rose-100 transition"
+            title="Delete list"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       <div ref={drop.setNodeRef} className="p-3 grid gap-2 min-h-[120px] bg-slate-100/80">
@@ -561,6 +573,22 @@ export default function BoardPage() {
     }
   }
 
+  async function deleteList(listId: number, listTitle: string) {
+    const ok = window.confirm(`Delete list "${listTitle}" and all its cards? This cannot be undone.`);
+    if (!ok) return;
+
+    setErr("");
+    try {
+      await apiFetch("/admin/lists/delete", {
+        method: "POST",
+        body: JSON.stringify({ list_id: listId }),
+      });
+      await load();
+    } catch (e: any) {
+      setErr(e?.message || "Failed to delete list");
+    }
+  }
+
   function onOpenCard(cardId: number) {
     setOpenCardId(cardId);
     setIsCardModalOpen(true);
@@ -709,6 +737,11 @@ export default function BoardPage() {
           await load();
           if (data) await loadPreviews(data.cards);
         }}
+        onDeleted={async () => {
+          setIsCardModalOpen(false);
+          setOpenCardId(null);
+          await load();
+        }}
       />
 
       {err && (
@@ -787,6 +820,7 @@ export default function BoardPage() {
                     cards={cardsByList[l.id] ?? []}
                     previews={previews}
                     onAddCard={createCard}
+                    onDeleteList={deleteList}
                     onOpenCard={onOpenCard}
                     onToggleDone={toggleCardDone}
                     columnIndex={colIdx}

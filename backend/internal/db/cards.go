@@ -128,3 +128,8 @@ func UpdateCard(conn *sql.DB, cardID int64, title, description string) error {
 	`, title, description, cardID)
 	return err
 }
+
+func DeleteCard(conn *sql.DB, cardID int64) error {
+	_, err := conn.Exec(`DELETE FROM cards WHERE id = ?`, cardID)
+	return err
+}
