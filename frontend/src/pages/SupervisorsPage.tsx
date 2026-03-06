@@ -7,6 +7,7 @@ type SupervisorRow = {
   supervisor_user_id: number;
   full_name: string;
   email: string;
+  nickname?: string;
   file_id: number;
   created_at: string;
 };
@@ -63,6 +64,26 @@ function MailIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function ShieldCheckIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 2l7 4v6c0 5-3 9-7 10-4-1-7-5-7-10V6l7-4Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.5 12.5l1.8 1.8L15.8 9.8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function SupervisorsPage() {
   const nav = useNavigate();
 
@@ -92,7 +113,10 @@ export default function SupervisorsPage() {
     const query = q.trim().toLowerCase();
     if (!query) return data;
     return data.filter(
-      (s) => s.full_name.toLowerCase().includes(query) || s.email.toLowerCase().includes(query)
+      (s) =>
+        s.full_name.toLowerCase().includes(query) ||
+        s.email.toLowerCase().includes(query) ||
+        (s.nickname || "").toLowerCase().includes(query)
     );
   }, [data, q]);
 
@@ -124,7 +148,7 @@ export default function SupervisorsPage() {
           <div>
             <div className="text-base font-black text-slate-900">Directory</div>
             <div className="mt-2 text-sm font-semibold text-slate-500">
-              Search by name or email, then open the workspace.
+              Search by name, email, or username, then open the workspace.
             </div>
           </div>
 
@@ -134,7 +158,7 @@ export default function SupervisorsPage() {
             </span>
             <input
               className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none placeholder:font-semibold placeholder:text-slate-400"
-              placeholder="Search supervisors…"
+              placeholder="Search by name/email/username..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
@@ -175,7 +199,15 @@ export default function SupervisorsPage() {
                       {s.full_name}
                     </div>
 
+                    <div className="mt-0.5 truncate text-xs font-extrabold text-[#6d5efc]">
+                      @{(s.nickname || "").trim() || s.email.split("@")[0]}
+                    </div>
+
                     <div className="mt-1.5 flex min-w-0 flex-wrap gap-2">
+                      <span className="inline-flex max-w-full items-center gap-2 truncate rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 px-2.5 py-1 text-xs font-black text-slate-900">
+                        <ShieldCheckIcon /> supervisor
+                      </span>
+
                       <span className="inline-flex max-w-full items-center gap-2 truncate rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-extrabold text-slate-600">
                         <MailIcon /> <span className="truncate">{s.email}</span>
                       </span>

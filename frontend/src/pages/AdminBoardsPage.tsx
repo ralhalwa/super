@@ -13,6 +13,14 @@ type BoardRow = {
   cards_count: number;
 };
 
+type BoardMember = {
+  user_id: number;
+  full_name: string;
+  email: string;
+  role: string;
+  role_in_board: string;
+};
+
 function formatDate(iso: string) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -148,6 +156,16 @@ function UsersIcon({ size = 14 }: { size?: number }) {
   );
 }
 
+function PencilIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="m12 6 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M14 4l2-2 4 4-2 2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function ArrowIcon({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -252,6 +270,13 @@ export default function AdminBoardsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [err, setErr] = useState("");
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersErr, setMembersErr] = useState("");
+  const [members, setMembers] = useState<BoardMember[]>([]);
+  const [membersBoard, setMembersBoard] = useState<BoardRow | null>(null);
+
+  const isAdmin = (localStorage.getItem("role") || "").trim().toLowerCase() === "admin";
 
   async function load() {
     setLoading(true);
@@ -291,6 +316,22 @@ export default function AdminBoardsPage() {
     const totalCards = boards.reduce((acc, b) => acc + (b.cards_count || 0), 0);
     return { totalBoards, totalLists, totalCards };
   }, [boards]);
+
+  async function openMembers(board: BoardRow) {
+    setMembersBoard(board);
+    setMembersOpen(true);
+    setMembersErr("");
+    setMembersLoading(true);
+    try {
+      const res = await apiFetch(`/admin/board-members?board_id=${board.id}`);
+      setMembers(Array.isArray(res) ? res : []);
+    } catch (e: any) {
+      setMembersErr(e?.message || "Failed to load members");
+      setMembers([]);
+    } finally {
+      setMembersLoading(false);
+    }
+  }
 
   return (
     <AdminLayout active="boards" title="Boards" subtitle="All boards across supervisors">
@@ -476,7 +517,7 @@ export default function AdminBoardsPage() {
                         aria-label="Board members"
                         onClick={(e) => {
                           e.stopPropagation();
-                          nav(`/admin/boards/${b.id}/members`);
+                          openMembers(b);
                         }}
                       >
                         <UsersIcon />
@@ -572,6 +613,83 @@ export default function AdminBoardsPage() {
           </div>
         )}
       </div>
+
+      {membersOpen && (
+        <div
+          className="fixed inset-0 z-[80] grid place-items-center bg-slate-900/40 p-4"
+          onClick={() => setMembersOpen(false)}
+        >
+          <div
+            className="w-full max-w-[560px] rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_22px_60px_rgba(15,23,42,0.28)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[18px] font-black text-slate-900">Board Members</div>
+                <div className="text-[12px] font-semibold text-slate-500 truncate">
+                  {membersBoard?.name || "Board"}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {isAdmin && membersBoard ? (
+                  <button
+                    className="h-9 w-9 grid place-items-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100"
+                    title="Edit members"
+                    aria-label="Edit members"
+                    onClick={() => {
+                      setMembersOpen(false);
+                      nav(`/admin/boards/${membersBoard.id}/members`);
+                    }}
+                  >
+                    <PencilIcon />
+                  </button>
+                ) : null}
+                <button
+                  className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-700 hover:bg-slate-100"
+                  onClick={() => setMembersOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {membersErr ? (
+              <div className="mb-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+                {membersErr}
+              </div>
+            ) : null}
+
+            {membersLoading ? (
+              <div className="text-sm font-semibold text-slate-500">Loading members...</div>
+            ) : members.length === 0 ? (
+              <div className="text-sm font-semibold text-slate-500">No members found.</div>
+            ) : (
+              <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                {members.map((m) => (
+                  <div
+                    key={m.user_id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-black text-slate-900">{m.full_name}</div>
+                      <div className="truncate text-xs font-semibold text-slate-500">{m.email}</div>
+                    </div>
+                    <div className="flex flex-none items-center gap-2">
+                      <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-black text-slate-700">
+                        {m.role}
+                      </span>
+                      <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-black text-violet-700">
+                        {m.role_in_board || "member"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
