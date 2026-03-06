@@ -870,13 +870,6 @@ export default function BoardPage() {
         <div className="grid gap-4">
           <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-[18px] font-black tracking-[-0.02em] text-slate-900">{data.name}</div>
-                <div className="mt-1 text-[13px] font-semibold text-slate-500">
-                  Organize work by list, mark done on cards, and open card modal for details.
-                </div>
-              </div>
-
               <div className="flex flex-wrap items-center gap-2">
                 <span className="h-8 px-3 inline-flex items-center rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 text-[12px] font-extrabold text-slate-700">
                   {listsSorted.length} Lists
