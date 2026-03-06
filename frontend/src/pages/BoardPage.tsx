@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
+import { playDoneSound } from "../lib/sound";
 
 import {
   DndContext,
@@ -790,6 +791,7 @@ export default function BoardPage() {
       ...prev,
       [cardId]: prev[cardId] ? { ...prev[cardId], status: nextStatus } : prev[cardId],
     }));
+    if (nextDone) playDoneSound();
 
     try {
       await apiFetch("/admin/card", {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
 import { apiFetch } from "../lib/api";
+import { playDoneSound } from "../lib/sound";
 
 type Card = {
   id: number;
@@ -552,6 +553,7 @@ export default function CardModal({
     setMsg("");
     setDoneAnimId(id);
     setTimeout(() => setDoneAnimId(null), 280);
+    if (isDone) playDoneSound();
 
     try {
       await apiFetch("/admin/card/subtasks/toggle", {
