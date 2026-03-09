@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
 
@@ -55,16 +54,6 @@ function RoleIcon({ role }: { role: Role }) {
 
 const GQL_URL = "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
 
-// ✅ Your cohort mapping (eventId -> Cohort N)
-const COHORT_BY_EVENT_ID: Record<number, string> = {
-  20: "Cohort 1",
-  72: "Cohort 2",
-  250: "Cohort 3",
-  763: "Cohort 4",
-  1195: "Cohort 5",
-  1829: "Cohort 6",
-};
-
 type RebootFetchedUser = {
   nickname: string;
   email: string;
@@ -76,7 +65,8 @@ async function fetchRebootUserByLogin(login: string): Promise<RebootFetchedUser 
   const jwt = (localStorage.getItem("jwt") || "").trim();
   if (!jwt) throw new Error("Missing Reboot JWT in localStorage (jwt).");
 
-  // ✅ event_user is the source of cohort (eventId mapping)
+  // Cohort is derived dynamically from module event IDs.
+  // New cohorts are picked up automatically as larger event IDs appear.
   const query = `
     query GetUserForTaskflow($login: String!) {
       user(where: { login: { _eq: $login } }, limit: 1) {
@@ -86,16 +76,22 @@ async function fetchRebootUserByLogin(login: string): Promise<RebootFetchedUser 
         login
       }
 
-      event_user(
+      myModuleEvents: event_user(
         where: {
           userLogin: { _eq: $login }
-          eventId: { _in: [20, 72, 250, 763, 1195, 1829] }
+          event: { path: { _eq: "/bahrain/bh-module" } }
         }
-        limit: 1
+        order_by: [{ eventId: asc }]
       ) {
         eventId
-        userLogin
-        level
+      }
+
+      allModuleCohortEvents: event_user(
+        where: { event: { path: { _eq: "/bahrain/bh-module" } } }
+        distinct_on: eventId
+        order_by: [{ eventId: asc }]
+      ) {
+        eventId
       }
     }
   `;
@@ -122,10 +118,29 @@ async function fetchRebootUserByLogin(login: string): Promise<RebootFetchedUser 
 
   const fullName = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.login || login;
 
-  const ev = json?.data?.event_user?.[0];
-  const cohort =
-    (ev?.eventId && COHORT_BY_EVENT_ID[Number(ev.eventId)]) ||
-    "Unknown cohort";
+  const userEventIDs = (json?.data?.myModuleEvents || [])
+    .map((r: any) => Number(r?.eventId))
+    .filter((n: number) => Number.isFinite(n))
+    .sort((a: number, b: number) => a - b);
+  const userEventID = userEventIDs.length ? userEventIDs[userEventIDs.length - 1] : 0;
+
+  const moduleEventIDs = (json?.data?.allModuleCohortEvents || [])
+    .map((r: any) => Number(r?.eventId))
+    .filter((n: number) => Number.isFinite(n))
+    .sort((a: number, b: number) => a - b)
+    .filter((n: number, i: number, arr: number[]) => i === 0 || n !== arr[i - 1]);
+
+  let cohort = "Unknown cohort";
+  if (userEventID > 0 && moduleEventIDs.length > 0) {
+    const exactIndex = moduleEventIDs.indexOf(userEventID);
+    if (exactIndex >= 0) {
+      cohort = `Cohort ${exactIndex + 1}`;
+    } else {
+      // If a new eventId appears that is not in the distinct set yet, place it by numeric order.
+      const inferredIndex = moduleEventIDs.filter((id: number) => id < userEventID).length;
+      cohort = `Cohort ${inferredIndex + 1}`;
+    }
+  }
 
   return {
     nickname: u.login || login,
@@ -136,8 +151,6 @@ async function fetchRebootUserByLogin(login: string): Promise<RebootFetchedUser 
 }
 
 export default function AdminDashboard() {
-  const nav = useNavigate();
-
   // ✅ Only field admin types
   const [nickname, setNickname] = useState("");
 
@@ -359,7 +372,7 @@ export default function AdminDashboard() {
               <span className="h-2.5 w-2.5 rounded-full bg-blue-600 shadow-[0_0_0_0_rgba(37,99,235,0.25)] animate-[admPulse_1.5s_ease-in-out_infinite]" />
             </div>
           </div>
-          <div className="mt-2 text-[13px] text-slate-500">Each supervisor has a workspace</div>
+          {/* <div className="mt-2 text-[13px] text-slate-500">Each supervisor has a workspace</div> */}
         </div>
 
         {/* Students */}
@@ -377,7 +390,7 @@ export default function AdminDashboard() {
               <span className="h-3 w-1.5 rounded bg-emerald-500 animate-bounce [animation-duration:1.1s] [animation-delay:.24s]" />
             </div>
           </div>
-          <div className="mt-2 text-[13px] text-slate-500">Connect to stats endpoint later</div>
+          {/* <div className="mt-2 text-[13px] text-slate-500">Connect to stats endpoint later</div> */}
         </div>
 
         {/* Admin */}
@@ -401,9 +414,9 @@ export default function AdminDashboard() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-base font-black text-slate-900">Create user</div>
-              <div className="mt-1 text-[13px] text-slate-500">
+              {/* <div className="mt-1 text-[13px] text-slate-500">
                 Type nickname/login, we’ll auto-fill from Reboot.
-              </div>
+              </div> */}
             </div>
 
             <button
@@ -484,7 +497,7 @@ export default function AdminDashboard() {
               {checking ? (
                 <span className="text-xs font-bold text-slate-500">Checking Reboot API…</span>
               ) : (
-                <span className="text-xs font-bold text-slate-500">We’ll auto-fill name + email + cohort.</span>
+                <span className="text-xs font-bold text-slate-500"></span>
               )}
             </label>
 
@@ -574,13 +587,13 @@ export default function AdminDashboard() {
                 </button>
               )}
 
-              <button
+              {/* <button
                 type="button"
                 className="h-11 rounded-[14px] border border-slate-200 bg-white px-4 font-black text-slate-900 hover:bg-slate-50"
                 onClick={() => nav("/admin/supervisors")}
               >
                 Open Supervisors
-              </button>
+              </button> */}
             </div>
           </form>
         </div>
