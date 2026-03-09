@@ -773,6 +773,51 @@ export default function BoardPage() {
     return data?.cards.find((c) => c.id === cardId);
   }
 
+  function applyLiveCardUpdate(payload: {
+    cardId: number;
+    status?: Card["status"];
+    title?: string;
+    description?: string;
+    due_date?: string;
+    priority?: Card["priority"];
+    done?: number;
+    total?: number;
+  }) {
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            cards: prev.cards.map((c) =>
+              c.id === payload.cardId
+                ? {
+                    ...c,
+                    status: payload.status ?? c.status,
+                    title: payload.title ?? c.title,
+                    description: payload.description ?? c.description,
+                    due_date: payload.due_date ?? c.due_date,
+                    priority: payload.priority ?? c.priority,
+                  }
+                : c
+            ),
+          }
+        : prev
+    );
+
+    if (payload.done !== undefined || payload.total !== undefined || payload.status) {
+      setPreviews((prev) => ({
+        ...prev,
+        [payload.cardId]: prev[payload.cardId]
+          ? {
+              ...prev[payload.cardId]!,
+              status: payload.status ?? prev[payload.cardId]!.status,
+              done: payload.done ?? prev[payload.cardId]!.done,
+              total: payload.total ?? prev[payload.cardId]!.total,
+            }
+          : prev[payload.cardId],
+      }));
+    }
+  }
+
   async function toggleCardDone(cardId: number, nextDone: boolean) {
     const current = findCard(cardId);
     if (!current) return;
@@ -935,6 +980,7 @@ export default function BoardPage() {
           setOpenCardId(null);
           await load();
         }}
+        onLiveUpdate={applyLiveCardUpdate}
       />
       {membersOpen && (
         <div

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 
 type Props = {
-  active?: "dashboard" | "supervisors" | "boards" | "assign" | "reports";
+  active?: "dashboard" | "supervisors" | "boards" | "assign" | "reports" | "profile";
   title: string;
   subtitle?: string;
   right?: React.ReactNode;

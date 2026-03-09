@@ -338,12 +338,23 @@ export default function CardModal({
   onClose,
   onSaved,
   onDeleted,
+  onLiveUpdate,
 }: {
   open: boolean;
   cardId: number | null;
   onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
+  onLiveUpdate?: (payload: {
+    cardId: number;
+    status?: Card["status"];
+    title?: string;
+    description?: string;
+    due_date?: string;
+    priority?: Card["priority"];
+    done?: number;
+    total?: number;
+  }) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -527,16 +538,20 @@ export default function CardModal({
         method: "POST",
         body: JSON.stringify({ card_id: card.id, title: subtaskTitle.trim(), due_date: subtaskDue || "" }),
       });
-      setSubtasks((prev) => [
-        ...prev,
-        {
-          id: Number(res?.id),
-          card_id: card.id,
-          title: subtaskTitle.trim(),
-          is_done: false,
-          due_date: subtaskDue || "",
-        },
-      ]);
+      setSubtasks((prev) => {
+        const next = [
+          ...prev,
+          {
+            id: Number(res?.id),
+            card_id: card.id,
+            title: subtaskTitle.trim(),
+            is_done: false,
+            due_date: subtaskDue || "",
+          },
+        ];
+        emitLiveUpdate(undefined, next);
+        return next;
+      });
       setSubtaskDrafts((prev) => ({
         ...prev,
         [Number(res?.id)]: { title: subtaskTitle.trim(), due_date: subtaskDue || "" },
@@ -560,10 +575,18 @@ export default function CardModal({
         method: "POST",
         body: JSON.stringify({ subtask_id: id, is_done: isDone }),
       });
-      setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, is_done: isDone } : s)));
+      setSubtasks((prev) => {
+        const next = prev.map((s) => (s.id === id ? { ...s, is_done: isDone } : s));
+        emitLiveUpdate(undefined, next);
+        return next;
+      });
     } catch (e: any) {
       setErr(e.message || "Failed to update subtask");
-      setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, is_done: !isDone } : s)));
+      setSubtasks((prev) => {
+        const next = prev.map((s) => (s.id === id ? { ...s, is_done: !isDone } : s));
+        emitLiveUpdate(undefined, next);
+        return next;
+      });
     }
   }
 
@@ -575,7 +598,11 @@ export default function CardModal({
         method: "POST",
         body: JSON.stringify({ subtask_id: id }),
       });
-      setSubtasks((prev) => prev.filter((s) => s.id !== id));
+      setSubtasks((prev) => {
+        const next = prev.filter((s) => s.id !== id);
+        emitLiveUpdate(undefined, next);
+        return next;
+      });
       setSubtaskDrafts((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -604,7 +631,11 @@ export default function CardModal({
     setMsg("");
     const backup = base;
     setSavingSubtaskId(id);
-    setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, title: nextTitle, due_date: nextDue } : s)));
+    setSubtasks((prev) => {
+      const next = prev.map((s) => (s.id === id ? { ...s, title: nextTitle, due_date: nextDue } : s));
+      emitLiveUpdate(undefined, next);
+      return next;
+    });
 
     try {
       await apiFetch("/admin/card/subtasks/update", {
@@ -613,9 +644,11 @@ export default function CardModal({
       });
     } catch (e: any) {
       setErr(e.message || "Failed to update subtask");
-      setSubtasks((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, title: backup.title, due_date: backup.due_date || "" } : s))
-      );
+      setSubtasks((prev) => {
+        const next = prev.map((s) => (s.id === id ? { ...s, title: backup.title, due_date: backup.due_date || "" } : s));
+        emitLiveUpdate(undefined, next);
+        return next;
+      });
       setSubtaskDrafts((prev) => ({
         ...prev,
         [id]: { title: backup.title, due_date: backup.due_date || "" },
@@ -883,7 +916,52 @@ export default function CardModal({
   const isDone = card?.status === "done";
   const currentRole = (localStorage.getItem("role") || "").toLowerCase();
   const canManageCard = currentRole === "admin" || currentRole === "supervisor";
+  const canToggleDone = canManageCard || currentRole === "student";
   const canDeleteCard = canManageCard;
+
+  function emitLiveUpdate(nextCard?: Card | null, nextSubtasks?: Subtask[]) {
+    if (!onLiveUpdate) return;
+    const sourceCard = nextCard || card;
+    if (!sourceCard) return;
+    const sourceSubtasks = nextSubtasks ?? subtasks;
+    onLiveUpdate({
+      cardId: sourceCard.id,
+      status: sourceCard.status,
+      title: sourceCard.title,
+      description: sourceCard.description,
+      due_date: sourceCard.due_date,
+      priority: sourceCard.priority,
+      done: sourceSubtasks.filter((s) => s.is_done).length,
+      total: sourceSubtasks.length,
+    });
+  }
+
+  async function toggleDoneFromModal() {
+    if (!card || !canToggleDone) return;
+    const prevCard = card;
+    const nextStatus: Card["status"] = prevCard.status === "done" ? "todo" : "done";
+    const nextCard = { ...prevCard, status: nextStatus };
+    setCard(nextCard);
+    emitLiveUpdate(nextCard);
+    if (nextStatus === "done") playDoneSound();
+    try {
+      await apiFetch("/admin/card", {
+        method: "PUT",
+        body: JSON.stringify({
+          card_id: prevCard.id,
+          title: prevCard.title?.trim() || "",
+          description: prevCard.description || "",
+          due_date: prevCard.due_date || "",
+          status: nextStatus,
+          priority: prevCard.priority || "medium",
+        }),
+      });
+    } catch (e: any) {
+      setErr(e?.message || "Failed to update status");
+      setCard(prevCard);
+      emitLiveUpdate(prevCard);
+    }
+  }
 
   return (
     <Modal
@@ -903,8 +981,11 @@ export default function CardModal({
               <TrashIcon size={18} />
             </button>
           )}
-          <button className={btnGhost} onClick={onClose}>
-            Cancel
+          <button
+            className="h-9 rounded-[10px] px-4 text-[14px] font-extrabold text-white shadow-sm bg-gradient-to-r from-[#6d5efc] to-[#9a8cff] hover:brightness-105"
+            onClick={onClose}
+          >
+            Done
           </button>
           {canManageCard && (
             <button className={btnPrimary} onClick={saveCard} disabled={saving || deleting || loading || !card?.title?.trim()}>
@@ -941,6 +1022,16 @@ export default function CardModal({
                         <CheckIcon size={12} />
                         {isDone ? "Done" : "Open"}
                       </span>
+                      {canToggleDone ? (
+                        <button
+                          type="button"
+                          className={`${pillBase} border-[#6d5efc]/30 bg-[#6d5efc]/10 text-slate-900 hover:bg-[#6d5efc]/15`}
+                          onClick={toggleDoneFromModal}
+                        >
+                          <CheckIcon size={12} />
+                          {isDone ? "Mark open" : "Mark done"}
+                        </button>
+                      ) : null}
                       <span className={`${pillBase} ${pillPriorityClass(card.priority)}`}>{prettyPriority(card.priority)}</span>
                       {canManageCard ? (
                         <select

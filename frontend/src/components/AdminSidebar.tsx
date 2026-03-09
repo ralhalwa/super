@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 
-type Props = { active?: "dashboard" | "supervisors" | "boards" | "reports" | "assign" };
+type Props = { active?: "dashboard" | "supervisors" | "boards" | "reports" | "assign" | "profile" };
 
 function cn(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -10,6 +10,11 @@ export default function AdminSidebar({ active }: Props) {
   const nav = useNavigate();
   const role = (localStorage.getItem("role") || "").trim().toLowerCase();
   const isAdmin = role === "admin";
+  const login = (localStorage.getItem("login") || "").trim();
+  const email = (localStorage.getItem("email") || "").trim();
+  const fallbackName = login || email || "User";
+  const footerName = isAdmin ? "Admin" : fallbackName;
+  const footerSub = isAdmin ? "System access" : role || "workspace";
 
   const Item = ({
     id,
@@ -79,21 +84,24 @@ export default function AdminSidebar({ active }: Props) {
               <Item id="reports" label="Reports" to="/admin/reports" />
             </>
           ) : (
-            <Item id="boards" label="Boards" to="/admin/boards" />
+            <>
+              <Item id="boards" label="Boards" to="/admin/boards" />
+              <Item id="profile" label="Profile" to="/profile" />
+            </>
           )}
         </nav>
 
         {/* Footer */}
-        {isAdmin ? (
-          <div className="border-t border-slate-200 p-2">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full border border-slate-200 bg-[#e8ecff]" />
-              <div>
-                <div className="text-[13px] font-extrabold text-slate-900">Admin</div>
-                <div className="mt-0.5 text-[12px] font-bold text-slate-500">System access</div>
-              </div>
+        <div className="border-t border-slate-200 p-2">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full border border-slate-200 bg-[#e8ecff]" />
+            <div className="min-w-0">
+              <div className="truncate text-[13px] font-extrabold text-slate-900">{footerName}</div>
+              <div className="mt-0.5 truncate text-[12px] font-bold text-slate-500">{footerSub}</div>
             </div>
+          </div>
 
+          {isAdmin ? (
             <button
               type="button"
               onClick={() => nav("/admin/supervisors")}
@@ -105,8 +113,8 @@ export default function AdminSidebar({ active }: Props) {
             >
               Manage supervisors
             </button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </aside>
   );

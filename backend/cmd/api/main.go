@@ -138,6 +138,7 @@ func main() {
 		ar.Post("/card/reminders/delete", api.AdminDeleteReminder)
 
 		ar.Get("/all-boards", api.AdminAllBoards)
+		ar.Get("/profile/summary", api.ProfileSummary)
 
 		// supervisor-student assignments
 		ar.Get("/assign/supervisors", api.AdminAssignListSupervisors)

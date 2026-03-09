@@ -8,6 +8,7 @@ import type { JSX } from "react";
 import BoardPage from "./pages/BoardPage";
 import AdminBoardsPage from "./pages/AdminBoardsPage";
 import AssignPage from "./pages/AssignPage";
+import ProfilePage from "./pages/ProfilePage";
 
 // ✅ change this to your real dashboard page
 // import DashboardPage from "./pages/DashboardPage";
@@ -156,6 +157,15 @@ export default function App() {
           <RequireAdmin>
             <AssignPage />
           </RequireAdmin>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <RequireBoardsAccess>
+            <ProfilePage />
+          </RequireBoardsAccess>
         }
       />
 
