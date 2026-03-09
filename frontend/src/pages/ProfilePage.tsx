@@ -448,60 +448,135 @@ export default function ProfilePage() {
               </div>
             </section>
 
-            <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)] lg:min-h-[450px]">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div className="text-[18px] font-black text-slate-900">Assigned Tasks</div>
-                <span className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-black text-slate-700">
-                  {localProfile.tasks?.total || 0} total
-                </span>
-              </div>
+            {localProfile.user.role === "supervisor" ? (
+              <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)] lg:min-h-[450px]">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="text-[18px] font-black text-slate-900">Assigned Students</div>
+                  <span className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-black text-slate-700">
+                    {localProfile.supervisor?.assigned_students_overall || 0} total
+                  </span>
+                </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-2 flex items-center justify-between text-[12px] font-bold text-slate-600">
-                  <span>{localProfile.tasks?.done || 0} done</span>
-                  <span>{localProfile.tasks?.left || 0} left</span>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center justify-between text-[12px] font-bold text-slate-600">
+                    <span>{localProfile.supervisor?.assigned_students_overall || 0} assigned</span>
+                    <span>{boardRows.length} boards</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-200">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-[#6d5efc] to-[#8f83ff]"
+                      style={{
+                        width: `${Math.max(
+                          0,
+                          Math.min(
+                            100,
+                            boardRows.length > 0
+                              ? Math.round(
+                                  (((localProfile.supervisor?.assigned_students || []).filter(
+                                    (s) => (s.boards || []).length > 0
+                                  ).length || 0) /
+                                    Math.max(1, localProfile.supervisor?.assigned_students_overall || 1)) *
+                                    100
+                                )
+                              : 0
+                          )
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-1 text-right text-[11px] font-extrabold text-slate-600">
+                    {(localProfile.supervisor?.assigned_students || []).filter((s) => (s.boards || []).length > 0).length}{" "}
+                    linked to boards
+                  </div>
                 </div>
-                <div className="h-2 rounded-full bg-slate-200">
-                  <div
-                    className="h-2 rounded-full bg-gradient-to-r from-[#6d5efc] to-[#8f83ff]"
-                    style={{ width: `${Math.max(0, Math.min(100, localProfile.tasks?.progress_pct || 0))}%` }}
-                  />
-                </div>
-                <div className="mt-1 text-right text-[11px] font-extrabold text-slate-600">
-                  {localProfile.tasks?.progress_pct || 0}% complete
-                </div>
-              </div>
 
-              <div className="mt-3 space-y-2 overflow-y-auto pr-1 lg:max-h-[300px]">
-                {(localProfile.tasks?.assigned_cards || []).length === 0 ? (
-                  <div className="text-[13px] font-semibold text-slate-500">No assigned tasks yet.</div>
-                ) : (
-                  (localProfile.tasks?.assigned_cards || []).map((t) => (
-                    <div key={t.card_id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="truncate text-[13px] font-black text-slate-900">{t.card_title}</div>
-                      <div className="mt-0.5 text-[12px] font-semibold text-slate-500">{t.board_name}</div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
-                        <span
-                          className={
-                            t.status === "done"
-                              ? "rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-700"
-                              : "rounded-full border border-slate-300 bg-white px-2 py-0.5 text-slate-700"
-                          }
-                        >
-                          {t.status || "open"}
-                        </span>
-                        <span className="rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 px-2 py-0.5 text-slate-700">
-                          {t.priority || "medium"}
-                        </span>
-                        <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-slate-700">
-                          {t.subtasks_all > 0 ? `${t.subtasks_done}/${t.subtasks_all}` : "no checklist"}
-                        </span>
+                <div className="mt-3 space-y-2 overflow-y-auto pr-1 lg:max-h-[300px]">
+                  {(localProfile.supervisor?.assigned_students || []).length === 0 ? (
+                    <div className="text-[13px] font-semibold text-slate-500">No assigned students yet.</div>
+                  ) : (
+                    (localProfile.supervisor?.assigned_students || []).map((s) => (
+                      <div key={s.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div className="truncate text-[13px] font-black text-slate-900">{s.full_name}</div>
+                        <div className="mt-0.5 text-[12px] font-semibold text-slate-500">
+                          {withAt(s.nickname)} • {s.email}
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                          {(s.boards || []).length === 0 ? (
+                            <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-slate-700">
+                              no board yet
+                            </span>
+                          ) : (
+                            (s.boards || []).map((b) => (
+                              <span
+                                key={`${s.id}-${b.id}`}
+                                className="rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 px-2 py-0.5 text-slate-700"
+                              >
+                                {b.name}
+                              </span>
+                            ))
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
+                    ))
+                  )}
+                </div>
+              </section>
+            ) : (
+              <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)] lg:min-h-[450px]">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="text-[18px] font-black text-slate-900">Assigned Tasks</div>
+                  <span className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-black text-slate-700">
+                    {localProfile.tasks?.total || 0} total
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center justify-between text-[12px] font-bold text-slate-600">
+                    <span>{localProfile.tasks?.done || 0} done</span>
+                    <span>{localProfile.tasks?.left || 0} left</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-200">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-[#6d5efc] to-[#8f83ff]"
+                      style={{ width: `${Math.max(0, Math.min(100, localProfile.tasks?.progress_pct || 0))}%` }}
+                    />
+                  </div>
+                  <div className="mt-1 text-right text-[11px] font-extrabold text-slate-600">
+                    {localProfile.tasks?.progress_pct || 0}% complete
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-2 overflow-y-auto pr-1 lg:max-h-[300px]">
+                  {(localProfile.tasks?.assigned_cards || []).length === 0 ? (
+                    <div className="text-[13px] font-semibold text-slate-500">No assigned tasks yet.</div>
+                  ) : (
+                    (localProfile.tasks?.assigned_cards || []).map((t) => (
+                      <div key={t.card_id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div className="truncate text-[13px] font-black text-slate-900">{t.card_title}</div>
+                        <div className="mt-0.5 text-[12px] font-semibold text-slate-500">{t.board_name}</div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                          <span
+                            className={
+                              t.status === "done"
+                                ? "rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-700"
+                                : "rounded-full border border-slate-300 bg-white px-2 py-0.5 text-slate-700"
+                            }
+                          >
+                            {t.status || "open"}
+                          </span>
+                          <span className="rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 px-2 py-0.5 text-slate-700">
+                            {t.priority || "medium"}
+                          </span>
+                          <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-slate-700">
+                            {t.subtasks_all > 0 ? `${t.subtasks_done}/${t.subtasks_all}` : "no checklist"}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            )}
           </div>
         </div>
       ) : null}
