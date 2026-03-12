@@ -107,7 +107,7 @@ func (a *API) notifyCardAssigned(cardID, userID, actorID int64) bool {
 		return false
 	}
 
-	card, err := db.GetCard(a.conn, cardID)
+	card, err := db.GetCardWithDue(a.conn, cardID)
 	if err != nil {
 		log.Printf("discord assignment notify skipped: card query failed for card %d: %v", cardID, err)
 		return false
@@ -132,6 +132,9 @@ func (a *API) notifyCardAssigned(cardID, userID, actorID int64) bool {
 	}
 
 	message := fmt.Sprintf("%s assigned %s to **%s** in **%s**.", actorName, assigneeMention, card.Title, board.Name)
+	if strings.TrimSpace(card.DueDate) != "" {
+		message += fmt.Sprintf(" Deadline: `%s`.", strings.TrimSpace(card.DueDate))
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), discordSyncTimeout)
 	defer cancel()
@@ -142,4 +145,155 @@ func (a *API) notifyCardAssigned(cardID, userID, actorID int64) bool {
 	}
 
 	return true
+}
+
+func (a *API) notifyCardCompleted(cardID, actorID int64) bool {
+	if a.discord == nil || !a.discord.Enabled() {
+		return false
+	}
+
+	boardID, err := db.GetBoardIDByCardID(a.conn, cardID)
+	if err != nil || boardID == 0 {
+		log.Printf("discord completion notify skipped: board lookup failed for card %d: %v", cardID, err)
+		return false
+	}
+
+	channelID, err := db.GetBoardDiscordChannelID(a.conn, boardID)
+	if err != nil || strings.TrimSpace(channelID) == "" {
+		log.Printf("discord completion notify skipped: channel lookup failed for board %d: %v", boardID, err)
+		return false
+	}
+
+	board, err := db.GetBoardBasic(a.conn, boardID)
+	if err != nil {
+		log.Printf("discord completion notify skipped: board query failed for board %d: %v", boardID, err)
+		return false
+	}
+
+	card, err := db.GetCardWithDue(a.conn, cardID)
+	if err != nil {
+		log.Printf("discord completion notify skipped: card query failed for card %d: %v", cardID, err)
+		return false
+	}
+
+	actorName := "Someone"
+	actorMention := actorName
+	if actorID > 0 {
+		if fullName, _, _, _, err := db.GetUserBasic(a.conn, actorID); err == nil && strings.TrimSpace(fullName) != "" {
+			actorName = fullName
+			actorMention = fullName
+		}
+		if discordUserID, err := db.GetUserDiscordID(a.conn, actorID); err == nil && strings.TrimSpace(discordUserID) != "" {
+			actorMention = "<@" + strings.TrimSpace(discordUserID) + ">"
+		}
+	}
+
+	messages := []string{
+		fmt.Sprintf("%s completed **%s** in **%s**. Great work, keep the momentum going.", actorMention, card.Title, board.Name),
+		fmt.Sprintf("%s finished **%s** in **%s**. Strong progress, keep pushing.", actorMention, card.Title, board.Name),
+		fmt.Sprintf("%s wrapped up **%s** in **%s**. Nice job, one more step forward.", actorMention, card.Title, board.Name),
+	}
+	message := messages[(int(cardID)+int(actorID))%len(messages)]
+
+	ctx, cancel := context.WithTimeout(context.Background(), discordSyncTimeout)
+	defer cancel()
+
+	if err := a.discord.SendChannelMessage(ctx, channelID, message); err != nil {
+		log.Printf("discord completion notify failed for card %d actor %d (%s): %v", cardID, actorID, actorName, err)
+		return false
+	}
+
+	return true
+}
+
+func (a *API) runDiscordDueReminderSweep() {
+	if a.discord == nil || !a.discord.Enabled() {
+		return
+	}
+
+	now := time.Now()
+	today := now.Format("2006-01-02")
+
+	items, err := db.ListPendingDiscordDueNotifications(a.conn, today)
+	if err != nil {
+		log.Printf("discord due reminder sweep failed: %v", err)
+		return
+	}
+
+	for _, item := range items {
+		dueDate, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(item.DueDate), now.Location())
+		if err != nil {
+			log.Printf("discord due reminder skipped: bad due date for card %d: %v", item.CardID, err)
+			continue
+		}
+
+		todayDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		daysBefore := int(dueDate.Sub(todayDate).Hours() / 24)
+		if daysBefore < 0 || daysBefore > 2 {
+			continue
+		}
+
+		sent, err := db.HasDiscordDueNotificationSent(a.conn, item.CardID, item.UserID, daysBefore, item.DueDate)
+		if err != nil {
+			log.Printf("discord due reminder lookup failed for card %d user %d: %v", item.CardID, item.UserID, err)
+			continue
+		}
+		if sent {
+			continue
+		}
+
+		mention := item.UserFullName
+		if strings.TrimSpace(item.DiscordUserID) != "" {
+			mention = "<@" + strings.TrimSpace(item.DiscordUserID) + ">"
+		}
+
+		var message string
+		switch daysBefore {
+		case 2:
+			message = fmt.Sprintf("%s reminder: **%s** in **%s** is due in 2 days. Deadline: `%s`.", mention, item.CardTitle, item.BoardName, item.DueDate)
+		case 1:
+			message = fmt.Sprintf("%s reminder: **%s** in **%s** is due tomorrow. Deadline: `%s`.", mention, item.CardTitle, item.BoardName, item.DueDate)
+		case 0:
+			message = fmt.Sprintf("%s last-day reminder: **%s** in **%s** is due today. Deadline: `%s`.", mention, item.CardTitle, item.BoardName, item.DueDate)
+		default:
+			continue
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), discordSyncTimeout)
+		err = a.discord.SendChannelMessage(ctx, item.ChannelID, message)
+		cancel()
+		if err != nil {
+			log.Printf("discord due reminder send failed for card %d user %d: %v", item.CardID, item.UserID, err)
+			continue
+		}
+
+		if err := db.MarkDiscordDueNotificationSent(a.conn, item.CardID, item.UserID, daysBefore, item.DueDate); err != nil {
+			log.Printf("discord due reminder mark failed for card %d user %d: %v", item.CardID, item.UserID, err)
+		}
+	}
+}
+
+func (a *API) StartDiscordReminderWorker() {
+	if a.discord == nil || !a.discord.Enabled() {
+		return
+	}
+
+	go func() {
+		location, err := time.LoadLocation("Asia/Bahrain")
+		if err != nil {
+			log.Printf("discord due reminder worker disabled: failed to load Bahrain timezone: %v", err)
+			return
+		}
+
+		for {
+			now := time.Now().In(location)
+			nextRun := time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, location)
+			if !now.Before(nextRun) {
+				nextRun = nextRun.Add(24 * time.Hour)
+			}
+
+			time.Sleep(time.Until(nextRun))
+			a.runDiscordDueReminderSweep()
+		}
+	}()
 }

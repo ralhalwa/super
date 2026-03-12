@@ -437,6 +437,12 @@ func (a *API) AdminUpdateCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	current, err := db.GetCardWithDue(a.conn, req.CardID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "card not found")
+		return
+	}
+
 	if err := db.UpdateCardAll(a.conn, req.CardID, req.Title, req.Description, req.DueDate, req.Status, req.Priority); err != nil {
 		writeErr(w, http.StatusInternalServerError, "failed to update card")
 		return
@@ -444,7 +450,15 @@ func (a *API) AdminUpdateCard(w http.ResponseWriter, r *http.Request) {
 
 	_ = db.InsertCardActivity(a.conn, req.CardID, actor, "card_updated", "Card updated")
 
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	discordNotified := false
+	if strings.TrimSpace(strings.ToLower(current.Status)) != "done" && req.Status == "done" {
+		discordNotified = a.notifyCardCompleted(req.CardID, actor)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":               true,
+		"discord_notified": discordNotified,
+	})
 }
 
 func (a *API) AdminDeleteCard(w http.ResponseWriter, r *http.Request) {

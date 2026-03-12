@@ -130,6 +130,20 @@ type CardReminder struct {
 	CreatedAt string `json:"created_at"`
 }
 
+type DiscordDueNotification struct {
+	CardID        int64  `json:"card_id"`
+	CardTitle     string `json:"card_title"`
+	DueDate       string `json:"due_date"`
+	CardStatus    string `json:"card_status"`
+	BoardID       int64  `json:"board_id"`
+	BoardName     string `json:"board_name"`
+	ChannelID     string `json:"channel_id"`
+	UserID        int64  `json:"user_id"`
+	UserFullName  string `json:"user_full_name"`
+	UserNickname  string `json:"user_nickname"`
+	DiscordUserID string `json:"discord_user_id"`
+}
+
 type BoardFull struct {
 	BoardID int64  `json:"board_id"`
 	FileID  int64  `json:"supervisor_file_id"`

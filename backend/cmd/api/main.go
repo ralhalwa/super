@@ -44,6 +44,7 @@ func main() {
 	}
 
 	api := handlers.NewAPI(conn, discord.NewFromEnv())
+	api.StartDiscordReminderWorker()
 
 	r := chi.NewRouter()
 
@@ -173,12 +174,31 @@ func runMigrations(conn *sql.DB) error {
 		"migrations/004_comments_attachments_reminders.sql",
 		"migrations/005_supervisor_assignments.sql",
 		"migrations/007_discord.sql",
+		"migrations/008_discord_due_notifications.sql",
 		// "migrations/006_users_nickname_cohort.sql",
 	}
 
 	for _, f := range files {
 		if f == "migrations/007_discord.sql" {
 			if err := ensureDiscordSchema(conn); err != nil {
+				return err
+			}
+			continue
+		}
+		if f == "migrations/008_discord_due_notifications.sql" {
+			if _, err := conn.Exec(`
+				CREATE TABLE IF NOT EXISTS discord_due_notifications (
+				  id INTEGER PRIMARY KEY AUTOINCREMENT,
+				  card_id INTEGER NOT NULL,
+				  user_id INTEGER NOT NULL,
+				  days_before INTEGER NOT NULL,
+				  due_date TEXT NOT NULL,
+				  sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+				  FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
+				  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+				  UNIQUE(card_id, user_id, days_before, due_date)
+				)
+			`); err != nil {
 				return err
 			}
 			continue
