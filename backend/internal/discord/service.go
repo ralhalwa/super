@@ -47,6 +47,10 @@ type channelResponse struct {
 	ID string `json:"id"`
 }
 
+type channelDetails struct {
+	PermissionOverwrites []permissionOverwrite `json:"permission_overwrites"`
+}
+
 type permissionOverwrite struct {
 	ID    string `json:"id"`
 	Type  int    `json:"type"`
@@ -113,10 +117,15 @@ func (s *Service) CreateBoardChannel(ctx context.Context, boardName string, memb
 	return out.ID, nil
 }
 
-func (s *Service) UpdateBoardChannel(ctx context.Context, channelID, boardName string, members []MemberAccess) error {
+func (s *Service) UpdateBoardChannel(ctx context.Context, channelID, boardName string, members []MemberAccess, previouslyManagedUserIDs []string) error {
+	existingOverwrites, err := s.GetChannelPermissionOverwrites(ctx, channelID)
+	if err != nil {
+		return err
+	}
+
 	body := updateChannelRequest{
 		Name:                 sanitizeChannelName(boardName),
-		PermissionOverwrites: s.permissionOverwrites(members),
+		PermissionOverwrites: s.mergePermissionOverwrites(existingOverwrites, members, previouslyManagedUserIDs),
 	}
 
 	return s.doJSON(ctx, http.MethodPatch, fmt.Sprintf("https://discord.com/api/v10/channels/%s", channelID), body, nil)
@@ -167,6 +176,14 @@ func (s *Service) SendChannelMessage(ctx context.Context, channelID, content str
 	return s.doJSON(ctx, http.MethodPost, fmt.Sprintf("https://discord.com/api/v10/channels/%s/messages", channelID), body, nil)
 }
 
+func (s *Service) GetChannelPermissionOverwrites(ctx context.Context, channelID string) ([]permissionOverwrite, error) {
+	var out channelDetails
+	if err := s.doJSON(ctx, http.MethodGet, fmt.Sprintf("https://discord.com/api/v10/channels/%s", channelID), nil, &out); err != nil {
+		return nil, err
+	}
+	return out.PermissionOverwrites, nil
+}
+
 func (s *Service) permissionOverwrites(members []MemberAccess) []permissionOverwrite {
 	viewAndChat := fmt.Sprintf("%d", permissionViewChannel+permissionSendMessages+permissionReadMessageHistory)
 	botAllow := fmt.Sprintf("%d", permissionViewChannel+permissionSendMessages+permissionReadMessageHistory+permissionManageChannels)
@@ -199,6 +216,32 @@ func (s *Service) permissionOverwrites(members []MemberAccess) []permissionOverw
 	}
 
 	return overwrites
+}
+
+func (s *Service) mergePermissionOverwrites(existing []permissionOverwrite, members []MemberAccess, previouslyManagedUserIDs []string) []permissionOverwrite {
+	base := s.permissionOverwrites(members)
+
+	previouslyManaged := map[string]bool{}
+	for _, discordUserID := range previouslyManagedUserIDs {
+		discordUserID = strings.TrimSpace(discordUserID)
+		if discordUserID == "" {
+			continue
+		}
+		previouslyManaged[discordUserID] = true
+	}
+
+	var preserved []permissionOverwrite
+	for _, overwrite := range existing {
+		if overwrite.ID == s.guildID || overwrite.ID == s.applicationID {
+			continue
+		}
+		if overwrite.Type == 1 && previouslyManaged[overwrite.ID] {
+			continue
+		}
+		preserved = append(preserved, overwrite)
+	}
+
+	return append(preserved, base...)
 }
 
 func (s *Service) doJSON(ctx context.Context, method, url string, payload any, out any) error {

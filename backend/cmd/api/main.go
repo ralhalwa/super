@@ -175,6 +175,7 @@ func runMigrations(conn *sql.DB) error {
 		"migrations/005_supervisor_assignments.sql",
 		"migrations/007_discord.sql",
 		"migrations/008_discord_due_notifications.sql",
+		"migrations/009_discord_managed_users.sql",
 		// "migrations/006_users_nickname_cohort.sql",
 	}
 
@@ -197,6 +198,20 @@ func runMigrations(conn *sql.DB) error {
 				  FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
 				  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 				  UNIQUE(card_id, user_id, days_before, due_date)
+				)
+			`); err != nil {
+				return err
+			}
+			continue
+		}
+		if f == "migrations/009_discord_managed_users.sql" {
+			if _, err := conn.Exec(`
+				CREATE TABLE IF NOT EXISTS board_discord_managed_users (
+				  board_id INTEGER NOT NULL,
+				  discord_user_id TEXT NOT NULL,
+				  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+				  PRIMARY KEY (board_id, discord_user_id),
+				  FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
 				)
 			`); err != nil {
 				return err

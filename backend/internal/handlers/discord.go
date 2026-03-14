@@ -35,6 +35,7 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 	defer cancel()
 
 	access := make([]discord.MemberAccess, 0, len(members))
+	managedDiscordUserIDs := make([]string, 0, len(members))
 	for _, member := range members {
 		discordUserID := strings.TrimSpace(member.DiscordUserID)
 		if discordUserID == "" && strings.TrimSpace(member.Nickname) != "" {
@@ -52,6 +53,7 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 		if discordUserID == "" {
 			continue
 		}
+		managedDiscordUserIDs = append(managedDiscordUserIDs, discordUserID)
 		access = append(access, discord.MemberAccess{
 			DiscordUserID: discordUserID,
 		})
@@ -68,6 +70,10 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 			log.Printf("discord channel mapping save failed for board %d: %v", boardID, err)
 			return false
 		}
+		if err := db.ReplaceBoardManagedDiscordUserIDs(a.conn, boardID, managedDiscordUserIDs); err != nil {
+			log.Printf("discord managed user save failed for board %d: %v", boardID, err)
+			return false
+		}
 		return true
 	}
 	if err != nil {
@@ -75,8 +81,18 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 		return false
 	}
 
-	if err := a.discord.UpdateBoardChannel(ctx, channelID, board.Name, access); err != nil {
+	previouslyManagedUserIDs, err := db.ListBoardManagedDiscordUserIDs(a.conn, boardID)
+	if err != nil {
+		log.Printf("discord managed user lookup failed for board %d: %v", boardID, err)
+		return false
+	}
+
+	if err := a.discord.UpdateBoardChannel(ctx, channelID, board.Name, access, previouslyManagedUserIDs); err != nil {
 		log.Printf("discord channel update failed for board %d: %v", boardID, err)
+		return false
+	}
+	if err := db.ReplaceBoardManagedDiscordUserIDs(a.conn, boardID, managedDiscordUserIDs); err != nil {
+		log.Printf("discord managed user save failed for board %d: %v", boardID, err)
 		return false
 	}
 	return true
