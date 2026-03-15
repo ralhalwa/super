@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -96,6 +97,31 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 		return false
 	}
 	return true
+}
+
+func (a *API) deleteBoardDiscordChannel(boardID int64) error {
+	if a.discord == nil || !a.discord.Enabled() {
+		return nil
+	}
+
+	channelID, err := db.GetBoardDiscordChannelID(a.conn, boardID)
+	if err == sql.ErrNoRows || strings.TrimSpace(channelID) == "" {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), discordSyncTimeout)
+	defer cancel()
+
+	if err := a.discord.DeleteChannel(ctx, channelID); err != nil {
+		if strings.Contains(err.Error(), "status=404") || strings.Contains(err.Error(), fmt.Sprintf("status=%d", http.StatusNotFound)) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (a *API) notifyCardAssigned(cardID, userID, actorID int64) bool {

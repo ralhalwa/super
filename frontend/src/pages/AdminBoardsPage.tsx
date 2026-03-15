@@ -166,6 +166,17 @@ function PencilIcon({ size = 14 }: { size?: number }) {
   );
 }
 
+function BinIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 10v6M14 10v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function ArrowIcon({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -275,6 +286,7 @@ export default function AdminBoardsPage() {
   const [membersErr, setMembersErr] = useState("");
   const [members, setMembers] = useState<BoardMember[]>([]);
   const [membersBoard, setMembersBoard] = useState<BoardRow | null>(null);
+  const [deletingBoardID, setDeletingBoardID] = useState<number | null>(null);
 
   const role = (localStorage.getItem("role") || "").trim().toLowerCase();
   const isAdmin = role === "admin";
@@ -333,6 +345,32 @@ export default function AdminBoardsPage() {
       setMembers([]);
     } finally {
       setMembersLoading(false);
+    }
+  }
+
+  async function deleteBoard(board: BoardRow) {
+    if (deletingBoardID === board.id) return;
+
+    const ok = window.confirm(`Delete board "${board.name}"? This will also delete its Discord channel and cannot be undone.`);
+    if (!ok) return;
+
+    setDeletingBoardID(board.id);
+    setErr("");
+    try {
+      await apiFetch("/admin/boards/delete", {
+        method: "POST",
+        body: JSON.stringify({ board_id: board.id }),
+      });
+      setBoards((prev) => prev.filter((item) => item.id !== board.id));
+      if (membersBoard?.id === board.id) {
+        setMembersOpen(false);
+        setMembersBoard(null);
+        setMembers([]);
+      }
+    } catch (e: any) {
+      setErr(e?.message || "Failed to delete board");
+    } finally {
+      setDeletingBoardID(null);
     }
   }
 
@@ -530,18 +568,34 @@ export default function AdminBoardsPage() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        className="h-8 w-8 grid place-items-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100"
-                        title="Board members"
-                        aria-label="Board members"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openMembers(b);
-                        }}
-                      >
-                        <UsersIcon />
-                      </button>
+                      <div className="flex flex-none items-center gap-2">
+                        <button
+                          type="button"
+                          className="h-8 w-8 grid place-items-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100"
+                          title="Board members"
+                          aria-label="Board members"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openMembers(b);
+                          }}
+                        >
+                          <UsersIcon />
+                        </button>
+
+                        <button
+                          type="button"
+                          className="h-8 w-8 grid place-items-center rounded-full border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          title={deletingBoardID === b.id ? "Deleting..." : "Delete board"}
+                          aria-label={deletingBoardID === b.id ? "Deleting board" : "Delete board"}
+                          disabled={deletingBoardID === b.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteBoard(b);
+                          }}
+                        >
+                          <BinIcon size={14} />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2">

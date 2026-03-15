@@ -79,6 +79,17 @@ function BoardIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function BinIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 10v6M14 10v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function SupervisorFilePage() {
   const nav = useNavigate();
   const { fileId } = useParams();
@@ -101,6 +112,7 @@ export default function SupervisorFilePage() {
   const [editingBoardID, setEditingBoardID] = useState<number | null>(null);
   const [editingBoardName, setEditingBoardName] = useState("");
   const [renaming, setRenaming] = useState(false);
+  const [deletingBoardID, setDeletingBoardID] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -224,6 +236,32 @@ export default function SupervisorFilePage() {
       setErr(e.message || "Failed to update board name");
     } finally {
       setRenaming(false);
+    }
+  }
+
+  async function deleteBoard(board: Board) {
+    if (deletingBoardID === board.id) return;
+
+    const ok = window.confirm(`Delete board "${board.name}"? This will also delete its Discord channel and cannot be undone.`);
+    if (!ok) return;
+
+    setDeletingBoardID(board.id);
+    setErr("");
+    setMsg("");
+    try {
+      await apiFetch("/admin/boards/delete", {
+        method: "POST",
+        body: JSON.stringify({ board_id: board.id }),
+      });
+      setBoards((prev) => prev.filter((b) => b.id !== board.id));
+      if (editingBoardID === board.id) {
+        cancelRename();
+      }
+      setMsg("Board deleted.");
+    } catch (e: any) {
+      setErr(e.message || "Failed to delete board");
+    } finally {
+      setDeletingBoardID(null);
     }
   }
 
@@ -469,6 +507,17 @@ export default function SupervisorFilePage() {
                           aria-label="Members"
                         >
                           <UsersIcon />
+                        </button>
+
+                        <button
+                          className="grid h-8 w-10 place-items-center rounded-full border border-red-200 bg-red-50 text-red-700 transition hover:-translate-y-[1px] hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          type="button"
+                          onClick={() => deleteBoard(b)}
+                          title={deletingBoardID === b.id ? "Deleting..." : "Delete board"}
+                          aria-label={deletingBoardID === b.id ? "Deleting board" : "Delete board"}
+                          disabled={deletingBoardID === b.id}
+                        >
+                          <BinIcon />
                         </button>
 
                         <span className="select-none text-2xl text-slate-300">›</span>

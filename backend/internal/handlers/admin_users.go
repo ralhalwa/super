@@ -409,6 +409,61 @@ func (a *API) AdminUpdateBoard(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type deleteBoardReq struct {
+	BoardID int64 `json:"board_id"`
+}
+
+func (a *API) AdminDeleteBoard(w http.ResponseWriter, r *http.Request) {
+	var req deleteBoardReq
+	if err := utils.ReadJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	if req.BoardID == 0 {
+		writeErr(w, http.StatusBadRequest, "board_id required")
+		return
+	}
+
+	role := strings.TrimSpace(strings.ToLower(r.Header.Get("X-User-Role")))
+	if role == "" {
+		role = "admin"
+	}
+	if role != "admin" && role != "supervisor" {
+		writeErr(w, http.StatusForbidden, "only admin or supervisor can delete board")
+		return
+	}
+
+	if role == "supervisor" {
+		actor := actorID(r, a.conn)
+		supID, err := db.GetBoardSupervisorUserID(a.conn, req.BoardID)
+		if err != nil || supID == 0 {
+			writeErr(w, http.StatusBadRequest, "invalid board")
+			return
+		}
+		if actor != supID {
+			writeErr(w, http.StatusForbidden, "not your board")
+			return
+		}
+	}
+
+	if _, err := db.GetBoardBasic(a.conn, req.BoardID); err != nil {
+		writeErr(w, http.StatusNotFound, "board not found")
+		return
+	}
+
+	if err := a.deleteBoardDiscordChannel(req.BoardID); err != nil {
+		writeErr(w, http.StatusBadGateway, "failed to delete discord channel")
+		return
+	}
+
+	if err := db.DeleteBoard(a.conn, req.BoardID); err != nil {
+		writeErr(w, http.StatusInternalServerError, "failed to delete board")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 type addMemberReq struct {
 	BoardID     int64  `json:"board_id"`
 	UserID      int64  `json:"user_id"`

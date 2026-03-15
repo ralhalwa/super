@@ -176,6 +176,10 @@ func (s *Service) SendChannelMessage(ctx context.Context, channelID, content str
 	return s.doJSON(ctx, http.MethodPost, fmt.Sprintf("https://discord.com/api/v10/channels/%s/messages", channelID), body, nil)
 }
 
+func (s *Service) DeleteChannel(ctx context.Context, channelID string) error {
+	return s.doJSON(ctx, http.MethodDelete, fmt.Sprintf("https://discord.com/api/v10/channels/%s", channelID), nil, nil)
+}
+
 func (s *Service) GetChannelPermissionOverwrites(ctx context.Context, channelID string) ([]permissionOverwrite, error) {
 	var out channelDetails
 	if err := s.doJSON(ctx, http.MethodGet, fmt.Sprintf("https://discord.com/api/v10/channels/%s", channelID), nil, &out); err != nil {

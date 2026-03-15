@@ -63,3 +63,8 @@ func UpdateBoardName(conn *sql.DB, boardID int64, name string) error {
 	`, name, boardID)
 	return err
 }
+
+func DeleteBoard(conn *sql.DB, boardID int64) error {
+	_, err := conn.Exec(`DELETE FROM boards WHERE id = ?`, boardID)
+	return err
+}
