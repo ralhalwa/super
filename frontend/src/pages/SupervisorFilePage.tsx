@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
+import { SkeletonBlock } from "../components/Skeleton";
 import { apiFetch } from "../lib/api";
+import { useAuth } from "../lib/auth";
+import { useConfirm } from "../lib/useConfirm";
 
 type Board = {
   id: number;
@@ -93,11 +96,8 @@ function BinIcon({ size = 16 }: { size?: number }) {
 export default function SupervisorFilePage() {
   const nav = useNavigate();
   const { fileId } = useParams();
-  const role = (localStorage.getItem("role") || "").trim().toLowerCase();
-  const isAdmin = role === "admin";
-  const isSupervisor = role === "supervisor";
-  const email = (localStorage.getItem("email") || "").trim().toLowerCase();
-  const login = (localStorage.getItem("login") || "").trim().toLowerCase();
+  const { isAdmin, isSupervisor, email, login } = useAuth();
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const fileIDParam = Number(fileId);
   const [resolvedFileID, setResolvedFileID] = useState<number>(Number.isFinite(fileIDParam) ? fileIDParam : 0);
 
@@ -242,7 +242,10 @@ export default function SupervisorFilePage() {
   async function deleteBoard(board: Board) {
     if (deletingBoardID === board.id) return;
 
-    const ok = window.confirm(`Delete board "${board.name}"? This will also delete its Discord channel and cannot be undone.`);
+    const ok = await confirm({
+      title: "Delete board",
+      message: `Delete "${board.name}"? This will also delete its Discord channel and cannot be undone.`,
+    });
     if (!ok) return;
 
     setDeletingBoardID(board.id);
@@ -273,6 +276,8 @@ export default function SupervisorFilePage() {
   const descMax = 120;
 
   return (
+    <>
+    {confirmDialog}
     <AdminLayout
       active={isAdmin ? "supervisors" : "boards"}
       title="Workspace"
@@ -416,7 +421,10 @@ export default function SupervisorFilePage() {
             ) : null}
 
             {loading ? (
-              <div className="text-[13px] text-slate-500">Loading…</div>
+              <div className="grid gap-2">
+                <SkeletonBlock lines={2} />
+                <SkeletonBlock lines={2} />
+              </div>
             ) : boardsSorted.length === 0 ? (
               <div className="text-[13px] text-slate-500">No boards yet.</div>
             ) : (
@@ -531,5 +539,6 @@ export default function SupervisorFilePage() {
         </div>
       </section>
     </AdminLayout>
+    </>
   );
 }

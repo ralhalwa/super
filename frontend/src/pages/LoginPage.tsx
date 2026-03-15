@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../lib/auth";
 import placeholder from "../placeholder.png";
 
 const AUTH_URL = "https://learn.reboot01.com/api/auth/signin";
@@ -144,6 +145,7 @@ async function resolveLocalUser(identifier: string) {
 
 export default function LoginPage() {
   const nav = useNavigate();
+  const auth = useAuth();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -151,13 +153,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const role = localStorage.getItem("role");
-    const email = localStorage.getItem("email");
-    if (role && email) {
-      if (role === "admin") nav("/admin");
-      else nav("/dashboard");
+    if (auth.authenticated) {
+      nav(auth.isAdmin ? "/admin" : "/admin/boards");
     }
-  }, [nav]);
+  }, [auth.authenticated, auth.isAdmin, nav]);
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -233,15 +232,10 @@ export default function LoginPage() {
         login = String(localUser.nickname || me?.login || ident.login || inputIdentifier).trim();
       }
 
-      // 3) Save
-      localStorage.setItem("jwt", jwt);
-      localStorage.setItem("email", email);
-      localStorage.setItem("login", login);
-      localStorage.setItem("role", role);
+      auth.setSession({ jwt, email, login, role });
 
-      // 4) Redirect
       if (role === "admin") nav("/admin");
-      else nav("/dashboard");
+      else nav("/admin/boards");
     } catch (err: any) {
       setError(err?.message || "Login failed");
     } finally {
@@ -260,8 +254,7 @@ export default function LoginPage() {
             className="relative min-h-[280px] p-6 sm:p-8 lg:min-h-[640px]"
             style={{ backgroundImage: `url(${placeholder})`, backgroundSize: "cover", backgroundPosition: "center" }}
           >
-            <div  />
-            {/* className="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-slate-900/45 to-[#6d5efc]/40" */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-slate-900/45 to-[#6d5efc]/40" />
             <div className="absolute inset-0 opacity-25" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,.7) 1px, transparent 0)", backgroundSize: "20px 20px" }} />
 
             <div className="relative z-10 flex h-full flex-col justify-between">
@@ -271,20 +264,14 @@ export default function LoginPage() {
               </div>
 
               <div className="max-w-[420px]">
-                {/* <h2 className="text-[34px] font-black leading-[1.05] tracking-[-0.03em] text-white sm:text-[42px]">
+                <h2 className="text-[34px] font-black leading-[1.05] tracking-[-0.03em] text-white sm:text-[42px]">
                   Manage Boards.
                   <br />
                   Track Progress.
-                </h2> */}
-                {/* <p className="mt-3 text-[14px] font-semibold text-white/90 sm:text-[15px]">
+                </h2>
+                <p className="mt-3 text-[14px] font-semibold text-white/90 sm:text-[15px]">
                   One clean workspace for admins, supervisors, and students.
-                </p> */}
-
-                {/* <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                  <HeroStat label="Boards" value="Live" />
-                  <HeroStat label="Cards" value="Tracked" />
-                  <HeroStat label="Teams" value="Aligned" />
-                </div> */}
+                </p>
               </div>
             </div>
           </section>
@@ -292,10 +279,7 @@ export default function LoginPage() {
           <section className="grid place-items-center p-6 sm:p-8 lg:p-10">
             <div className="w-full max-w-[360px]">
               <div className="mb-5">
-                {/* <div className="inline-flex items-center rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-[#5f50f6]">
-                  Secure Access
-                </div> */}
-                <h1 className="mt-2 text-[32px] font-black tracking-[-0.03em] text-slate-900">Sign In</h1>
+                <h1 className="text-[32px] font-black tracking-[-0.03em] text-slate-900">Sign In</h1>
                 <p className="mt-1 text-[14px] font-semibold text-slate-500">
                   Enter your nickname or email to continue.
                 </p>
@@ -331,12 +315,6 @@ export default function LoginPage() {
                   {loading ? "Signing in..." : "Sign In"}
                 </button>
               </form>
-
-              {/* <div className="mt-5 flex flex-wrap gap-2">
-                <MiniChip text="Admin" />
-                <MiniChip text="Supervisor" />
-                <MiniChip text="Student" />
-              </div> */}
 
               <div className="mt-6 border-t border-slate-200 pt-4 text-center text-xs font-semibold text-slate-400">
                 © {new Date().getFullYear()} TaskFlow

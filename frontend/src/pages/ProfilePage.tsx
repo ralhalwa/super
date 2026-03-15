@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
+import { SkeletonBlock } from "../components/Skeleton";
 import { apiFetch } from "../lib/api";
+import { useAuth } from "../lib/auth";
 
 const GQL_URL = "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
 
@@ -242,9 +244,7 @@ async function loadRebootGender(login: string, jwt: string): Promise<string> {
 export default function ProfilePage() {
   const nav = useNavigate();
   const params = useParams<{ userId?: string }>();
-  const role = (localStorage.getItem("role") || "").trim().toLowerCase();
-  const ownLogin = (localStorage.getItem("login") || "").trim();
-  const jwt = (localStorage.getItem("jwt") || "").trim().replace(/^"|"$/g, "");
+  const { role, login: ownLogin, jwt, isAdmin, isSupervisor } = useAuth();
   const targetUserID = Number(params.userId || 0);
   const isTargetUserView =
     Number.isFinite(targetUserID) && targetUserID > 0 && (role === "admin" || role === "supervisor");
@@ -376,8 +376,9 @@ export default function ProfilePage() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-[18px] border border-slate-200 bg-white p-5 text-[14px] font-semibold text-slate-500">
-          Loading profile...
+        <div className="mx-auto grid max-w-[1280px] gap-3">
+          <SkeletonBlock lines={3} />
+          <SkeletonBlock lines={5} />
         </div>
       ) : null}
 

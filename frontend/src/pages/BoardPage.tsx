@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
+import { useEscClose } from "../components/Modal";
 import { apiFetch } from "../lib/api";
+import { useAuth } from "../lib/auth";
+import { useConfirm } from "../lib/useConfirm";
 import { playDoneSound } from "../lib/sound";
 
 import {
@@ -563,6 +566,7 @@ export default function BoardPage() {
   const location = useLocation();
   const { boardId } = useParams();
   const boardID = Number(boardId);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const [data, setData] = useState<BoardFull | null>(null);
   const [err, setErr] = useState("");
@@ -582,6 +586,8 @@ export default function BoardPage() {
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersErr, setMembersErr] = useState("");
   const [members, setMembers] = useState<BoardMember[]>([]);
+  const closeMembersModal = useCallback(() => setMembersOpen(false), []);
+  useEscClose(membersOpen, closeMembersModal);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -725,7 +731,10 @@ export default function BoardPage() {
 
   async function deleteList(listId: number, listTitle: string) {
     if (!canManage) return;
-    const ok = window.confirm(`Delete list "${listTitle}" and all its cards? This cannot be undone.`);
+    const ok = await confirm({
+      title: "Delete list",
+      message: `Delete "${listTitle}" and all its cards? This cannot be undone.`,
+    });
     if (!ok) return;
 
     setErr("");
@@ -938,11 +947,13 @@ export default function BoardPage() {
 
   const pageTitle = data ? data.name : `Board #${boardID}`;
   const from = new URLSearchParams(location.search).get("from");
-  const role = (localStorage.getItem("role") || "").trim().toLowerCase();
-  const layoutActive = role === "admin" ? (from === "boards" ? "boards" : "supervisors") : "boards";
-  const canManage = role === "admin" || role === "supervisor";
+  const { isAdmin, isSupervisor } = useAuth();
+  const layoutActive = isAdmin ? (from === "boards" ? "boards" : "supervisors") : "boards";
+  const canManage = isAdmin || isSupervisor;
 
   return (
+    <>
+    {confirmDialog}
     <AdminLayout
       active={layoutActive}
       title={pageTitle}
@@ -959,9 +970,9 @@ export default function BoardPage() {
           </button>
           <button
             className="h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 font-extrabold hover:bg-slate-100 transition"
-            onClick={() => nav(-1)}
+            onClick={() => nav("/admin/boards")}
           >
-            Back
+            Boards
           </button>
         </div>
       }
@@ -1172,5 +1183,6 @@ export default function BoardPage() {
         </div>
       )}
     </AdminLayout>
+    </>
   );
 }

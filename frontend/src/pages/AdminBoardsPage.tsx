@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
+import { useEscClose } from "../components/Modal";
 import { apiFetch } from "../lib/api";
+import { useAuth } from "../lib/auth";
+import { useConfirm } from "../lib/useConfirm";
 
 type BoardRow = {
   id: number;
@@ -288,10 +291,11 @@ export default function AdminBoardsPage() {
   const [membersBoard, setMembersBoard] = useState<BoardRow | null>(null);
   const [deletingBoardID, setDeletingBoardID] = useState<number | null>(null);
 
-  const role = (localStorage.getItem("role") || "").trim().toLowerCase();
-  const isAdmin = role === "admin";
-  const isSupervisor = role === "supervisor";
+  const { isAdmin, isSupervisor } = useAuth();
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const canManageMembers = isAdmin || isSupervisor;
+  const closeMembersModal = useCallback(() => setMembersOpen(false), []);
+  useEscClose(membersOpen, closeMembersModal);
 
   async function load() {
     setLoading(true);
@@ -351,7 +355,10 @@ export default function AdminBoardsPage() {
   async function deleteBoard(board: BoardRow) {
     if (deletingBoardID === board.id) return;
 
-    const ok = window.confirm(`Delete board "${board.name}"? This will also delete its Discord channel and cannot be undone.`);
+    const ok = await confirm({
+      title: "Delete board",
+      message: `Delete "${board.name}"? This will also delete its Discord channel and cannot be undone.`,
+    });
     if (!ok) return;
 
     setDeletingBoardID(board.id);
@@ -375,6 +382,8 @@ export default function AdminBoardsPage() {
   }
 
   return (
+    <>
+    {confirmDialog}
     <AdminLayout
       active="boards"
       title="Boards"
@@ -768,5 +777,6 @@ export default function AdminBoardsPage() {
         </div>
       )}
     </AdminLayout>
+    </>
   );
 }

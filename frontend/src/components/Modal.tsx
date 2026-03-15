@@ -1,4 +1,15 @@
-import React from "react";
+import React, { useEffect } from "react";
+
+export function useEscClose(open: boolean, onClose: () => void) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+}
 
 export default function Modal({
   open,
@@ -13,6 +24,8 @@ export default function Modal({
   footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  useEscClose(open, onClose);
+
   if (!open) return null;
 
   return (
@@ -26,7 +39,6 @@ export default function Modal({
         className="modalPanelIn grid w-full max-w-[940px] grid-rows-[auto_1fr_auto] overflow-hidden rounded-[18px] border border-slate-200 bg-white text-slate-900 shadow-[0_24px_70px_rgba(15,23,42,0.24)]"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
           <div className="text-[13px] font-black tracking-[-0.01em]">{title}</div>
 
@@ -39,10 +51,8 @@ export default function Modal({
           </button>
         </div>
 
-        {/* Body */}
         <div className="overflow-y-auto overflow-x-hidden bg-[#f7f8fb] p-4">{children}</div>
 
-        {/* Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-white px-4 py-2.5">
           {footer}
         </div>

@@ -237,9 +237,10 @@ export default function AssignPage() {
   }
 
   async function removeStudent(studentId: number) {
-    if (!selectedSup) return;
+    if (!selectedSup || saving) return;
     setErr("");
     setOk("");
+    setSaving(true);
     try {
       await apiFetch("/admin/assign/remove", {
         method: "POST",
@@ -250,6 +251,8 @@ export default function AssignPage() {
       setStudents(refreshed || []);
     } catch (e: any) {
       setErr(e.message || "Failed to unassign");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -552,9 +555,11 @@ export default function AssignPage() {
                       className={cn(
                         "h-9 flex-none rounded-[10px] border px-3 text-[12.5px] font-black",
                         "border-red-300/60 bg-red-50 text-red-800",
-                        "hover:border-red-400/70 hover:shadow-[0_10px_18px_rgba(239,68,68,0.10)]"
+                        "hover:border-red-400/70 hover:shadow-[0_10px_18px_rgba(239,68,68,0.10)]",
+                        "disabled:opacity-50 disabled:cursor-not-allowed"
                       )}
                       type="button"
+                      disabled={saving}
                       onClick={() => removeStudent(s.id)}
                     >
                       Remove

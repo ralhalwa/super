@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
+import { SkeletonBlock } from "../components/Skeleton";
 import { apiFetch } from "../lib/api";
+import { useAuth } from "../lib/auth";
 
 type Member = {
   user_id: number;
@@ -182,9 +184,8 @@ export default function BoardMembersPage() {
   const nav = useNavigate();
   const { boardId } = useParams();
   const boardID = Number(boardId);
-  const role = (localStorage.getItem("role") || "").trim().toLowerCase();
-  const isSupervisor = role === "supervisor";
-  const canManage = role === "admin" || role === "supervisor";
+  const { isAdmin, isSupervisor } = useAuth();
+  const canManage = isAdmin || isSupervisor;
 
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -386,9 +387,9 @@ export default function BoardMembersPage() {
         <div className="flex items-center gap-2">
           <button
             className="h-10 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-900 transition hover:border-violet-200 hover:bg-violet-50"
-            onClick={() => nav(-1)}
+            onClick={() => nav(`/admin/boards/${boardID}`)}
           >
-            Back
+            Board
           </button>
         </div>
       }
@@ -572,7 +573,11 @@ export default function BoardMembersPage() {
 
             <div className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:thin]">
               {loading ? (
-                <div className="text-sm font-semibold text-slate-500">Loading...</div>
+                <div className="grid gap-2">
+                  <SkeletonBlock lines={2} />
+                  <SkeletonBlock lines={2} />
+                  <SkeletonBlock lines={2} />
+                </div>
               ) : members.length === 0 ? (
                 <div className="text-sm font-semibold text-slate-500">No members yet.</div>
               ) : (
@@ -622,7 +627,8 @@ export default function BoardMembersPage() {
                             <button
                               type="button"
                               title="Remove member"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100"
+                              disabled={removing}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 removeMembers([m.user_id]);

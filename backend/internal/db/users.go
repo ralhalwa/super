@@ -180,13 +180,22 @@ func GetBoardMemberIDs(conn DBTX, boardID int64) (map[int64]bool, error) {
 	return m, nil
 }
 
-func DeleteUserByID(conn DBTX, userID int64) error {
-	// Avoid FK restrict on boards.created_by by re-homing authored boards.
-	_, err := conn.Exec(`UPDATE boards SET created_by = ? WHERE created_by = ?`, int64(1), userID)
+func DeleteUserByID(conn *sql.DB, userID int64) error {
+	tx, err := conn.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`UPDATE boards SET created_by = ? WHERE created_by = ?`, int64(1), userID)
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.Exec(`DELETE FROM users WHERE id = ?`, userID)
-	return err
+	_, err = tx.Exec(`DELETE FROM users WHERE id = ?`, userID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

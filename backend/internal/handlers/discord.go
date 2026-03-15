@@ -324,6 +324,9 @@ func (a *API) StartDiscordReminderWorker() {
 		return
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	a.stop = cancel
+
 	go func() {
 		location, err := time.LoadLocation("Asia/Bahrain")
 		if err != nil {
@@ -338,8 +341,15 @@ func (a *API) StartDiscordReminderWorker() {
 				nextRun = nextRun.Add(24 * time.Hour)
 			}
 
-			time.Sleep(time.Until(nextRun))
-			a.runDiscordDueReminderSweep()
+			timer := time.NewTimer(time.Until(nextRun))
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				log.Println("discord reminder worker stopped")
+				return
+			case <-timer.C:
+				a.runDiscordDueReminderSweep()
+			}
 		}
 	}()
 }

@@ -1,12 +1,14 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export function clearAuth() {
+  localStorage.removeItem("jwt");
   localStorage.removeItem("role");
   localStorage.removeItem("email");
   localStorage.removeItem("login");
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 }
 
-// Backward compatibility with older imports.
 export const clearToken = clearAuth;
 
 function buildHeaders(options: RequestInit): Record<string, string> {
@@ -14,8 +16,6 @@ function buildHeaders(options: RequestInit): Record<string, string> {
     ...(options.headers as Record<string, string>),
   };
 
-  // ✅ Only set JSON content-type when we actually send JSON body
-  // (Setting it on GET triggers OPTIONS preflight frequently)
   const hasBody = options.body !== undefined && options.body !== null;
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
 
@@ -23,7 +23,6 @@ function buildHeaders(options: RequestInit): Record<string, string> {
     headers["Content-Type"] = "application/json";
   }
 
-  // ✅ Identity headers for backend actorID()
   const email = (localStorage.getItem("email") || "").trim();
   const role = (localStorage.getItem("role") || "").trim();
   const login = (localStorage.getItem("login") || "").trim();
@@ -42,6 +41,12 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     ...options,
     headers,
   });
+
+  if (res.status === 401) {
+    clearAuth();
+    window.dispatchEvent(new Event("auth:logout"));
+    throw new Error("Session expired");
+  }
 
   const text = await res.text();
   let data: any = null;

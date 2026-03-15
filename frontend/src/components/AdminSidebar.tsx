@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../lib/auth";
+import faviconIcon from "/favicon-icon.png";
 
 type Props = { active?: "dashboard" | "supervisors" | "boards" | "reports" | "assign" | "profile" | "users" };
 
@@ -8,13 +10,17 @@ function cn(...xs: Array<string | false | null | undefined>) {
 
 export default function AdminSidebar({ active }: Props) {
   const nav = useNavigate();
-  const role = (localStorage.getItem("role") || "").trim().toLowerCase();
-  const isAdmin = role === "admin";
-  const login = (localStorage.getItem("login") || "").trim();
-  const email = (localStorage.getItem("email") || "").trim();
+  const { isAdmin, login, email, role } = useAuth();
   const fallbackName = login || email || "User";
   const footerName = isAdmin ? "Admin" : fallbackName;
   const footerSub = isAdmin ? "System access" : role || "workspace";
+  const initials = fallbackName
+    .replace(/^@/, "")
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((x) => x[0]?.toUpperCase() || "")
+    .join("") || "U";
 
   const Item = ({
     id,
@@ -50,21 +56,17 @@ export default function AdminSidebar({ active }: Props) {
     <aside
       className={cn(
         "w-[240px] border-r border-slate-200 bg-white p-[18px]",
-
         "h-screen sticky top-0 self-start",
-
         "overflow-y-auto overscroll-contain",
-
         "max-[1050px]:w-full max-[1050px]:h-auto max-[1050px]:sticky max-[1050px]:top-0 max-[1050px]:overflow-visible"
       )}
     >
       <div className="grid h-full grid-rows-[auto_1fr_auto] gap-2">
-        {/* Brand */}
         <div
           onClick={() => nav(isAdmin ? "/admin" : "/admin/boards")}
           className="flex cursor-pointer items-center gap-3 rounded-[14px] px-2 py-2"
         >
-          <div className="h-10 w-10 rounded-[14px] bg-gradient-to-br from-[#6d5efc] to-[#9a8cff] shadow-[0_10px_25px_rgba(15,23,42,0.06)]" />
+          <img src={faviconIcon} alt="Reboot" className="h-10 w-10 rounded-[14px] object-cover shadow-[0_10px_25px_rgba(15,23,42,0.06)]" />
           <div>
             <div className="font-black tracking-[-0.2px] text-slate-900">TaskFlow</div>
             <div className="mt-0.5 text-[12px] font-bold text-slate-500">
@@ -73,8 +75,7 @@ export default function AdminSidebar({ active }: Props) {
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="grid content-center auto-rows-min gap-20 px-2 py-2">
+        <nav className="grid content-start auto-rows-min gap-1.5 px-2 py-2">
           {isAdmin ? (
             <>
               <Item id="dashboard" label="Dashboard" to="/admin" />
@@ -92,29 +93,16 @@ export default function AdminSidebar({ active }: Props) {
           )}
         </nav>
 
-        {/* Footer */}
         <div className="border-t border-slate-200 p-2">
           <div className="mb-3 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full border border-slate-200 bg-[#e8ecff]" />
-            <div className="min-w-0">
+            <div className="h-9 w-9 rounded-full border border-slate-200 bg-[#e8ecff] flex items-center justify-center flex-shrink-0">
+              <span className="text-[11px] font-extrabold text-[#6d5efc]">{initials}</span>
+            </div>
+            <div className="min-w-0 flex-1">
               <div className="truncate text-[13px] font-extrabold text-slate-900">{footerName}</div>
               <div className="mt-0.5 truncate text-[12px] font-bold text-slate-500">{footerSub}</div>
             </div>
           </div>
-
-          {/* {isAdmin ? (
-            <button
-              type="button"
-              onClick={() => nav("/admin/supervisors")}
-              className={cn(
-                "h-11 w-full rounded-[14px] border border-slate-200 bg-slate-50",
-                "font-extrabold text-slate-900 transition",
-                "hover:border-[#6d5efc]/25 hover:bg-[#f2f5ff]"
-              )}
-            >
-              Manage supervisors
-            </button>
-          ) : null} */}
         </div>
       </div>
     </aside>

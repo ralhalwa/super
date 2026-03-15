@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
 import { apiFetch } from "../lib/api";
+import { useAuth } from "../lib/auth";
+import { useConfirm } from "../lib/useConfirm";
 import { playDoneSound } from "../lib/sound";
 
 type Card = {
@@ -356,6 +358,8 @@ export default function CardModal({
     total?: number;
   }) => void;
 }) {
+  const { isAdmin, isSupervisor, isStudent } = useAuth();
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -800,7 +804,7 @@ export default function CardModal({
   }
 
   async function deleteLabel(labelId: number) {
-    const ok = window.confirm("Delete this label?");
+    const ok = await confirm({ title: "Delete label", message: "Delete this label?" });
     if (!ok) return;
     setErr("");
     setMsg("");
@@ -890,7 +894,7 @@ export default function CardModal({
 
   async function deleteCard() {
     if (!card) return;
-    const ok = window.confirm("Delete this card? This action cannot be undone.");
+    const ok = await confirm({ title: "Delete card", message: "Delete this card? This cannot be undone." });
     if (!ok) return;
 
     setErr("");
@@ -915,9 +919,8 @@ export default function CardModal({
     isOverdue ? "overdue" : card?.due_date ? "soon" : "none";
   const dueBadgeText = isOverdue ? "Overdue" : card?.due_date ? "Scheduled" : "None";
   const isDone = card?.status === "done";
-  const currentRole = (localStorage.getItem("role") || "").toLowerCase();
-  const canManageCard = currentRole === "admin" || currentRole === "supervisor";
-  const canToggleDone = canManageCard || currentRole === "student";
+  const canManageCard = isAdmin || isSupervisor;
+  const canToggleDone = canManageCard || isStudent;
   const canDeleteCard = canManageCard;
 
   function emitLiveUpdate(nextCard?: Card | null, nextSubtasks?: Subtask[]) {
@@ -965,6 +968,8 @@ export default function CardModal({
   }
 
   return (
+    <>
+    {confirmDialog}
     <Modal
       open={open}
       title={cardId ? `Card #${cardId}` : "Card"}
@@ -1794,5 +1799,6 @@ export default function CardModal({
         </div>
       )}
     </Modal>
+    </>
   );
 }

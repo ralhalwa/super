@@ -68,10 +68,14 @@ func ListCardsByBoard(conn *sql.DB, boardID int64) ([]models.Card, error) {
 	return out, nil
 }
 
-// Move card between lists + update ordering (simple + robust)
 func MoveCard(conn *sql.DB, cardID, toListID int64, toPosition int64) error {
-	// shift down existing cards in target list from toPosition
-	_, err := conn.Exec(`
+	tx, err := conn.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`
 		UPDATE cards
 		SET position = position + 1
 		WHERE list_id = ? AND position >= ?
@@ -80,13 +84,16 @@ func MoveCard(conn *sql.DB, cardID, toListID int64, toPosition int64) error {
 		return err
 	}
 
-	// move the card
-	_, err = conn.Exec(`
+	_, err = tx.Exec(`
 		UPDATE cards
 		SET list_id = ?, position = ?
 		WHERE id = ?
 	`, toListID, toPosition, cardID)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // reorder within a list (array of card IDs in correct order)

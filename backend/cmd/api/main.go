@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -30,11 +34,15 @@ func main() {
 		dbPath = "./data/app.db"
 	}
 
-	conn, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
+	conn, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer conn.Close()
+
+	if _, err := conn.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		log.Fatal("failed to enable WAL mode:", err)
+	}
 
 	if err := runMigrations(conn); err != nil {
 		log.Fatal(err)
@@ -168,8 +176,23 @@ func main() {
 		sr.Get("/eligible-students", api.SupervisorEligibleStudents)
 	})
 
+	srv := &http.Server{Addr: ":" + port, Handler: r}
+
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		<-quit
+		log.Println("shutting down...")
+		api.Shutdown()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}()
+
 	log.Println("API running on http://localhost:" + port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
 }
 
 func runMigrations(conn *sql.DB) error {

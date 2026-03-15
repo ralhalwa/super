@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -11,10 +12,17 @@ import (
 type API struct {
 	conn    *sql.DB
 	discord *discord.Service
+	stop    context.CancelFunc
 }
 
 func NewAPI(conn *sql.DB, discordSvc *discord.Service) *API {
 	return &API{conn: conn, discord: discordSvc}
+}
+
+func (a *API) Shutdown() {
+	if a.stop != nil {
+		a.stop()
+	}
 }
 
 // Shared JSON helpers (use everywhere)

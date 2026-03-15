@@ -1,6 +1,6 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
+import { useAuth } from "../lib/auth";
 
 type Props = {
   active?: "dashboard" | "supervisors" | "boards" | "assign" | "reports" | "profile" | "users";
@@ -23,11 +23,7 @@ export default function AdminLayout({
   children,
   showLogout = true,
 }: Props) {
-  const nav = useNavigate();
-  const role = (localStorage.getItem("role") || "").trim().toLowerCase();
-  const isAdmin = role === "admin";
-  const login = (localStorage.getItem("login") || "").trim();
-  const email = (localStorage.getItem("email") || "").trim();
+  const { isAdmin, login, email, logout } = useAuth();
   const baseName = login || email || "User";
   const profileInitials = baseName
     .replace(/^@/, "")
@@ -36,19 +32,6 @@ export default function AdminLayout({
     .slice(0, 2)
     .map((x) => x[0]?.toUpperCase() || "")
     .join("") || "U";
-
-  function logout() {
-    // ✅ remove the keys you actually use now
-    localStorage.removeItem("jwt");
-    localStorage.removeItem("role");
-
-    // (optional) clear old leftovers if they exist
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    // ✅ go to login
-    nav("/login", { replace: true });
-  }
 
   return (
     <div className="min-h-screen bg-[#f4f6fb] text-slate-900">
@@ -69,9 +52,8 @@ export default function AdminLayout({
 
             <div className="flex items-center gap-2 max-[1050px]:w-full">
               {!isAdmin && active !== "profile" ? (
-                <button
-                  type="button"
-                  onClick={() => nav("/profile")}
+                <a
+                  href="/profile"
                   className="relative grid h-12 w-12 place-items-center rounded-full border border-[#cfc4ff] bg-[#e9e2ff] font-black text-[#334155] transition hover:border-[#b8a8ff] hover:bg-[#e3d9ff]"
                   title="Profile"
                   aria-label="Open profile"
@@ -83,7 +65,7 @@ export default function AdminLayout({
                       <path d="M12 12.5V21M8 17h8" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                   </span>
-                </button>
+                </a>
               ) : null}
 
               {right}

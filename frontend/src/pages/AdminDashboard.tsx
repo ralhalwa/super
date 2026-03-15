@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
+import { useConfirm } from "../lib/useConfirm";
 
 type SupervisorRow = {
   supervisor_user_id: number;
@@ -151,7 +152,7 @@ async function fetchRebootUserByLogin(login: string): Promise<RebootFetchedUser 
 }
 
 export default function AdminDashboard() {
-  // ✅ Only field admin types
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const [nickname, setNickname] = useState("");
 
   // auto-filled from Reboot
@@ -307,7 +308,10 @@ export default function AdminDashboard() {
     try {
       if (!exists) throw new Error("User does not exist in TaskFlow.");
       if (!email) throw new Error("No user email to delete.");
-      const ok = window.confirm(`Delete ${email} from TaskFlow? This cannot be undone.`);
+      const ok = await confirm({
+        title: "Delete user",
+        message: `Delete ${email} from TaskFlow? This cannot be undone.`,
+      });
       if (!ok) return;
 
       setDeleting(true);
@@ -356,6 +360,8 @@ export default function AdminDashboard() {
   }, [fullName, nickname, role]);
 
   return (
+    <>
+    {confirmDialog}
     <AdminLayout active="dashboard" title="Admin Dashboard" subtitle="Manage users and supervise the system.">
       {/* KPI row */}
       <section className="grid grid-cols-1 gap-3.5 lg:grid-cols-3">
@@ -599,5 +605,6 @@ export default function AdminDashboard() {
         </div>
       </section>
     </AdminLayout>
+    </>
   );
 }

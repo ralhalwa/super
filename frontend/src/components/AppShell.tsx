@@ -1,5 +1,4 @@
-import { clearToken } from "../lib/api";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../lib/auth";
 
 type Props = {
   title: string;
@@ -16,35 +15,30 @@ export default function AppShell({
   children,
   showLogout = false,
 }: Props) {
-  const nav = useNavigate();
+  const { logout } = useAuth();
 
-  function logout() {
-    clearToken();
-    nav("/login");
-  }
+  return (
+    <div className="shell">
+      <div className="container shellInner">
+        <div className="shellTop">
+          <div>
+            <div className="shellKicker">TaskFlow</div>
+            <h1 className="shellTitle">{title}</h1>
+            {subtitle && <p className="shellSub">{subtitle}</p>}
+          </div>
 
-return (
-  <div className="shell">
-    <div className="container shellInner">
-      <div className="shellTop">
-        <div>
-          <div className="shellKicker">TaskFlow • Admin Console</div>
-          <h1 className="shellTitle">{title}</h1>
-          {subtitle && <p className="shellSub">{subtitle}</p>}
+          <div className="shellActions">
+            {right}
+            {showLogout && (
+              <button className="aBtn aBtnOutline" onClick={logout}>
+                Logout
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="shellActions">
-          {right}
-          {showLogout && (
-            <button className="aBtn aBtnOutline" onClick={logout}>
-              Logout
-            </button>
-          )}
-        </div>
+        {children}
       </div>
-
-      {children}
     </div>
-  </div>
-);
+  );
 }
