@@ -163,7 +163,6 @@ func main() {
 	})
 
 	log.Println("API running on http://localhost:" + port)
-	log.Println("Hardcoded login enabled (NO JWT)")
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
 
