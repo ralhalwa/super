@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -21,6 +22,7 @@ const (
 )
 
 var channelSanitizer = regexp.MustCompile(`[^a-z0-9-]+`)
+var discordNameTokenPattern = regexp.MustCompile(`[a-z0-9_-]+`)
 
 type Service struct {
 	token         string
@@ -35,6 +37,15 @@ type MemberAccess struct {
 }
 
 type guildMemberSearchResult struct {
+	User struct {
+		ID         string `json:"id"`
+		Username   string `json:"username"`
+		GlobalName string `json:"global_name"`
+	} `json:"user"`
+	Nick string `json:"nick"`
+}
+
+type guildMemberResult struct {
 	User struct {
 		ID         string `json:"id"`
 		Username   string `json:"username"`
@@ -137,18 +148,37 @@ func (s *Service) ResolveMemberByNickname(ctx context.Context, nickname string) 
 		return "", nil
 	}
 
+	normalizedQuery := normalizeDiscordName(query)
+
+	members, err := s.ListGuildMembers(ctx)
+	if err == nil {
+		var exactMatches []guildMemberResult
+		for _, member := range members {
+			if matchesDiscordNameQuery(normalizedQuery, member.Nick) ||
+				matchesDiscordNameQuery(normalizedQuery, member.User.Username) ||
+				matchesDiscordNameQuery(normalizedQuery, member.User.GlobalName) {
+				exactMatches = append(exactMatches, member)
+			}
+		}
+		if len(exactMatches) == 1 {
+			return strings.TrimSpace(exactMatches[0].User.ID), nil
+		}
+		if len(exactMatches) > 1 {
+			return "", fmt.Errorf("multiple discord members matched nickname %q", query)
+		}
+	}
+
 	var results []guildMemberSearchResult
-	url := fmt.Sprintf("https://discord.com/api/v10/guilds/%s/members/search?query=%s&limit=25", s.guildID, query)
-	if err := s.doJSON(ctx, http.MethodGet, url, nil, &results); err != nil {
+	searchURL := fmt.Sprintf("https://discord.com/api/v10/guilds/%s/members/search?query=%s&limit=25", s.guildID, url.QueryEscape(query))
+	if err := s.doJSON(ctx, http.MethodGet, searchURL, nil, &results); err != nil {
 		return "", err
 	}
 
-	normalizedQuery := normalizeDiscordName(query)
 	var exactMatches []guildMemberSearchResult
 	for _, result := range results {
-		if normalizeDiscordName(result.Nick) == normalizedQuery ||
-			normalizeDiscordName(result.User.Username) == normalizedQuery ||
-			normalizeDiscordName(result.User.GlobalName) == normalizedQuery {
+		if matchesDiscordNameQuery(normalizedQuery, result.Nick) ||
+			matchesDiscordNameQuery(normalizedQuery, result.User.Username) ||
+			matchesDiscordNameQuery(normalizedQuery, result.User.GlobalName) {
 			exactMatches = append(exactMatches, result)
 		}
 	}
@@ -163,6 +193,34 @@ func (s *Service) ResolveMemberByNickname(ctx context.Context, nickname string) 
 		return strings.TrimSpace(results[0].User.ID), nil
 	}
 	return "", nil
+}
+
+func (s *Service) ListGuildMembers(ctx context.Context) ([]guildMemberResult, error) {
+	allMembers := make([]guildMemberResult, 0, 256)
+	after := ""
+
+	for {
+		endpoint := fmt.Sprintf("https://discord.com/api/v10/guilds/%s/members?limit=1000", s.guildID)
+		if after != "" {
+			endpoint += "&after=" + url.QueryEscape(after)
+		}
+
+		var batch []guildMemberResult
+		if err := s.doJSON(ctx, http.MethodGet, endpoint, nil, &batch); err != nil {
+			return nil, err
+		}
+		if len(batch) == 0 {
+			break
+		}
+
+		allMembers = append(allMembers, batch...)
+		after = strings.TrimSpace(batch[len(batch)-1].User.ID)
+		if len(batch) < 1000 || after == "" {
+			break
+		}
+	}
+
+	return allMembers, nil
 }
 
 func (s *Service) SendChannelMessage(ctx context.Context, channelID, content string) error {
@@ -290,6 +348,24 @@ func (s *Service) doJSON(ctx context.Context, method, url string, payload any, o
 
 func normalizeDiscordName(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func matchesDiscordNameQuery(normalizedQuery, candidate string) bool {
+	candidate = normalizeDiscordName(candidate)
+	if candidate == "" || normalizedQuery == "" {
+		return false
+	}
+	if candidate == normalizedQuery {
+		return true
+	}
+
+	for _, token := range discordNameTokenPattern.FindAllString(candidate, -1) {
+		if token == normalizedQuery {
+			return true
+		}
+	}
+
+	return false
 }
 
 func sanitizeChannelName(boardName string) string {

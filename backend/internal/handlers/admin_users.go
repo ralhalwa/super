@@ -276,19 +276,20 @@ func (a *API) AdminCreateBoard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var ownerID int64
+	err := a.conn.QueryRow(`
+		SELECT supervisor_user_id
+		FROM supervisor_files
+		WHERE id = ?
+		LIMIT 1
+	`, req.SupervisorFileID).Scan(&ownerID)
+	if err != nil || ownerID == 0 {
+		writeErr(w, http.StatusBadRequest, "invalid supervisor file")
+		return
+	}
+
 	if role == "supervisor" {
 		actor := actorID(r, a.conn)
-		var ownerID int64
-		err := a.conn.QueryRow(`
-			SELECT supervisor_user_id
-			FROM supervisor_files
-			WHERE id = ?
-			LIMIT 1
-		`, req.SupervisorFileID).Scan(&ownerID)
-		if err != nil || ownerID == 0 {
-			writeErr(w, http.StatusBadRequest, "invalid supervisor file")
-			return
-		}
 		if ownerID != actor {
 			writeErr(w, http.StatusForbidden, "cannot create board in another supervisor workspace")
 			return
@@ -302,7 +303,7 @@ func (a *API) AdminCreateBoard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = db.AddBoardMember(a.conn, boardID, createdBy, "owner")
+	_ = db.AddBoardMember(a.conn, boardID, ownerID, "owner")
 
 	discordSynced := a.syncBoardDiscordChannel(boardID)
 

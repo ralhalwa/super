@@ -225,7 +225,7 @@ export default function LoginPage() {
         }
 
         if (!localUser?.role) {
-          throw new Error("User role not found in local DB. Ask admin to add this user first.");
+          throw new Error("Your account is not set up in TaskFlow yet. Please contact an admin to complete your access.");
         }
 
         role = String(localUser.role).trim().toLowerCase();

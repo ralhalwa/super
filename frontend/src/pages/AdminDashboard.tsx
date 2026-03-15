@@ -180,7 +180,7 @@ export default function AdminDashboard() {
     try {
       const [sups, students] = await Promise.all([
         apiFetch("/admin/supervisors"),
-        apiFetch("/admin/assign/students"),
+        apiFetch("/admin/users?role=student&q="),
       ]);
 
       setSupervisors(sups || []);

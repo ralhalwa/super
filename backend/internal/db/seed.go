@@ -23,9 +23,9 @@ func SeedAdmin(conn *sql.DB) error {
 	}
 
 	_, err = conn.Exec(`
-		INSERT INTO users (full_name, email, password_hash, role)
-		VALUES (?, ?, ?, 'admin')
-	`, "System Admin", "admin@local.test", hash)
+		INSERT INTO users (full_name, email, password_hash, role, nickname, cohort)
+		VALUES (?, ?, ?, 'admin', ?, ?)
+	`, "System Admin", "admin@local.test", hash, "admin", "system")
 
 	// ensure data folder exists if path points there
 	_ = os.MkdirAll("./data", 0755)

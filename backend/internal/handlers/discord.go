@@ -13,7 +13,7 @@ import (
 	"taskflow/internal/discord"
 )
 
-const discordSyncTimeout = 10 * time.Second
+const discordSyncTimeout = 30 * time.Second
 
 func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 	if a.discord == nil || !a.discord.Enabled() {
@@ -32,15 +32,14 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), discordSyncTimeout)
-	defer cancel()
-
 	access := make([]discord.MemberAccess, 0, len(members))
 	managedDiscordUserIDs := make([]string, 0, len(members))
 	for _, member := range members {
 		discordUserID := strings.TrimSpace(member.DiscordUserID)
 		if discordUserID == "" && strings.TrimSpace(member.Nickname) != "" {
-			resolvedID, err := a.discord.ResolveMemberByNickname(ctx, member.Nickname)
+			resolveCtx, resolveCancel := context.WithTimeout(context.Background(), discordSyncTimeout)
+			resolvedID, err := a.discord.ResolveMemberByNickname(resolveCtx, member.Nickname)
+			resolveCancel()
 			if err != nil {
 				log.Printf("discord nickname resolve failed for board %d user %d nickname %q: %v", boardID, member.UserID, member.Nickname, err)
 			} else if resolvedID != "" {
@@ -62,7 +61,9 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 
 	channelID, err := db.GetBoardDiscordChannelID(a.conn, boardID)
 	if err == sql.ErrNoRows {
-		channelID, err = a.discord.CreateBoardChannel(ctx, board.Name, access)
+		createCtx, createCancel := context.WithTimeout(context.Background(), discordSyncTimeout)
+		channelID, err = a.discord.CreateBoardChannel(createCtx, board.Name, access)
+		createCancel()
 		if err != nil {
 			log.Printf("discord channel create failed for board %d: %v", boardID, err)
 			return false
@@ -88,10 +89,13 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 		return false
 	}
 
-	if err := a.discord.UpdateBoardChannel(ctx, channelID, board.Name, access, previouslyManagedUserIDs); err != nil {
+	updateCtx, updateCancel := context.WithTimeout(context.Background(), discordSyncTimeout)
+	if err := a.discord.UpdateBoardChannel(updateCtx, channelID, board.Name, access, previouslyManagedUserIDs); err != nil {
+		updateCancel()
 		log.Printf("discord channel update failed for board %d: %v", boardID, err)
 		return false
 	}
+	updateCancel()
 	if err := db.ReplaceBoardManagedDiscordUserIDs(a.conn, boardID, managedDiscordUserIDs); err != nil {
 		log.Printf("discord managed user save failed for board %d: %v", boardID, err)
 		return false
