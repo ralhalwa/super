@@ -156,7 +156,11 @@ func main() {
 		ar.Post("/card/reminders/delete", api.AdminDeleteReminder)
 
 		ar.Get("/all-boards", api.AdminAllBoards)
-		ar.Get("/profile/summary", api.ProfileSummary)
+			ar.Get("/meetings", api.AdminListMeetings)
+			ar.Post("/meetings", api.AdminCreateMeeting)
+			ar.Post("/meetings/update", api.AdminUpdateMeeting)
+			ar.Post("/meetings/delete", api.AdminDeleteMeeting)
+			ar.Get("/profile/summary", api.ProfileSummary)
 
 		// supervisor-student assignments
 		ar.Get("/assign/supervisors", api.AdminAssignListSupervisors)
@@ -205,6 +209,7 @@ func runMigrations(conn *sql.DB) error {
 		"migrations/007_discord.sql",
 		"migrations/008_discord_due_notifications.sql",
 		"migrations/009_discord_managed_users.sql",
+		"migrations/010_meetings.sql",
 		// "migrations/006_users_nickname_cohort.sql",
 	}
 

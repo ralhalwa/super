@@ -1,9 +1,10 @@
 import React from "react";
 import AdminSidebar from "./AdminSidebar";
 import { useAuth } from "../lib/auth";
+import { useNavigate } from "react-router-dom";
 
 type Props = {
-  active?: "dashboard" | "supervisors" | "boards" | "assign" | "reports" | "profile" | "users";
+  active?: "dashboard" | "supervisors" | "boards" | "assign" | "reports" | "profile" | "users" | "meetings";
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
@@ -23,6 +24,7 @@ export default function AdminLayout({
   children,
   showLogout = true,
 }: Props) {
+  const nav = useNavigate();
   const { isAdmin, login, email, logout } = useAuth();
   const baseName = login || email || "User";
   const profileInitials = baseName
@@ -52,20 +54,48 @@ export default function AdminLayout({
 
             <div className="flex items-center gap-2 max-[1050px]:w-full">
               {!isAdmin && active !== "profile" ? (
-                <a
-                  href="/profile"
-                  className="relative grid h-12 w-12 place-items-center rounded-full border border-[#cfc4ff] bg-[#e9e2ff] font-black text-[#334155] transition hover:border-[#b8a8ff] hover:bg-[#e3d9ff]"
-                  title="Profile"
-                  aria-label="Open profile"
-                >
-                  <span className="text-[20px] tracking-[-0.02em]">{profileInitials}</span>
-                  <span className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white shadow-sm">
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-                      <circle cx="12" cy="8" r="4.5" stroke="#7c3aed" strokeWidth="2" />
-                      <path d="M12 12.5V21M8 17h8" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+                <>
+                  <button
+                    type="button"
+                    onClick={() => nav("/admin/boards")}
+                    className="relative grid h-12 w-12 place-items-center rounded-full border border-[#bfd7ff] bg-[#e8f1ff] font-black text-[#334155] transition hover:border-[#93c5fd] hover:bg-[#dbeafe]"
+                    title="Boards"
+                    aria-label="Open boards"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+                      <rect x="4" y="5" width="16" height="14" rx="3" stroke="#2563eb" strokeWidth="2" />
+                      <path d="M8 9h8M8 13h8M8 17h5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                  </span>
-                </a>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => nav("/calendar")}
+                    className="relative grid h-12 w-12 place-items-center rounded-full border border-[#d9c8a8] bg-[#fff4de] font-black text-[#334155] transition hover:border-[#d8b56f] hover:bg-[#ffefcf]"
+                    title="Meetings calendar"
+                    aria-label="Open meetings calendar"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+                      <path d="M7 3v3M17 3v3M4 9h16" stroke="#b45309" strokeWidth="2" strokeLinecap="round" />
+                      <rect x="4" y="5" width="16" height="15" rx="3" stroke="#b45309" strokeWidth="2" />
+                      <path d="M8 13h3v3H8z" fill="#f59e0b" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => nav("/profile")}
+                    className="relative grid h-12 w-12 place-items-center rounded-full border border-[#cfc4ff] bg-[#e9e2ff] font-black text-[#334155] transition hover:border-[#b8a8ff] hover:bg-[#e3d9ff]"
+                    title="Profile"
+                    aria-label="Open profile"
+                  >
+                    <span className="text-[20px] tracking-[-0.02em]">{profileInitials}</span>
+                    <span className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white shadow-sm">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4.5" stroke="#7c3aed" strokeWidth="2" />
+                        <path d="M12 12.5V21M8 17h8" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                  </button>
+                </>
               ) : null}
 
               {right}

@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import faviconIcon from "/favicon-icon.png";
 
-type Props = { active?: "dashboard" | "supervisors" | "boards" | "reports" | "assign" | "profile" | "users" };
+type Props = { active?: "dashboard" | "supervisors" | "boards" | "reports" | "assign" | "profile" | "users" | "meetings" };
 
 function cn(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -83,6 +83,7 @@ export default function AdminSidebar({ active }: Props) {
               <Item id="boards" label="Boards" to="/admin/boards" />
               <Item id="assign" label="Assign" to="/admin/assign" />
               <Item id="users" label="Users" to="/admin/users" />
+              <Item id="meetings" label="Meetings" to="/admin/meetings" />
               <Item id="reports" label="Reports" to="/admin/reports" />
             </>
           ) : (

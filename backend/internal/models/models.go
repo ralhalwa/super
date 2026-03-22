@@ -130,6 +130,22 @@ type CardReminder struct {
 	CreatedAt string `json:"created_at"`
 }
 
+type Meeting struct {
+	ID            int64  `json:"id"`
+	BoardID       int64  `json:"board_id"`
+	BoardName     string `json:"board_name"`
+	SupervisorID  int64  `json:"supervisor_id"`
+	Supervisor    string `json:"supervisor_name"`
+	CreatedBy     int64  `json:"created_by"`
+	CreatedByName string `json:"created_by_name"`
+	Title         string `json:"title"`
+	Location      string `json:"location"`
+	Notes         string `json:"notes"`
+	StartsAt      string `json:"starts_at"`
+	EndsAt        string `json:"ends_at"`
+	CreatedAt     string `json:"created_at"`
+}
+
 type DiscordDueNotification struct {
 	CardID        int64  `json:"card_id"`
 	CardTitle     string `json:"card_title"`
