@@ -146,6 +146,16 @@ type Meeting struct {
 	CreatedAt     string `json:"created_at"`
 }
 
+type MeetingRoomNotification struct {
+	MeetingID  int64  `json:"meeting_id"`
+	BoardID    int64  `json:"board_id"`
+	BoardName  string `json:"board_name"`
+	Title      string `json:"title"`
+	Location   string `json:"location"`
+	StartsAt   string `json:"starts_at"`
+	EndsAt     string `json:"ends_at"`
+}
+
 type DiscordDueNotification struct {
 	CardID        int64  `json:"card_id"`
 	CardTitle     string `json:"card_title"`

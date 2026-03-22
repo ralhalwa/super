@@ -121,10 +121,12 @@ func (a *API) AdminCreateMeeting(w http.ResponseWriter, r *http.Request) {
 	}
 
 	discordNotified := a.notifyMeetingBooked(meetingID, actor)
+	roomBookingNotified := a.notifyMeetingRoomBookingIfDue(meetingID)
 
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"id":               meetingID,
-		"discord_notified": discordNotified,
+		"id":                     meetingID,
+		"discord_notified":       discordNotified,
+		"room_booking_notified":  roomBookingNotified,
 	})
 }
 

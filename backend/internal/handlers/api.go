@@ -5,18 +5,34 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 
 	"taskflow/internal/discord"
 )
 
 type API struct {
-	conn    *sql.DB
-	discord *discord.Service
-	stop    context.CancelFunc
+	conn                   *sql.DB
+	discord                *discord.Service
+	stop                   context.CancelFunc
+	roomsBookingsChannelID string
+	roomsBookingsMention   string
 }
 
 func NewAPI(conn *sql.DB, discordSvc *discord.Service) *API {
-	return &API{conn: conn, discord: discordSvc}
+	channelID := strings.TrimSpace(os.Getenv("DISCORD_ROOMS_BOOKINGS_CHANNEL_ID"))
+	roleID := strings.TrimSpace(os.Getenv("DISCORD_TALENT_ROLE_ID"))
+	mention := ""
+	if roleID != "" {
+		mention = "<@&" + roleID + ">"
+	}
+
+	return &API{
+		conn:                   conn,
+		discord:                discordSvc,
+		roomsBookingsChannelID: channelID,
+		roomsBookingsMention:   mention,
+	}
 }
 
 func (a *API) Shutdown() {

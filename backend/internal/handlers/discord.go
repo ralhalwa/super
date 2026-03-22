@@ -11,6 +11,7 @@ import (
 
 	"taskflow/internal/db"
 	"taskflow/internal/discord"
+	"taskflow/internal/models"
 )
 
 const discordSyncTimeout = 30 * time.Second
@@ -348,6 +349,115 @@ func (a *API) notifyMeetingBooked(meetingID, actorID int64) bool {
 	return true
 }
 
+func formatRoomTime(t time.Time) string {
+	return strings.ToLower(t.Format("3:04 pm"))
+}
+
+func (a *API) sendMeetingRoomBookingNotice(meeting models.Meeting, location *time.Location) bool {
+	if a.discord == nil || !a.discord.Enabled() {
+		return false
+	}
+	if strings.TrimSpace(a.roomsBookingsChannelID) == "" || strings.TrimSpace(a.roomsBookingsMention) == "" {
+		return false
+	}
+
+	startAt, err := time.Parse(time.RFC3339, strings.TrimSpace(meeting.StartsAt))
+	if err != nil {
+		log.Printf("meeting room notify skipped: bad start time for meeting %d: %v", meeting.ID, err)
+		return false
+	}
+	endAt, err := time.Parse(time.RFC3339, strings.TrimSpace(meeting.EndsAt))
+	if err != nil {
+		log.Printf("meeting room notify skipped: bad end time for meeting %d: %v", meeting.ID, err)
+		return false
+	}
+
+	startLocal := startAt.In(location)
+	endLocal := endAt.In(location)
+	now := time.Now().In(location)
+	meetingDay := time.Date(startLocal.Year(), startLocal.Month(), startLocal.Day(), 0, 0, 0, 0, location)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, location)
+	daysBefore := int(meetingDay.Sub(today).Hours() / 24)
+	if daysBefore != 1 && daysBefore != 0 {
+		return false
+	}
+
+	meetingDate := meetingDay.Format("2006-01-02")
+	sent, err := db.HasMeetingRoomNotificationSent(a.conn, meeting.ID, daysBefore, meetingDate)
+	if err != nil {
+		log.Printf("meeting room notify lookup failed for meeting %d: %v", meeting.ID, err)
+		return false
+	}
+	if sent {
+		return false
+	}
+
+	dayWord := "today"
+	if daysBefore == 1 {
+		dayWord = "tomorrow"
+	}
+
+	message := fmt.Sprintf(
+		"%s Please note that %s will be occupied from %s to %s %s.",
+		a.roomsBookingsMention,
+		strings.TrimSpace(meeting.Location),
+		formatRoomTime(startLocal),
+		formatRoomTime(endLocal),
+		dayWord,
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), discordSyncTimeout)
+	err = a.discord.SendChannelMessage(ctx, a.roomsBookingsChannelID, message)
+	cancel()
+	if err != nil {
+		log.Printf("meeting room notify send failed for meeting %d: %v", meeting.ID, err)
+		return false
+	}
+
+	if err := db.MarkMeetingRoomNotificationSent(a.conn, meeting.ID, daysBefore, meetingDate); err != nil {
+		log.Printf("meeting room notify mark failed for meeting %d: %v", meeting.ID, err)
+	}
+
+	return true
+}
+
+func (a *API) notifyMeetingRoomBookingIfDue(meetingID int64) bool {
+	meeting, err := db.GetMeetingByID(a.conn, meetingID)
+	if err != nil || meeting.ID == 0 || strings.TrimSpace(meeting.Location) == "" {
+		return false
+	}
+
+	location, err := time.LoadLocation("Asia/Bahrain")
+	if err != nil {
+		log.Printf("meeting room notify skipped: failed to load Bahrain timezone: %v", err)
+		return false
+	}
+
+	return a.sendMeetingRoomBookingNotice(meeting, location)
+}
+
+func (a *API) runMeetingRoomBookingSweep(location *time.Location) {
+	if a.discord == nil || !a.discord.Enabled() {
+		return
+	}
+
+	items, err := db.ListMeetingsForRoomNotifications(a.conn)
+	if err != nil {
+		log.Printf("meeting room sweep failed: %v", err)
+		return
+	}
+
+	for _, item := range items {
+		meeting := models.Meeting{
+			ID:       item.MeetingID,
+			Location: item.Location,
+			StartsAt: item.StartsAt,
+			EndsAt:   item.EndsAt,
+		}
+		_ = a.sendMeetingRoomBookingNotice(meeting, location)
+	}
+}
+
 func (a *API) runDiscordDueReminderSweep() {
 	if a.discord == nil || !a.discord.Enabled() {
 		return
@@ -445,6 +555,7 @@ func (a *API) StartDiscordReminderWorker() {
 				return
 			case <-timer.C:
 				a.runDiscordDueReminderSweep()
+				a.runMeetingRoomBookingSweep(location)
 			}
 		}
 	}()

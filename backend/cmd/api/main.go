@@ -210,6 +210,7 @@ func runMigrations(conn *sql.DB) error {
 		"migrations/008_discord_due_notifications.sql",
 		"migrations/009_discord_managed_users.sql",
 		"migrations/010_meetings.sql",
+		"migrations/011_meeting_room_notifications.sql",
 		// "migrations/006_users_nickname_cohort.sql",
 	}
 
