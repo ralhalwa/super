@@ -32,6 +32,24 @@ func GetUserBasic(conn DBTX, id int64) (fullName, email, role string, isActive b
 	return fullName, email, role, activeInt == 1, nil
 }
 
+func GetUserDisplayName(conn DBTX, id int64) (string, error) {
+	var fullName, nickname string
+	err := conn.QueryRow(`
+		SELECT full_name, IFNULL(nickname, '')
+		FROM users
+		WHERE id = ?
+	`, id).Scan(&fullName, &nickname)
+	if err != nil {
+		return "", err
+	}
+
+	nickname = strings.TrimSpace(nickname)
+	if nickname != "" {
+		return nickname, nil
+	}
+	return strings.TrimSpace(fullName), nil
+}
+
 // ✅ UPDATED: add nickname + cohort
 func CreateUser(conn DBTX, fullName, email, passHash, role, nickname, cohort string) (int64, error) {
 	res, err := conn.Exec(`
@@ -135,6 +153,29 @@ func UserExistsByEmail(conn DBTX, email string) (bool, error) {
 		return false, err
 	}
 	return id > 0, nil
+}
+
+func GetUserByNickname(conn DBTX, nickname string) (id int64, fullName, email, role string, isActive bool, err error) {
+	var activeInt int
+	err = conn.QueryRow(`
+		SELECT id, full_name, email, role, is_active
+		FROM users
+		WHERE LOWER(IFNULL(nickname,'')) = LOWER(?)
+		LIMIT 1
+	`, nickname).Scan(&id, &fullName, &email, &role, &activeInt)
+	if err != nil {
+		return 0, "", "", "", false, err
+	}
+	return id, fullName, email, role, activeInt == 1, nil
+}
+
+func UpdateUserNickname(conn DBTX, userID int64, nickname string) error {
+	_, err := conn.Exec(`
+		UPDATE users
+		SET nickname = NULLIF(TRIM(?), '')
+		WHERE id = ?
+	`, nickname, userID)
+	return err
 }
 
 func UserExistsByNickname(conn DBTX, nickname string) (bool, error) {

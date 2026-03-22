@@ -120,8 +120,11 @@ func (a *API) AdminCreateMeeting(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	discordNotified := a.notifyMeetingBooked(meetingID, actor)
+
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"id": meetingID,
+		"id":               meetingID,
+		"discord_notified": discordNotified,
 	})
 }
 

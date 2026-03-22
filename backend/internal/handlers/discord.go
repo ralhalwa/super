@@ -252,6 +252,70 @@ func (a *API) notifyCardCompleted(cardID, actorID int64) bool {
 	return true
 }
 
+func (a *API) notifyMeetingBooked(meetingID, actorID int64) bool {
+	if a.discord == nil || !a.discord.Enabled() {
+		return false
+	}
+
+	meeting, err := db.GetMeetingByID(a.conn, meetingID)
+	if err != nil || meeting.ID == 0 {
+		log.Printf("discord meeting notify skipped: meeting lookup failed for meeting %d: %v", meetingID, err)
+		return false
+	}
+
+	_ = a.syncBoardDiscordChannel(meeting.BoardID)
+
+	channelID, err := db.GetBoardDiscordChannelID(a.conn, meeting.BoardID)
+	if err != nil || strings.TrimSpace(channelID) == "" {
+		log.Printf("discord meeting notify skipped: channel lookup failed for board %d: %v", meeting.BoardID, err)
+		return false
+	}
+
+	actorName := meeting.CreatedByName
+	if actorID > 0 {
+		if displayName, err := db.GetUserDisplayName(a.conn, actorID); err == nil && strings.TrimSpace(displayName) != "" {
+			actorName = displayName
+		}
+	}
+	if strings.TrimSpace(actorName) == "" {
+		actorName = "Someone"
+	}
+
+	startAt, err := time.Parse(time.RFC3339, strings.TrimSpace(meeting.StartsAt))
+	if err != nil {
+		log.Printf("discord meeting notify skipped: bad start time for meeting %d: %v", meetingID, err)
+		return false
+	}
+	endAt, err := time.Parse(time.RFC3339, strings.TrimSpace(meeting.EndsAt))
+	if err != nil {
+		log.Printf("discord meeting notify skipped: bad end time for meeting %d: %v", meetingID, err)
+		return false
+	}
+
+	message := fmt.Sprintf(
+		"%s booked a new meeting for **%s** in **%s**.\nLocation: **%s**\nTime: `%s - %s`",
+		actorName,
+		meeting.Title,
+		meeting.BoardName,
+		meeting.Location,
+		startAt.Local().Format("02 Jan 2006 03:04 PM"),
+		endAt.Local().Format("03:04 PM"),
+	)
+	if strings.TrimSpace(meeting.Notes) != "" {
+		message += "\nNotes: " + strings.TrimSpace(meeting.Notes)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), discordSyncTimeout)
+	defer cancel()
+
+	if err := a.discord.SendChannelMessage(ctx, channelID, message); err != nil {
+		log.Printf("discord meeting notify failed for meeting %d: %v", meetingID, err)
+		return false
+	}
+
+	return true
+}
+
 func (a *API) runDiscordDueReminderSweep() {
 	if a.discord == nil || !a.discord.Enabled() {
 		return

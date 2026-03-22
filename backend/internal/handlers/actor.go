@@ -16,23 +16,39 @@ const DevActorID int64 = 1 // seeded admin user id
 func actorID(r *http.Request, conn *sql.DB) int64 {
 	email := strings.TrimSpace(strings.ToLower(r.Header.Get("X-User-Email")))
 	role := strings.TrimSpace(strings.ToLower(r.Header.Get("X-User-Role")))
+	login := strings.TrimSpace(strings.ToLower(r.Header.Get("X-User-Login")))
 
 	// no identity → fallback
-	if email == "" {
+	if email == "" && login == "" {
 		return DevActorID
 	}
 
-	// 1) try find user
-	id, _, _, _, active, err := db.GetUserByEmail(conn, email)
-	if err == nil && id > 0 {
-		if active {
-			return id
+	// 1) try find user by email
+	if email != "" {
+		id, _, _, _, active, err := db.GetUserByEmail(conn, email)
+		if err == nil && id > 0 {
+			if active {
+				if login != "" {
+					_ = db.UpdateUserNickname(conn, id, login)
+				}
+				return id
+			}
+			return DevActorID
 		}
-		// user exists but inactive → fallback
-		return DevActorID
 	}
 
-	// 2) auto-create local user (dev mode)
+	// 2) try find user by nickname/login
+	if login != "" {
+		id, _, _, _, active, err := db.GetUserByNickname(conn, login)
+		if err == nil && id > 0 {
+			if active {
+				return id
+			}
+			return DevActorID
+		}
+	}
+
+	// 3) auto-create local user (dev mode)
 	if role == "" {
 		role = "student"
 	}
@@ -40,9 +56,17 @@ func actorID(r *http.Request, conn *sql.DB) int64 {
 		role = "student"
 	}
 
-	// full_name default = email if we don't have a name
-	newID, err := db.CreateUserMinimal(conn, email, email, "", role)
+	identifier := email
+	if identifier == "" {
+		identifier = login
+	}
+
+	// full_name default = identifier if we don't have a name
+	newID, err := db.CreateUserMinimal(conn, identifier, identifier, "", role)
 	if err == nil && newID > 0 {
+		if login != "" {
+			_ = db.UpdateUserNickname(conn, newID, login)
+		}
 		// if created supervisor, ensure supervisor file exists
 		if role == "supervisor" {
 			_ = db.EnsureSupervisorFile(conn, newID)
