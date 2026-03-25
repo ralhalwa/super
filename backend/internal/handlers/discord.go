@@ -392,7 +392,12 @@ func (a *API) sendMeetingRoomBookingNotice(meeting models.Meeting, location *tim
 	if a.discord == nil || !a.discord.Enabled() {
 		return false
 	}
-	if strings.TrimSpace(a.roomsBookingsChannelID) == "" || strings.TrimSpace(a.roomsBookingsMention) == "" {
+	channelID, roleID := a.roomBookingConfig()
+	mention := ""
+	if roleID != "" {
+		mention = "<@&" + roleID + ">"
+	}
+	if strings.TrimSpace(channelID) == "" || strings.TrimSpace(mention) == "" {
 		return false
 	}
 
@@ -432,9 +437,9 @@ func (a *API) sendMeetingRoomBookingNotice(meeting models.Meeting, location *tim
 		dayWord = "tomorrow"
 	}
 
-	message := fmt.Sprintf(
+		message := fmt.Sprintf(
 		"%s Please note that %s will be occupied from %s to %s %s.",
-		a.roomsBookingsMention,
+		mention,
 		strings.TrimSpace(meeting.Location),
 		formatRoomTime(startLocal),
 		formatRoomTime(endLocal),
@@ -442,7 +447,7 @@ func (a *API) sendMeetingRoomBookingNotice(meeting models.Meeting, location *tim
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), discordSyncTimeout)
-	err = a.discord.SendChannelMessage(ctx, a.roomsBookingsChannelID, message)
+	err = a.discord.SendChannelMessage(ctx, channelID, message)
 	cancel()
 	if err != nil {
 		log.Printf("meeting room notify send failed for meeting %d: %v", meeting.ID, err)

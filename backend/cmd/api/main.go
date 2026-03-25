@@ -167,6 +167,8 @@ func main() {
 		ar.Get("/notifications", api.ListNotifications)
 		ar.Post("/notifications/read", api.MarkNotificationRead)
 		ar.Post("/notifications/read-all", api.MarkAllNotificationsRead)
+		ar.Get("/settings/discord", api.DiscordSettings)
+		ar.Post("/settings/discord", api.UpdateDiscordSettings)
 		ar.Get("/profile/summary", api.ProfileSummary)
 
 		// supervisor-student assignments
@@ -220,6 +222,7 @@ func runMigrations(conn *sql.DB) error {
 		"migrations/011_meeting_room_notifications.sql",
 		"migrations/012_meeting_phase1.sql",
 		"migrations/013_notifications_phase2.sql",
+		"migrations/014_app_settings.sql",
 		// "migrations/006_users_nickname_cohort.sql",
 	}
 

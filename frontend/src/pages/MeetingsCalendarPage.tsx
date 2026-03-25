@@ -754,7 +754,7 @@ export default function MeetingsCalendarPage() {
                     <input required type="date" value={form.date} onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))} className="h-12 w-full rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-amber-300" />
                   </Field>
                   <Field label="Location">
-                    <input required value={form.location} onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))} className="h-12 w-full rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-amber-300" placeholder="Quest / Sandbox / Zoom" />
+                    <input required value={form.location} onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))} className="h-12 w-full rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-amber-300" placeholder="Quest / Sandbox / Pixel" />
                   </Field>
                   <Field label="Start time">
                     <input required type="time" value={form.start_time} onChange={(e) => setForm((prev) => ({ ...prev, start_time: e.target.value }))} className="h-12 w-full rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-amber-300" />

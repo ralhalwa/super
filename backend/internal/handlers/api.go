@@ -16,22 +16,18 @@ type API struct {
 	discord                *discord.Service
 	stop                   context.CancelFunc
 	roomsBookingsChannelID string
-	roomsBookingsMention   string
+	roomsBookingsRoleID    string
 }
 
 func NewAPI(conn *sql.DB, discordSvc *discord.Service) *API {
 	channelID := strings.TrimSpace(os.Getenv("DISCORD_ROOMS_BOOKINGS_CHANNEL_ID"))
 	roleID := strings.TrimSpace(os.Getenv("DISCORD_TALENT_ROLE_ID"))
-	mention := ""
-	if roleID != "" {
-		mention = "<@&" + roleID + ">"
-	}
 
 	return &API{
 		conn:                   conn,
 		discord:                discordSvc,
 		roomsBookingsChannelID: channelID,
-		roomsBookingsMention:   mention,
+		roomsBookingsRoleID:    roleID,
 	}
 }
 

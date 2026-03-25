@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
 
@@ -37,6 +37,24 @@ type SupervisorRow = {
   full_name: string;
 };
 
+type MeetingRow = {
+  id: number;
+  board_id: number;
+  board_name: string;
+  supervisor_id: number;
+  supervisor_name: string;
+  created_by: number;
+  created_by_name: string;
+  title: string;
+  location: string;
+  notes: string;
+  status: "scheduled" | "completed" | "canceled";
+  outcome_notes: string;
+  starts_at: string;
+  ends_at: string;
+  created_at: string;
+};
+
 type OverdueCard = {
   boardID: number;
   boardName: string;
@@ -55,6 +73,12 @@ type SupervisorStats = {
   done: number;
   overdue: number;
   completionPct: number;
+};
+
+type ComplianceRow = {
+  supervisor: string;
+  meetings: number;
+  status: "on_track" | "missing";
 };
 
 function toDateOnly(v: string) {
@@ -78,6 +102,12 @@ function formatDate(v: string) {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
 }
 
+function formatMeetingTime(startISO: string, endISO: string) {
+  const start = new Date(startISO);
+  const end = new Date(endISO);
+  return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} • ${start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} - ${end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+}
+
 function normalizePriority(v: string) {
   const p = String(v || "").trim().toLowerCase();
   if (p === "urgent" || p === "high" || p === "medium" || p === "low") return p;
@@ -88,24 +118,33 @@ export default function AdminReportsPage() {
   const [boards, setBoards] = useState<BoardRow[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
+  const [meetings, setMeetings] = useState<MeetingRow[]>([]);
   const [boardDetails, setBoardDetails] = useState<Record<number, BoardFull>>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [meetingFilter, setMeetingFilter] = useState({
+    boardId: "all",
+    supervisor: "all",
+    dateFrom: "",
+    dateTo: "",
+  });
 
   async function load() {
     setLoading(true);
     setErr("");
     try {
-      const [boardsRes, usersRes, supsRes] = await Promise.all([
+      const [boardsRes, usersRes, supsRes, meetingsRes] = await Promise.all([
         apiFetch("/admin/all-boards"),
         apiFetch("/admin/users?role=all&q="),
         apiFetch("/admin/supervisors"),
+        apiFetch("/admin/meetings"),
       ]);
 
       const boardRows: BoardRow[] = Array.isArray(boardsRes) ? boardsRes : [];
       setBoards(boardRows);
       setUsers(Array.isArray(usersRes) ? usersRes : []);
       setSupervisors(Array.isArray(supsRes) ? supsRes : []);
+      setMeetings(Array.isArray(meetingsRes) ? meetingsRes : []);
 
       const fullRes = await Promise.all(
         boardRows.map(async (b) => {
@@ -121,6 +160,7 @@ export default function AdminReportsPage() {
       setBoards([]);
       setUsers([]);
       setSupervisors([]);
+      setMeetings([]);
       setBoardDetails({});
     } finally {
       setLoading(false);
@@ -236,11 +276,127 @@ export default function AdminReportsPage() {
     };
   }, [boards, boardDetails, users, supervisors.length]);
 
+  const filteredMeetings = useMemo(() => {
+    return meetings.filter((meeting) => {
+      if (meetingFilter.boardId !== "all" && String(meeting.board_id) !== meetingFilter.boardId) return false;
+      if (meetingFilter.supervisor !== "all" && meeting.supervisor_name !== meetingFilter.supervisor) return false;
+      const start = new Date(meeting.starts_at);
+      if (meetingFilter.dateFrom) {
+        const from = new Date(`${meetingFilter.dateFrom}T00:00:00`);
+        if (start < from) return false;
+      }
+      if (meetingFilter.dateTo) {
+        const to = new Date(`${meetingFilter.dateTo}T23:59:59`);
+        if (start > to) return false;
+      }
+      return true;
+    });
+  }, [meetings, meetingFilter]);
+
+  const meetingAnalytics = useMemo(() => {
+    const now = new Date();
+    const todayKey = now.toDateString();
+    const roomCounts = new Map<string, number>();
+
+    let scheduled = 0;
+    let completed = 0;
+    let canceled = 0;
+    let today = 0;
+    let upcoming = 0;
+
+    for (const meeting of filteredMeetings) {
+      const startsAt = new Date(meeting.starts_at);
+      if (meeting.status === "scheduled") scheduled += 1;
+      if (meeting.status === "completed") completed += 1;
+      if (meeting.status === "canceled") canceled += 1;
+      if (startsAt.toDateString() === todayKey) today += 1;
+      if (meeting.status === "scheduled" && startsAt >= now) upcoming += 1;
+      const room = (meeting.location || "Unknown").trim();
+      roomCounts.set(room, (roomCounts.get(room) || 0) + 1);
+    }
+
+    const mostUsedRooms = [...roomCounts.entries()]
+      .map(([room, count]) => ({ room, count }))
+      .sort((a, b) => b.count - a.count || a.room.localeCompare(b.room))
+      .slice(0, 5);
+
+    const supervisorsInScope = [...new Set(
+      boards
+        .filter((board) => meetingFilter.boardId === "all" || String(board.id) === meetingFilter.boardId)
+        .map((board) => board.supervisor_name)
+        .filter(Boolean)
+    )];
+
+    const complianceSource = filteredMeetings.filter((meeting) => {
+      if (meetingFilter.dateFrom || meetingFilter.dateTo) return true;
+      const date = new Date(meeting.starts_at);
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    });
+
+    const meetingsPerSupervisor = new Map<string, number>();
+    for (const meeting of complianceSource) {
+      if (meeting.status === "canceled") continue;
+      meetingsPerSupervisor.set(meeting.supervisor_name, (meetingsPerSupervisor.get(meeting.supervisor_name) || 0) + 1);
+    }
+
+    const compliance: ComplianceRow[] = supervisorsInScope
+      .map((supervisor) => {
+        const meetingsCount = meetingsPerSupervisor.get(supervisor) || 0;
+        return {
+          supervisor,
+          meetings: meetingsCount,
+          status: (meetingsCount > 0 ? "on_track" : "missing") as ComplianceRow["status"],
+        };
+      })
+      .sort((a, b) => a.meetings - b.meetings || a.supervisor.localeCompare(b.supervisor));
+
+    return {
+      total: filteredMeetings.length,
+      scheduled,
+      completed,
+      canceled,
+      today,
+      upcoming,
+      mostUsedRooms,
+      compliance,
+      recent: filteredMeetings
+        .slice()
+        .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime())
+        .slice(0, 6),
+    };
+  }, [filteredMeetings, boards, meetingFilter]);
+
+  const reportHighlights = useMemo(() => {
+    const complianceMissing = meetingAnalytics.compliance.filter((row) => row.status === "missing").length;
+    const busiestRoom = meetingAnalytics.mostUsedRooms[0];
+    const topSupervisor = analytics.supervisorStats[0];
+
+    const healthScore = Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(
+          analytics.completionPct -
+            analytics.overdue * 2 +
+            meetingAnalytics.completed * 3 -
+            meetingAnalytics.canceled * 4
+        )
+      )
+    );
+
+    return {
+      complianceMissing,
+      busiestRoom: busiestRoom ? `${busiestRoom.room} (${busiestRoom.count})` : "No room data",
+      topSupervisor: topSupervisor ? `${topSupervisor.supervisor} • ${topSupervisor.completionPct}%` : "No supervisor data",
+      healthScore,
+    };
+  }, [analytics, meetingAnalytics]);
+
   return (
     <AdminLayout
       active="reports"
       title="Reports"
-      subtitle="Actionable workspace insights for planning, risks, and supervisor workload."
+      subtitle="Workspace analytics, meeting compliance, and operational clarity."
       right={
         <button
           type="button"
@@ -262,123 +418,427 @@ export default function AdminReportsPage() {
           Building reports...
         </div>
       ) : (
-        <div className="grid gap-3">
-          <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-            <Kpi label="Boards" value={analytics.boardsTotal} />
-            <Kpi label="Lists" value={analytics.listsTotal} />
-            <Kpi label="Cards" value={analytics.cardsTotal} />
-            <Kpi label="Completion" value={`${analytics.completionPct}%`} tone="good" />
-            <Kpi label="Overdue" value={analytics.overdue} tone={analytics.overdue > 0 ? "danger" : "good"} />
-          </section>
+        <div className="grid gap-4">
+          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(109,94,252,0.16),_transparent_38%),radial-gradient(circle_at_80%_20%,_rgba(16,185,129,0.14),_transparent_30%),linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)] p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+            <div className="grid gap-4 xl:grid-cols-[1.5fr_0.9fr]">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#6d5efc]/15 bg-white/80 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[#5b50d6] backdrop-blur">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.12)]" />
+                  Live operations report
+                </div>
+                <div className="max-w-3xl">
+                  <h2 className="text-[30px] font-black tracking-[-0.04em] text-slate-950 sm:text-[38px]">
+                    One view for workspace health, meeting activity, and supervisor follow-through.
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-[14px] font-semibold leading-7 text-slate-600">
+                    This page highlights operational risk first, then shows who is keeping boards active, where meetings are landing,
+                    and whether Discord room communication is configured correctly.
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <SignalCard
+                    label="Workspace health"
+                    value={`${reportHighlights.healthScore}%`}
+                    detail={`${analytics.completionPct}% card completion with ${analytics.overdue} overdue cards in play.`}
+                    tone={reportHighlights.healthScore >= 70 ? "good" : reportHighlights.healthScore >= 40 ? "warning" : "danger"}
+                  />
+                  <SignalCard
+                    label="Compliance watch"
+                    value={reportHighlights.complianceMissing}
+                    detail={reportHighlights.complianceMissing === 1 ? "1 supervisor has not logged a meeting in scope." : `${reportHighlights.complianceMissing} supervisors have not logged a meeting in scope.`}
+                    tone={reportHighlights.complianceMissing === 0 ? "good" : "danger"}
+                  />
+                  <SignalCard
+                    label="Busiest room"
+                    value={reportHighlights.busiestRoom}
+                    detail="Most-used location based on the current report filters."
+                    tone="default"
+                  />
+                </div>
+              </div>
 
-          <section className="grid gap-3 lg:grid-cols-2">
-            <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-              <div className="mb-2 text-[18px] font-black text-slate-900">Status Snapshot</div>
-              <div className="mb-2 flex items-center justify-between text-[13px] font-semibold text-slate-600">
-                <span>{analytics.done} done</span>
-                <span>{analytics.open} open</span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#6d5efc] to-[#8f83ff]"
-                  style={{ width: `${analytics.completionPct}%` }}
-                />
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <Mini label="Supervisors" value={analytics.supervisors} />
-                <Mini label="Students" value={analytics.students} />
-              </div>
-            </div>
-
-            <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-              <div className="mb-2 text-[18px] font-black text-slate-900">Priority Distribution</div>
-              <div className="grid gap-2">
-                <PriorityRow label="Urgent" value={analytics.priority.urgent} tone="urgent" />
-                <PriorityRow label="High" value={analytics.priority.high} tone="high" />
-                <PriorityRow label="Medium" value={analytics.priority.medium} tone="medium" />
-                <PriorityRow label="Low" value={analytics.priority.low} tone="low" />
-              </div>
-            </div>
-          </section>
-
-          <section className="grid gap-3 lg:grid-cols-2">
-            <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="text-[18px] font-black text-slate-900">Overdue Risk</div>
-                <span className="inline-flex h-7 items-center rounded-full border border-red-200 bg-red-50 px-2.5 text-[11px] font-black text-red-700">
-                  {analytics.overdue} overdue
-                </span>
-              </div>
-              <div className="space-y-2">
-                {analytics.overdueCards.length === 0 ? (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] font-semibold text-emerald-700">
-                    No overdue cards right now.
-                  </div>
-                ) : (
-                  analytics.overdueCards.map((c) => (
-                    <div key={c.cardID} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="truncate text-[13px] font-black text-slate-900">{c.cardTitle}</div>
-                      <div className="mt-0.5 truncate text-[12px] font-semibold text-slate-600">
-                        {c.boardName} • {c.supervisor}
-                      </div>
-                      <div className="mt-1 flex items-center gap-2 text-[11px] font-extrabold">
-                        <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-red-700">
-                          {c.daysOverdue}d overdue
-                        </span>
-                        <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-slate-700">
-                          {formatDate(c.dueDate)}
-                        </span>
+              <div className="grid gap-3">
+                <div className="rounded-[24px] border border-white/70 bg-white/85 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Focus now</div>
+                      <div className="mt-2 text-[20px] font-black tracking-[-0.03em] text-slate-950">
+                        {analytics.overdue > 0 ? "Overdue backlog needs attention" : "Boards are currently stable"}
                       </div>
                     </div>
-                  ))
-                )}
+                    <div className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${analytics.overdue > 0 ? "border border-red-200 bg-red-50 text-red-700" : "border border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+                      {analytics.overdue > 0 ? "Risk" : "Healthy"}
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-2">
+                    <InsightRow label="Top supervisor" value={reportHighlights.topSupervisor} />
+                    <InsightRow
+                      label="Upcoming meetings"
+                      value={`${meetingAnalytics.upcoming} scheduled ahead`}
+                    />
+                    <InsightRow
+                      label="Room pressure"
+                      value={reportHighlights.busiestRoom}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Kpi label="Boards" value={analytics.boardsTotal} />
+                  <Kpi label="Students" value={analytics.students} />
+                  <Kpi label="Meetings" value={meetingAnalytics.total} />
+                  <Kpi label="Overdue" value={analytics.overdue} tone={analytics.overdue > 0 ? "danger" : "good"} />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
+              <SectionEyebrow label="Workspace Pulse" />
+              <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="text-[24px] font-black tracking-[-0.03em] text-slate-950">Card progress and delivery balance</div>
+                  <div className="mt-1 text-[13px] font-semibold text-slate-500">A quick read of done vs open work, plus who is carrying the largest overdue load.</div>
+                </div>
+                <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                  {analytics.completionPct}% completion
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+                <div className="rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-4">
+                  <div className="flex items-center justify-between text-[12px] font-bold text-slate-500">
+                    <span>Execution split</span>
+                    <span>{analytics.done} done / {analytics.open} open</span>
+                  </div>
+                  <div className="mt-4 h-4 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#6d5efc] via-[#7e72ff] to-[#8f83ff] transition-all duration-500" style={{ width: `${analytics.completionPct}%` }} />
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <Mini label="Lists" value={analytics.listsTotal} />
+                    <Mini label="Cards" value={analytics.cardsTotal} />
+                    <Mini label="Supervisors" value={analytics.supervisors} />
+                    <Mini label="Students" value={analytics.students} />
+                  </div>
+                </div>
+
+                <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-[13px] font-black uppercase tracking-[0.14em] text-slate-500">Priority distribution</div>
+                  <div className="mt-4 space-y-3">
+                    <PriorityBar label="Urgent" value={analytics.priority.urgent} tone="urgent" total={analytics.cardsTotal} />
+                    <PriorityBar label="High" value={analytics.priority.high} tone="high" total={analytics.cardsTotal} />
+                    <PriorityBar label="Medium" value={analytics.priority.medium} tone="medium" total={analytics.cardsTotal} />
+                    <PriorityBar label="Low" value={analytics.priority.low} tone="low" total={analytics.cardsTotal} />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-              <div className="mb-2 text-[18px] font-black text-slate-900">Supervisor Workload</div>
-              <div className="space-y-2">
-                {analytics.supervisorStats.length === 0 ? (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-semibold text-slate-600">
-                    No supervisor data yet.
+            <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
+              <SectionEyebrow label="Meeting Filters" />
+              <div className="mt-2 text-[24px] font-black tracking-[-0.03em] text-slate-950">Operations control panel</div>
+              <div className="mt-1 text-[13px] font-semibold text-slate-500">Change the report lens by board, supervisor, and date range.</div>
+
+              <div className="mt-5 grid gap-3">
+                <ReportField label="Board">
+                  <select
+                    value={meetingFilter.boardId}
+                    onChange={(e) => setMeetingFilter((prev) => ({ ...prev, boardId: e.target.value }))}
+                    className="h-11 rounded-[16px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none transition focus:border-[#6d5efc]/30 focus:bg-white"
+                  >
+                    <option value="all">All boards</option>
+                    {boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
+                  </select>
+                </ReportField>
+                <ReportField label="Supervisor">
+                  <select
+                    value={meetingFilter.supervisor}
+                    onChange={(e) => setMeetingFilter((prev) => ({ ...prev, supervisor: e.target.value }))}
+                    className="h-11 rounded-[16px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none transition focus:border-[#6d5efc]/30 focus:bg-white"
+                  >
+                    <option value="all">All supervisors</option>
+                    {[...new Set(boards.map((board) => board.supervisor_name).filter(Boolean))].sort().map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </ReportField>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <ReportField label="From">
+                    <input
+                      type="date"
+                      value={meetingFilter.dateFrom}
+                      onChange={(e) => setMeetingFilter((prev) => ({ ...prev, dateFrom: e.target.value }))}
+                      className="h-11 rounded-[16px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none transition focus:border-[#6d5efc]/30 focus:bg-white"
+                    />
+                  </ReportField>
+                  <ReportField label="To">
+                    <input
+                      type="date"
+                      value={meetingFilter.dateTo}
+                      onChange={(e) => setMeetingFilter((prev) => ({ ...prev, dateTo: e.target.value }))}
+                      className="h-11 rounded-[16px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none transition focus:border-[#6d5efc]/30 focus:bg-white"
+                    />
+                  </ReportField>
+                </div>
+                <div className="rounded-[18px] border border-[#6d5efc]/12 bg-[linear-gradient(180deg,rgba(109,94,252,0.06),rgba(109,94,252,0.02))] p-4">
+                  <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#5b50d6]">Filter impact</div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <InsightRow label="Meetings in scope" value={meetingAnalytics.total} />
+                    <InsightRow label="Rooms active" value={meetingAnalytics.mostUsedRooms.length} />
+                    <InsightRow label="Scheduled now" value={meetingAnalytics.scheduled} />
+                    <InsightRow label="Completed" value={meetingAnalytics.completed} />
                   </div>
-                ) : (
-                  analytics.supervisorStats.map((s) => (
-                    <div key={s.supervisor} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="truncate text-[13px] font-black text-slate-900">{s.supervisor}</div>
-                      <div className="mt-1 grid grid-cols-4 gap-1 text-[11px] font-extrabold text-slate-700">
-                        <span>{s.boards} boards</span>
-                        <span>{s.cards} cards</span>
-                        <span>{s.done} done</span>
-                        <span className={s.overdue > 0 ? "text-red-600" : "text-slate-700"}>
-                          {s.overdue} overdue
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <SectionEyebrow label="Meeting Overview" />
+                <div className="mt-2 text-[24px] font-black tracking-[-0.03em] text-slate-950">Attendance, completion, and room usage at a glance</div>
+                <div className="mt-1 text-[13px] font-semibold text-slate-500">This block turns the current filters into an operational snapshot.</div>
+              </div>
+              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                Updated from live meeting records
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+                <CompactKpi label="Meetings" value={meetingAnalytics.total} />
+                <CompactKpi label="Scheduled" value={meetingAnalytics.scheduled} />
+                <CompactKpi label="Completed" value={meetingAnalytics.completed} tone="good" />
+                <CompactKpi label="Canceled" value={meetingAnalytics.canceled} tone={meetingAnalytics.canceled > 0 ? "danger" : "default"} />
+                <CompactKpi label="Today" value={meetingAnalytics.today} />
+                <CompactKpi label="Upcoming" value={meetingAnalytics.upcoming} tone="good" />
+              </div>
+              <div className="mt-4">
+                <div className="mb-2 flex items-center justify-between text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
+                  <span>Meeting mix</span>
+                  <span>{meetingAnalytics.total} records</span>
+                </div>
+                <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
+                  <SegmentBar value={meetingAnalytics.scheduled} total={Math.max(meetingAnalytics.total, 1)} className="bg-[#8f83ff]" />
+                  <SegmentBar value={meetingAnalytics.completed} total={Math.max(meetingAnalytics.total, 1)} className="bg-emerald-400" />
+                  <SegmentBar value={meetingAnalytics.canceled} total={Math.max(meetingAnalytics.total, 1)} className="bg-rose-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+              <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[18px] font-black text-slate-900">Supervisor Compliance</div>
+                    <div className="mt-1 text-[12px] font-semibold text-slate-500">Expected meeting activity within the selected scope.</div>
+                  </div>
+                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                    {meetingAnalytics.compliance.length} tracked
+                  </span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {meetingAnalytics.compliance.length === 0 ? (
+                    <div className="text-[13px] font-semibold text-slate-500">No supervisors in this scope.</div>
+                  ) : meetingAnalytics.compliance.map((row) => (
+                    <div key={row.supervisor} className="group rounded-[16px] border border-slate-200 bg-white px-3 py-3 transition hover:-translate-y-0.5 hover:border-[#6d5efc]/20 hover:shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-[13px] font-black text-slate-900">{row.supervisor}</div>
+                          <div className="text-[11px] font-semibold text-slate-500">{row.meetings} meeting{row.meetings === 1 ? "" : "s"}</div>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${row.status === "on_track" ? "border border-emerald-200 bg-emerald-50 text-emerald-700" : "border border-red-200 bg-red-50 text-red-700"}`}>
+                          {row.status === "on_track" ? "On track" : "Missing"}
                         </span>
                       </div>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#6d5efc] to-[#8f83ff]"
-                          style={{ width: `${s.completionPct}%` }}
+                          className={`h-full rounded-full transition-all duration-500 ${row.status === "on_track" ? "bg-gradient-to-r from-emerald-400 to-emerald-500" : "bg-gradient-to-r from-rose-300 to-rose-400"}`}
+                          style={{ width: `${Math.max(16, Math.min(100, row.meetings * 20 || 16))}%` }}
                         />
                       </div>
                     </div>
-                  ))
-                )}
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[18px] font-black text-slate-900">Most Used Rooms</div>
+                      <div className="mt-1 text-[12px] font-semibold text-slate-500">Useful for spotting room pressure and recurring location demand.</div>
+                    </div>
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-slate-600">
+                      Top 5
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-2.5">
+                    {meetingAnalytics.mostUsedRooms.length === 0 ? (
+                      <div className="text-[13px] font-semibold text-slate-500">No room usage yet.</div>
+                    ) : meetingAnalytics.mostUsedRooms.map((row, index) => {
+                      const width = Math.max(18, Math.round((row.count / Math.max(meetingAnalytics.mostUsedRooms[0]?.count || 1, 1)) * 100));
+                      return (
+                        <div key={row.room} className="rounded-[16px] border border-slate-200 bg-white p-3 transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[10px] font-black text-white">
+                                {index + 1}
+                              </span>
+                              <div>
+                                <div className="text-[12px] font-black text-slate-900">{row.room}</div>
+                                <div className="text-[11px] font-semibold text-slate-500">{row.count} bookings</div>
+                              </div>
+                            </div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">usage</div>
+                          </div>
+                          <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-slate-100">
+                            <div className="h-full rounded-full bg-gradient-to-r from-[#6d5efc] to-[#8f83ff] transition-all duration-500" style={{ width: `${width}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-[18px] font-black text-slate-900">Recent Meeting Activity</div>
+                  <div className="mt-1 text-[12px] font-semibold text-slate-500">The latest meeting records presented as a cleaner activity stream.</div>
+                  <div className="mt-4 space-y-2.5">
+                    {meetingAnalytics.recent.length === 0 ? (
+                      <div className="text-[13px] font-semibold text-slate-500">No meetings found for the current filters.</div>
+                    ) : meetingAnalytics.recent.map((meeting) => (
+                      <div key={meeting.id} className="relative overflow-hidden rounded-[18px] border border-slate-200 bg-white p-3.5 transition hover:-translate-y-0.5 hover:border-[#6d5efc]/20 hover:shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+                        <div className="absolute inset-y-0 left-0 w-1 rounded-full bg-gradient-to-b from-[#6d5efc] to-[#8f83ff]" />
+                        <div className="flex items-start justify-between gap-2 pl-2">
+                          <div>
+                            <div className="text-[13px] font-black text-slate-900">{meeting.title}</div>
+                            <div className="mt-0.5 text-[12px] font-semibold text-slate-500">{meeting.board_name} • {meeting.supervisor_name}</div>
+                          </div>
+                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${meeting.status === "completed" ? "border border-emerald-200 bg-emerald-50 text-emerald-700" : meeting.status === "canceled" ? "border border-red-200 bg-red-50 text-red-700" : "border border-slate-200 bg-slate-50 text-slate-600"}`}>
+                            {meeting.status}
+                          </span>
+                        </div>
+                        <div className="mt-3 grid gap-2 pl-2 sm:grid-cols-2">
+                          <Mini label="When" value={formatMeetingTime(meeting.starts_at, meeting.ends_at)} />
+                          <Mini label="Location" value={meeting.location || "No room"} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </section>
 
-          <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-            <div className="mb-2 text-[18px] font-black text-slate-900">Low Activity Boards</div>
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {analytics.lowActivityBoards.map((b) => (
-                <div key={b.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="truncate text-[13px] font-black text-slate-900">{b.name}</div>
-                  <div className="mt-0.5 truncate text-[12px] font-semibold text-slate-600">{b.supervisor_name}</div>
-                  <div className="mt-1 text-[11px] font-extrabold text-slate-700">
-                    {b.activeCards} active • {b.cardsTotal} total cards
+          <section className="grid gap-4 xl:grid-cols-[1.05fr_1.1fr_0.9fr]">
+              <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div>
+                    <SectionEyebrow label="Risk Radar" />
+                    <div className="mt-2 text-[24px] font-black tracking-[-0.03em] text-slate-950">Overdue cards most likely to block progress</div>
                   </div>
                 </div>
-              ))}
+                <div className="space-y-2.5">
+                  {analytics.overdueCards.length === 0 ? (
+                    <div className="rounded-[18px] border border-emerald-200 bg-emerald-50 px-4 py-4 text-[13px] font-semibold text-emerald-700">
+                      No overdue cards right now.
+                    </div>
+                  ) : (
+                    analytics.overdueCards.map((c) => (
+                      <div key={c.cardID} className="rounded-[18px] border border-slate-200 bg-slate-50 p-3.5 transition hover:-translate-y-0.5 hover:border-red-200 hover:bg-white hover:shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-[13px] font-black text-slate-950">{c.cardTitle}</div>
+                            <div className="mt-1 truncate text-[12px] font-semibold text-slate-500">{c.boardName} • {c.supervisor}</div>
+                          </div>
+                          <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-red-700">
+                            {c.daysOverdue}d late
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-extrabold">
+                          <span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-slate-700">{formatDate(c.dueDate)}</span>
+                          <span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-slate-700">{c.priority}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div>
+                    <SectionEyebrow label="Workload Balance" />
+                    <div className="mt-2 text-[24px] font-black tracking-[-0.03em] text-slate-950">Supervisor workload and completion</div>
+                  </div>
+                </div>
+                <div className="space-y-2.5">
+                  {analytics.supervisorStats.length === 0 ? (
+                    <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-4 text-[13px] font-semibold text-slate-600">
+                      No supervisor data yet.
+                    </div>
+                  ) : (
+                    analytics.supervisorStats.map((s) => (
+                      <div key={s.supervisor} className="rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-3.5 transition hover:-translate-y-0.5 hover:border-[#6d5efc]/20 hover:bg-white hover:shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+                        <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+                          <div className="min-w-0">
+                            <div className="truncate text-[13px] font-black text-slate-950">{s.supervisor}</div>
+                            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-extrabold text-slate-600">
+                              <MetricPill label="Boards" value={s.boards} />
+                              <MetricPill label="Cards" value={s.cards} />
+                              <MetricPill label="Done" value={s.done} />
+                              <MetricPill label="Overdue" value={s.overdue} tone={s.overdue > 0 ? "danger" : "default"} />
+                            </div>
+                          </div>
+                          <div className="rounded-[16px] border border-slate-200 bg-white p-3 shadow-[0_8px_22px_rgba(15,23,42,0.04)]">
+                            <div className="flex items-end justify-between gap-3">
+                              <div>
+                                <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Completion</div>
+                                <div className="mt-1 text-[22px] font-black tracking-[-0.03em] text-slate-950">{s.completionPct}%</div>
+                              </div>
+                              <div className="text-right text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                                {s.done}/{s.cards || 0} done
+                              </div>
+                            </div>
+                            <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200">
+                              <div className="h-full rounded-full bg-gradient-to-r from-[#6d5efc] to-[#8f83ff] transition-all duration-500" style={{ width: `${s.completionPct}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div>
+                  <SectionEyebrow label="Board Coverage" />
+                  <div className="mt-2 text-[24px] font-black tracking-[-0.03em] text-slate-950">Low-activity boards worth checking</div>
+                </div>
+              </div>
+              <div className="space-y-2.5">
+                {analytics.lowActivityBoards.map((b) => (
+                  <div key={b.id} className="rounded-[18px] border border-slate-200 bg-slate-50 p-3.5 transition hover:-translate-y-0.5 hover:border-[#6d5efc]/20 hover:bg-white hover:shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+                    <div className="truncate text-[13px] font-black text-slate-950">{b.name}</div>
+                    <div className="mt-1 truncate text-[12px] font-semibold text-slate-500">{b.supervisor_name}</div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <MetricPill label="Active" value={b.activeCards} />
+                      <MetricPill label="Total" value={b.cardsTotal} />
+                    </div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#111827] to-[#475569] transition-all duration-500"
+                        style={{ width: `${Math.max(12, Math.min(100, b.cardsTotal > 0 ? Math.round((b.activeCards / b.cardsTotal) * 100) : 12))}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         </div>
@@ -398,50 +858,173 @@ function Kpi({
 }) {
   const toneClass =
     tone === "good"
-      ? "border-emerald-200 bg-emerald-50"
+      ? "border-emerald-200 bg-[linear-gradient(180deg,#f3fff9_0%,#ecfdf5_100%)]"
       : tone === "danger"
-      ? "border-red-200 bg-red-50"
-      : "border-slate-200 bg-white";
+        ? "border-red-200 bg-[linear-gradient(180deg,#fff7f7_0%,#fef2f2_100%)]"
+        : "border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]";
 
   return (
-    <div className={`rounded-[14px] border p-3 ${toneClass} shadow-[0_10px_28px_rgba(15,23,42,0.05)]`}>
-      <div className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-500">{label}</div>
-      <div className="mt-1 text-[24px] font-black tracking-[-0.02em] text-slate-900">{value}</div>
+    <div className={`rounded-[18px] border p-4 ${toneClass} shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)]`}>
+      <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-2 text-[28px] font-black tracking-[-0.03em] text-slate-950">{value}</div>
     </div>
   );
+}
+
+function CompactKpi({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "default" | "good" | "danger";
+}) {
+  const toneClass =
+    tone === "good"
+      ? "border-emerald-200 bg-emerald-50/80"
+      : tone === "danger"
+        ? "border-red-200 bg-red-50/80"
+        : "border-slate-200 bg-white";
+
+  return (
+    <div className={`rounded-[16px] border px-3 py-3 ${toneClass}`}>
+      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-1 text-[20px] font-black tracking-[-0.03em] text-slate-950">{value}</div>
+    </div>
+  );
+}
+
+function SegmentBar({ value, total, className }: { value: number; total: number; className: string }) {
+  const width = total > 0 ? `${(value / total) * 100}%` : "0%";
+  return <div className={`${className} h-full transition-all duration-500`} style={{ width }} />;
 }
 
 function Mini({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-      <div className="text-[10px] font-black uppercase tracking-[0.08em] text-slate-500">{label}</div>
-      <div className="mt-1 text-[18px] font-black text-slate-900">{value}</div>
+    <div className="rounded-[16px] border border-slate-200 bg-white px-3 py-3">
+      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-1 text-[14px] font-black text-slate-900">{value}</div>
     </div>
   );
 }
 
-function PriorityRow({
+function PriorityBar({
   label,
   value,
   tone,
+  total,
 }: {
   label: string;
   value: number;
   tone: "urgent" | "high" | "medium" | "low";
+  total: number;
 }) {
   const toneClass =
     tone === "urgent"
-      ? "border-red-200 bg-red-50 text-red-700"
+      ? "text-red-700"
       : tone === "high"
-      ? "border-orange-200 bg-orange-50 text-orange-700"
-      : tone === "medium"
-      ? "border-[#6d5efc]/20 bg-[#6d5efc]/10 text-[#4f46e5]"
-      : "border-emerald-200 bg-emerald-50 text-emerald-700";
+        ? "text-orange-700"
+        : tone === "medium"
+          ? "text-[#4f46e5]"
+          : "text-emerald-700";
+  const barClass =
+    tone === "urgent"
+      ? "from-red-500 to-red-400"
+      : tone === "high"
+        ? "from-orange-500 to-amber-400"
+        : tone === "medium"
+          ? "from-[#6d5efc] to-[#8f83ff]"
+          : "from-emerald-500 to-emerald-400";
+  const width = total > 0 ? Math.max(8, Math.round((value / total) * 100)) : 8;
 
   return (
-    <div className={`flex items-center justify-between rounded-lg border px-3 py-2 ${toneClass}`}>
-      <span className="text-[12px] font-black">{label}</span>
-      <span className="text-[12px] font-black">{value}</span>
+    <div>
+      <div className="flex items-center justify-between gap-3 text-[12px] font-black">
+        <span className={toneClass}>{label}</span>
+        <span className="text-slate-500">{value}</span>
+      </div>
+      <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white">
+        <div className={`h-full rounded-full bg-gradient-to-r ${barClass} transition-all duration-500`} style={{ width: `${width}%` }} />
+      </div>
     </div>
+  );
+}
+
+function SignalCard({
+  label,
+  value,
+  detail,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+  tone?: "default" | "good" | "warning" | "danger";
+}) {
+  const toneClass =
+    tone === "good"
+      ? "border-emerald-200 bg-emerald-50/80"
+      : tone === "warning"
+        ? "border-amber-200 bg-amber-50/80"
+        : tone === "danger"
+          ? "border-red-200 bg-red-50/80"
+          : "border-slate-200 bg-white/85";
+
+  return (
+    <div className={`rounded-[20px] border p-4 shadow-[0_12px_28px_rgba(15,23,42,0.05)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(15,23,42,0.08)] ${toneClass}`}>
+      <div className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</div>
+      <div className="mt-2 text-[24px] font-black tracking-[-0.03em] text-slate-950">{value}</div>
+      <div className="mt-2 text-[12px] font-semibold leading-6 text-slate-600">{detail}</div>
+    </div>
+  );
+}
+
+function InsightRow({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-[14px] border border-slate-200 bg-white px-3 py-2">
+      <span className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</span>
+      <span className="truncate text-right text-[12px] font-black text-slate-900">{value}</span>
+    </div>
+  );
+}
+
+function MetricPill({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <div className={`rounded-[14px] border px-3 py-2 ${tone === "danger" ? "border-red-200 bg-red-50" : "border-slate-200 bg-white"}`}>
+      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className={`mt-1 text-[13px] font-black ${tone === "danger" ? "text-red-700" : "text-slate-900"}`}>{value}</div>
+    </div>
+  );
+}
+
+function SectionEyebrow({ label }: { label: string }) {
+  return (
+    <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#5b50d6]">
+      {label}
+    </div>
+  );
+}
+
+function ReportField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span>
+      {children}
+    </label>
   );
 }
