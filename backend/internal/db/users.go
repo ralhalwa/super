@@ -82,7 +82,6 @@ func SearchUsersByRole(conn DBTX, role string, q string) ([]models.User, error) 
 		    OR LOWER(IFNULL(nickname,'')) LIKE '%' || LOWER(?) || '%'
 		  )
 		ORDER BY full_name ASC
-		LIMIT 25
 	`, role, q, q, q)
 	if err != nil {
 		return nil, err
@@ -117,7 +116,6 @@ func SearchUsersStudentsAndSupervisors(conn DBTX, q string) ([]models.User, erro
 		    OR LOWER(IFNULL(nickname,'')) LIKE '%' || LOWER(?) || '%'
 		  )
 		ORDER BY full_name ASC
-		LIMIT 25
 	`, q, q, q)
 	if err != nil {
 		return nil, err

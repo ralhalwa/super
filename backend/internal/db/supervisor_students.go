@@ -34,7 +34,6 @@ func ListEligibleStudentsForSupervisor(conn DBTX, supervisorUserID int64, q stri
 		    OR LOWER(IFNULL(u.nickname,'')) LIKE '%' || LOWER(?) || '%'
 		  )
 		ORDER BY u.full_name ASC
-		LIMIT 25
 	`, supervisorUserID, q, q, q)
 	if err != nil {
 		return nil, err
@@ -70,7 +69,6 @@ func ListEligibleSupervisors(conn *sql.DB, q string) ([]models.User, error) {
 		    OR LOWER(email) LIKE '%' || LOWER(?) || '%'
 		  )
 		ORDER BY full_name ASC
-		LIMIT 25
 	`, q, q)
 	if err != nil {
 		return nil, err
