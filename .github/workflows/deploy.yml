@@ -18,7 +18,7 @@ jobs:
           script: |
             set -e
 
-            cd /home/forge/supervisor.reboot
+            cd /home/dilmune/supervisor.reboot
             git pull origin main
 
             sudo ./deploy.sh --api-url https://taskflow.reboot01.com/api
