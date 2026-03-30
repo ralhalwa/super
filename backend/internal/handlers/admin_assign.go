@@ -23,10 +23,18 @@ type assignBody struct {
 
 func (api *API) AdminAssignListSupervisors(w http.ResponseWriter, r *http.Request) {
 	rows, err := api.conn.Query(`
-		SELECT id, full_name, nickname, email, role
-		FROM users
-		WHERE role='supervisor' AND is_active=1
-		ORDER BY full_name ASC
+		SELECT u.id, u.full_name, u.nickname, u.email, 'supervisor'
+		FROM users u
+		WHERE u.is_active=1
+		  AND (
+		    u.role='supervisor'
+		    OR EXISTS (
+		      SELECT 1
+		      FROM user_roles ur
+		      WHERE ur.user_id = u.id AND ur.role = 'supervisor'
+		    )
+		  )
+		ORDER BY u.full_name ASC
 	`)
 	if err != nil {
 		writeErr(w, 500, err.Error())
@@ -60,9 +68,17 @@ func (api *API) AdminAssignListStudents(w http.ResponseWriter, r *http.Request) 
 
 	if q == "" {
 		rows, err = api.conn.Query(`
-    SELECT u.id, u.full_name, u.nickname, u.email, u.role
+    SELECT u.id, u.full_name, u.nickname, u.email, 'student'
     FROM users u
-    WHERE u.role='student' AND u.is_active=1
+    WHERE u.is_active=1
+      AND (
+        u.role='student'
+        OR EXISTS (
+          SELECT 1
+          FROM user_roles ur
+          WHERE ur.user_id = u.id AND ur.role = 'student'
+        )
+      )
       AND NOT EXISTS (
         SELECT 1 FROM supervisor_students ss
         WHERE ss.student_user_id = u.id
@@ -71,9 +87,17 @@ func (api *API) AdminAssignListStudents(w http.ResponseWriter, r *http.Request) 
   `)
 	} else {
 		rows, err = api.conn.Query(`
-    SELECT u.id, u.full_name, u.nickname, u.email, u.role
+    SELECT u.id, u.full_name, u.nickname, u.email, 'student'
     FROM users u
-    WHERE u.role='student' AND u.is_active=1
+    WHERE u.is_active=1
+      AND (
+        u.role='student'
+        OR EXISTS (
+          SELECT 1
+          FROM user_roles ur
+          WHERE ur.user_id = u.id AND ur.role = 'student'
+        )
+      )
       AND NOT EXISTS (
         SELECT 1 FROM supervisor_students ss
         WHERE ss.student_user_id = u.id

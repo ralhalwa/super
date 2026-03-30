@@ -22,7 +22,7 @@ func ListEligibleStudentsForSupervisor(conn DBTX, supervisorUserID int64, q stri
 
 	rows, err := conn.Query(`
 		SELECT 
-			u.id, u.full_name, u.email, u.role, u.is_active, u.created_at,
+			u.id, u.full_name, u.email, 'student', u.is_active, u.created_at,
 			IFNULL(u.nickname,''), IFNULL(u.cohort,'')
 		FROM supervisor_students ss
 		JOIN users u ON u.id = ss.student_user_id
@@ -60,15 +60,22 @@ func ListEligibleSupervisors(conn *sql.DB, q string) ([]models.User, error) {
 	q = strings.TrimSpace(q)
 
 	rows, err := conn.Query(`
-		SELECT id, full_name, email, role, is_active, created_at
-		FROM users
-		WHERE role = 'supervisor'
+		SELECT u.id, u.full_name, u.email, 'supervisor', u.is_active, u.created_at
+		FROM users u
+		WHERE (
+		    u.role = 'supervisor'
+		    OR EXISTS (
+		      SELECT 1
+		      FROM user_roles ur
+		      WHERE ur.user_id = u.id AND ur.role = 'supervisor'
+		    )
+		  )
 		  AND is_active = 1
 		  AND (
-		    LOWER(full_name) LIKE '%' || LOWER(?) || '%'
-		    OR LOWER(email) LIKE '%' || LOWER(?) || '%'
+		    LOWER(u.full_name) LIKE '%' || LOWER(?) || '%'
+		    OR LOWER(u.email) LIKE '%' || LOWER(?) || '%'
 		  )
-		ORDER BY full_name ASC
+		ORDER BY u.full_name ASC
 	`, q, q)
 	if err != nil {
 		return nil, err

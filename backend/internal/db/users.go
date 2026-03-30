@@ -72,17 +72,25 @@ func SearchUsersByRole(conn DBTX, role string, q string) ([]models.User, error) 
 	q = strings.TrimSpace(q)
 
 	rows, err := conn.Query(`
-		SELECT id, full_name, email, role, is_active, created_at,
-		       IFNULL(nickname,''), IFNULL(cohort,'')
-		FROM users
-		WHERE role = ? AND is_active = 1
+		SELECT u.id, u.full_name, u.email, ?, u.is_active, u.created_at,
+		       IFNULL(u.nickname,''), IFNULL(u.cohort,'')
+		FROM users u
+		WHERE u.is_active = 1
 		  AND (
-		    LOWER(full_name) LIKE '%' || LOWER(?) || '%'
-		    OR LOWER(email) LIKE '%' || LOWER(?) || '%'
-		    OR LOWER(IFNULL(nickname,'')) LIKE '%' || LOWER(?) || '%'
+		    u.role = ?
+		    OR EXISTS (
+		      SELECT 1
+		      FROM user_roles ur
+		      WHERE ur.user_id = u.id AND ur.role = ?
+		    )
 		  )
-		ORDER BY full_name ASC
-	`, role, q, q, q)
+		  AND (
+		    LOWER(u.full_name) LIKE '%' || LOWER(?) || '%'
+		    OR LOWER(u.email) LIKE '%' || LOWER(?) || '%'
+		    OR LOWER(IFNULL(u.nickname,'')) LIKE '%' || LOWER(?) || '%'
+		  )
+		ORDER BY u.full_name ASC
+	`, role, role, role, q, q, q)
 	if err != nil {
 		return nil, err
 	}
@@ -105,17 +113,44 @@ func SearchUsersStudentsAndSupervisors(conn DBTX, q string) ([]models.User, erro
 	q = strings.TrimSpace(q)
 
 	rows, err := conn.Query(`
-		SELECT id, full_name, email, role, is_active, created_at,
-		       IFNULL(nickname,''), IFNULL(cohort,'')
-		FROM users
-		WHERE role IN ('student','supervisor')
-		  AND is_active = 1
+		SELECT
+			u.id,
+			u.full_name,
+			u.email,
+			CASE
+				WHEN u.role IN ('student', 'supervisor') THEN u.role
+				WHEN EXISTS (
+					SELECT 1
+					FROM user_roles ur
+					WHERE ur.user_id = u.id AND ur.role = 'supervisor'
+				) THEN 'supervisor'
+				WHEN EXISTS (
+					SELECT 1
+					FROM user_roles ur
+					WHERE ur.user_id = u.id AND ur.role = 'student'
+				) THEN 'student'
+				ELSE u.role
+			END,
+			u.is_active,
+			u.created_at,
+			IFNULL(u.nickname,''),
+			IFNULL(u.cohort,'')
+		FROM users u
+		WHERE u.is_active = 1
 		  AND (
-		    LOWER(full_name) LIKE '%' || LOWER(?) || '%'
-		    OR LOWER(email) LIKE '%' || LOWER(?) || '%'
-		    OR LOWER(IFNULL(nickname,'')) LIKE '%' || LOWER(?) || '%'
+		    u.role IN ('student','supervisor')
+		    OR EXISTS (
+		      SELECT 1
+		      FROM user_roles ur
+		      WHERE ur.user_id = u.id AND ur.role IN ('student', 'supervisor')
+		    )
 		  )
-		ORDER BY full_name ASC
+		  AND (
+		    LOWER(u.full_name) LIKE '%' || LOWER(?) || '%'
+		    OR LOWER(u.email) LIKE '%' || LOWER(?) || '%'
+		    OR LOWER(IFNULL(u.nickname,'')) LIKE '%' || LOWER(?) || '%'
+		  )
+		ORDER BY u.full_name ASC
 	`, q, q, q)
 	if err != nil {
 		return nil, err

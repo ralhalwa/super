@@ -223,6 +223,7 @@ func runMigrations(conn *sql.DB) error {
 		"migrations/012_meeting_phase1.sql",
 		"migrations/013_notifications_phase2.sql",
 		"migrations/014_app_settings.sql",
+		"migrations/015_user_roles.sql",
 		// "migrations/006_users_nickname_cohort.sql",
 	}
 

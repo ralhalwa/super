@@ -27,6 +27,7 @@ type createUserReq struct {
 
 type deleteUserReq struct {
 	Email string `json:"email"`
+	Role  string `json:"role"`
 }
 
 type updateUserDiscordReq struct {
@@ -63,6 +64,68 @@ func (a *API) AdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Role != "supervisor" && req.Role != "student" {
 		writeErr(w, http.StatusBadRequest, "role must be supervisor or student")
+		return
+	}
+
+	existingID, _, _, existingRole, existingActive, existingNickname, existingCohort, existingErr := db.GetUserByEmailFull(a.conn, req.Email)
+	if existingErr == nil && existingID > 0 {
+		if !existingActive {
+			writeErr(w, http.StatusForbidden, "user is inactive")
+			return
+		}
+
+		hasRequestedRole, err := db.UserHasRole(a.conn, existingID, req.Role)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "db error")
+			return
+		}
+		if hasRequestedRole {
+			writeErr(w, http.StatusBadRequest, "role already added")
+			return
+		}
+
+		if existingRole != "admin" {
+			writeErr(w, http.StatusBadRequest, "email already exists or invalid")
+			return
+		}
+
+		nicknameTaken, err := db.UserExistsByNickname(a.conn, req.Nickname)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "db error")
+			return
+		}
+		if nicknameTaken && !strings.EqualFold(existingNickname, req.Nickname) {
+			writeErr(w, http.StatusBadRequest, "nickname already exists")
+			return
+		}
+
+		if req.FullName != "" && req.Email != "" && req.Nickname != "" {
+			nextCohort := req.Cohort
+			if nextCohort == "" {
+				nextCohort = existingCohort
+			}
+			if err := db.UpdateUserBasics(a.conn, existingID, req.FullName, req.Email, req.Nickname, nextCohort); err != nil {
+				writeErr(w, http.StatusInternalServerError, "failed to update user")
+				return
+			}
+		}
+
+		if err := db.AddUserRole(a.conn, existingID, req.Role); err != nil {
+			writeErr(w, http.StatusInternalServerError, "failed to add role")
+			return
+		}
+		if req.Role == "supervisor" {
+			if err := db.EnsureSupervisorFile(a.conn, existingID); err != nil {
+				writeErr(w, http.StatusInternalServerError, "failed to create supervisor file")
+				return
+			}
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"id":            existingID,
+			"role":          req.Role,
+			"existing_user": true,
+		})
 		return
 	}
 
@@ -122,6 +185,7 @@ func (a *API) AdminDeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	req.Role = strings.TrimSpace(strings.ToLower(req.Role))
 	if req.Email == "" {
 		writeErr(w, http.StatusBadRequest, "email required")
 		return
@@ -133,9 +197,57 @@ func (a *API) AdminDeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Keep system/admin accounts protected.
-	if strings.ToLower(strings.TrimSpace(role)) == "admin" {
-		writeErr(w, http.StatusForbidden, "cannot delete admin user")
+	primaryRole := strings.ToLower(strings.TrimSpace(role))
+	if primaryRole == "admin" {
+		if req.Role != "student" && req.Role != "supervisor" {
+			writeErr(w, http.StatusBadRequest, "role is required when removing student or supervisor access from an admin")
+			return
+		}
+
+		hasExtraRole, err := db.UserHasExtraRole(a.conn, id, req.Role)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "db error")
+			return
+		}
+		if !hasExtraRole {
+			writeErr(w, http.StatusNotFound, "role not found on this admin")
+			return
+		}
+
+		if req.Role == "supervisor" {
+			deps, err := db.CountSupervisorRoleDependencies(a.conn, id)
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, "db error")
+				return
+			}
+			if deps > 0 {
+				writeErr(w, http.StatusConflict, "remove supervisor workspace, members, and assignments before deleting supervisor access")
+				return
+			}
+			if err := db.DeleteSupervisorFileByUserID(a.conn, id); err != nil {
+				writeErr(w, http.StatusInternalServerError, "failed to remove supervisor workspace")
+				return
+			}
+		}
+
+		if req.Role == "student" {
+			deps, err := db.CountStudentRoleDependencies(a.conn, id)
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, "db error")
+				return
+			}
+			if deps > 0 {
+				writeErr(w, http.StatusConflict, "remove student assignments, board membership, and card assignments before deleting student access")
+				return
+			}
+		}
+
+		if err := db.RemoveUserRole(a.conn, id, req.Role); err != nil {
+			writeErr(w, http.StatusInternalServerError, "failed to remove role")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 		return
 	}
 
@@ -211,7 +323,15 @@ func (a *API) AdminListSupervisors(w http.ResponseWriter, r *http.Request) {
 			sf.created_at
 		FROM users u
 		JOIN supervisor_files sf ON sf.supervisor_user_id = u.id
-		WHERE u.role = 'supervisor' AND u.is_active = 1
+		WHERE u.is_active = 1
+		  AND (
+		    u.role = 'supervisor'
+		    OR EXISTS (
+		      SELECT 1
+		      FROM user_roles ur
+		      WHERE ur.user_id = u.id AND ur.role = 'supervisor'
+		    )
+		  )
 		ORDER BY u.full_name ASC
 	`)
 	if err != nil {
@@ -827,13 +947,17 @@ func (a *API) AdminEligibleUsers(w http.ResponseWriter, r *http.Request) {
 func (a *API) AdminUserExists(w http.ResponseWriter, r *http.Request) {
 	email := strings.TrimSpace(r.URL.Query().Get("email"))
 	nickname := strings.TrimSpace(r.URL.Query().Get("nickname"))
+	role := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("role")))
 
 	if email == "" && nickname == "" {
 		writeErr(w, http.StatusBadRequest, "email or nickname required")
 		return
 	}
 
-	out := map[string]any{"exists": false}
+	out := map[string]any{
+		"exists":     false,
+		"any_exists": false,
+	}
 
 	if email != "" {
 		exists, err := db.UserExistsByEmail(a.conn, email)
@@ -841,7 +965,17 @@ func (a *API) AdminUserExists(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusInternalServerError, "db error")
 			return
 		}
+		out["any_exists"] = exists
 		out["exists"] = exists
+		if role == "student" || role == "supervisor" {
+			roleExists, err := db.UserRoleExistsByEmail(a.conn, email, role)
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, "db error")
+				return
+			}
+			out["exists"] = roleExists
+			out["role_exists"] = roleExists
+		}
 		returnJSON(w, out)
 		return
 	}

@@ -167,6 +167,7 @@ export default function AdminDashboard() {
 
   const [checking, setChecking] = useState(false);
   const [exists, setExists] = useState(false);
+  const [accountExists, setAccountExists] = useState(false);
   const existsCheckSeq = useRef(0);
 
   const [loading, setLoading] = useState(false);
@@ -206,6 +207,7 @@ export default function AdminDashboard() {
       setEmail("");
       setCohort("");
       setExists(false);
+      setAccountExists(false);
       setErr("");
       return;
     }
@@ -234,14 +236,19 @@ export default function AdminDashboard() {
         setEmail(u.email);
         setCohort(u.cohort);
 
-        const res = await apiFetch(`/admin/users/exists?email=${encodeURIComponent(u.email)}`);
+        const res = await apiFetch(
+          `/admin/users/exists?email=${encodeURIComponent(u.email)}&role=${encodeURIComponent(role)}`
+        );
         if (!alive || seq !== existsCheckSeq.current) return;
+
+        setAccountExists(!!res?.any_exists);
 
         if (res?.exists) {
           setExists(true);
-          setMsg("User already added.");
+          setMsg(`${role === "supervisor" ? "Supervisor" : "Student"} role already added.`);
         } else {
           setExists(false);
+          setMsg(res?.any_exists ? `Account exists. You can add the ${role} role.` : "");
         }
       } catch (e: any) {
         if (!alive || seq !== existsCheckSeq.current) return;
@@ -260,7 +267,7 @@ export default function AdminDashboard() {
     return () => {
       alive = false;
     };
-  }, [nickname]);
+  }, [nickname, role]);
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
@@ -271,7 +278,7 @@ export default function AdminDashboard() {
     try {
       if (!nickname.trim()) throw new Error("Enter nickname/login first.");
       if (!email) throw new Error("User not found in Reboot API.");
-      if (exists) throw new Error("User already added.");
+      if (exists) throw new Error(`${role === "supervisor" ? "Supervisor" : "Student"} role already added.`);
 
       await apiFetch("/admin/users", {
         method: "POST",
@@ -285,13 +292,18 @@ export default function AdminDashboard() {
         }),
       });
 
-      setMsg(`${role === "supervisor" ? "Supervisor" : "Student"} created successfully.`);
+      setMsg(
+        `${role === "supervisor" ? "Supervisor" : "Student"} ${
+          accountExists ? "role added successfully." : "created successfully."
+        }`
+      );
 
       setNickname("");
       setFullName("");
       setEmail("");
       setCohort("");
       setExists(false);
+      setAccountExists(false);
 
       await loadDashboardStats();
     } catch (e: any) {
@@ -309,8 +321,11 @@ export default function AdminDashboard() {
       if (!exists) throw new Error("User does not exist in TaskFlow.");
       if (!email) throw new Error("No user email to delete.");
       const ok = await confirm({
-        title: "Delete user",
-        message: `Delete ${email} from TaskFlow? This cannot be undone.`,
+        title: role === "supervisor" || role === "student" ? `Delete ${role} access` : "Delete user",
+        message:
+          accountExists && role
+            ? `Remove ${role} access for ${email}? Admin access will stay.`
+            : `Delete ${email} from TaskFlow? This cannot be undone.`,
       });
       if (!ok) return;
 
@@ -318,19 +333,23 @@ export default function AdminDashboard() {
       existsCheckSeq.current += 1; // invalidate any pending "exists" checks
       await apiFetch("/admin/users/delete", {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, role }),
       });
 
       // Immediate re-check to guarantee UI reflects DB state.
-      const verify = await apiFetch(`/admin/users/exists?email=${encodeURIComponent(email)}`);
-      const stillExists = !!verify?.exists;
-      setExists(stillExists);
-      setMsg(stillExists ? "Delete requested, but user still exists." : "User deleted successfully.");
-      if (!stillExists) {
+      const verify = await apiFetch(
+        `/admin/users/exists?email=${encodeURIComponent(email)}&role=${encodeURIComponent(role)}`
+      );
+      const stillHasRole = !!verify?.exists;
+      setExists(stillHasRole);
+      setAccountExists(!!verify?.any_exists);
+      setMsg(stillHasRole ? "Delete requested, but the role still exists." : `${role} access removed successfully.`);
+      if (!verify?.any_exists) {
         setNickname("");
         setFullName("");
         setEmail("");
         setCohort("");
+        setAccountExists(false);
       }
       await loadDashboardStats();
     } catch (e: any) {
@@ -436,6 +455,7 @@ export default function AdminDashboard() {
                 setErr("");
                 setMsg("");
                 setExists(false);
+                setAccountExists(false);
               }}
             >
               Reset
@@ -555,7 +575,13 @@ export default function AdminDashboard() {
 
                   {exists && (
                     <div className="mt-2 text-xs font-extrabold text-amber-700">
-                      Already added in TaskFlow.
+                      {role === "supervisor" ? "Supervisor" : "Student"} access already added.
+                    </div>
+                  )}
+
+                  {!exists && accountExists && (
+                    <div className="mt-2 text-xs font-extrabold text-blue-700">
+                      Account already exists. Creating now will add only the {role} role.
                     </div>
                   )}
                 </div>
@@ -589,7 +615,7 @@ export default function AdminDashboard() {
                   disabled={deleting || loading || checking}
                   className="h-11 rounded-[14px] border border-rose-200 bg-rose-50 px-4 font-black text-rose-700 hover:bg-rose-100 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {deleting ? "Deleting..." : "Delete user"}
+                  {deleting ? "Deleting..." : `Delete ${role} access`}
                 </button>
               )}
 
