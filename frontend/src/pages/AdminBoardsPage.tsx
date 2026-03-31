@@ -25,6 +25,8 @@ type BoardMember = {
   role_in_board: string;
 };
 
+type ViewMode = "boards" | "lists";
+
 function formatDate(iso: string) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -195,6 +197,28 @@ function ArrowIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function ViewBoardsIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="4" y="4" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2" />
+      <rect x="13" y="4" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2" />
+      <rect x="4" y="13" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2" />
+      <rect x="13" y="13" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function ViewListIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M8 7h12M8 12h12M8 17h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="4.5" cy="7" r="1.5" fill="currentColor" />
+      <circle cx="4.5" cy="12" r="1.5" fill="currentColor" />
+      <circle cx="4.5" cy="17" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
 function StatPill({
   icon,
   label,
@@ -281,6 +305,7 @@ function SkeletonCard() {
 export default function AdminBoardsPage() {
   const nav = useNavigate();
   const [boards, setBoards] = useState<BoardRow[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>("boards");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [err, setErr] = useState("");
@@ -407,54 +432,84 @@ export default function AdminBoardsPage() {
         {/* Toolbar */}
         <div className="mb-4 flex items-start justify-between gap-3 max-[1020px]:flex-col">
           {/* Search */}
-          <div
-            className="
-              flex-1 min-w-[340px] flex items-center gap-2.5
-              rounded-2xl border border-slate-900/10
-              bg-white/92 shadow-[0_10px_26px_rgba(15,23,42,0.06)]
-              px-3 py-2.5
-              focus-within:border-[#6d5efc]/30 focus-within:ring-4 focus-within:ring-[#6d5efc]/12
-              max-[1020px]:min-w-0
-            "
-          >
-            <span
+          <div className="flex-1 min-w-[340px] grid gap-3 max-[1020px]:min-w-0">
+            <div
               className="
-                grid place-items-center h-9 w-9 rounded-xl
-                border border-slate-900/10 bg-slate-900/3 text-slate-900/55
+                flex items-center gap-2.5
+                rounded-2xl border border-slate-900/10
+                bg-white/92 shadow-[0_10px_26px_rgba(15,23,42,0.06)]
+                px-3 py-2.5
+                focus-within:border-[#6d5efc]/30 focus-within:ring-4 focus-within:ring-[#6d5efc]/12
               "
-              aria-hidden="true"
             >
-              <SearchIcon />
-            </span>
-
-            <input
-              className="
-                flex-1 bg-transparent outline-none
-                text-[14px] font-extrabold text-slate-900/90
-                placeholder:text-slate-900/40 placeholder:font-bold
-              "
-              placeholder="Search boards, supervisors, or descriptions…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-
-            {search.trim() && (
-              <button
+              <span
                 className="
-                  h-9 px-3 rounded-xl
-                  border border-slate-900/12 bg-white/90
-                  font-black text-slate-900/70
-                  transition
-                  hover:-translate-y-[1px]
-                  hover:border-slate-900/18
-                  hover:shadow-[0_10px_18px_rgba(15,23,42,0.08)]
+                  grid place-items-center h-9 w-9 rounded-xl
+                  border border-slate-900/10 bg-slate-900/3 text-slate-900/55
                 "
-                type="button"
-                onClick={() => setSearch("")}
+                aria-hidden="true"
               >
-                Clear
+                <SearchIcon />
+              </span>
+
+              <input
+                className="
+                  flex-1 bg-transparent outline-none
+                  text-[14px] font-extrabold text-slate-900/90
+                  placeholder:text-slate-900/40 placeholder:font-bold
+                "
+                placeholder="Search boards, supervisors, or descriptions…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+
+              {search.trim() && (
+                <button
+                  className="
+                    h-9 px-3 rounded-xl
+                    border border-slate-900/12 bg-white/90
+                    font-black text-slate-900/70
+                    transition
+                    hover:-translate-y-[1px]
+                    hover:border-slate-900/18
+                    hover:shadow-[0_10px_18px_rgba(15,23,42,0.08)]
+                  "
+                  type="button"
+                  onClick={() => setSearch("")}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="inline-flex w-fit items-center gap-1 rounded-2xl border border-[#6d5efc]/18 bg-white/90 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+              <button
+                className={[
+                  "inline-flex h-10 items-center gap-2 rounded-[14px] px-3.5 text-[13px] font-black transition",
+                  viewMode === "boards"
+                    ? "bg-[#6d5efc] text-white shadow-[0_10px_24px_rgba(109,94,252,0.28)]"
+                    : "text-slate-600 hover:bg-[#f4f1ff] hover:text-[#6d5efc]",
+                ].join(" ")}
+                type="button"
+                onClick={() => setViewMode("boards")}
+              >
+                <ViewBoardsIcon />
+                Boards
               </button>
-            )}
+              <button
+                className={[
+                  "inline-flex h-10 items-center gap-2 rounded-[14px] px-3.5 text-[13px] font-black transition",
+                  viewMode === "lists"
+                    ? "bg-[#6d5efc] text-white shadow-[0_10px_24px_rgba(109,94,252,0.28)]"
+                    : "text-slate-600 hover:bg-[#f4f1ff] hover:text-[#6d5efc]",
+                ].join(" ")}
+                type="button"
+                onClick={() => setViewMode("lists")}
+              >
+                <ViewListIcon />
+                Lists
+              </button>
+            </div>
           </div>
 
           {/* KPIs */}
@@ -521,7 +576,7 @@ export default function AdminBoardsPage() {
               </button>
             )}
           </div>
-        ) : (
+        ) : viewMode === "boards" ? (
           <div className="grid grid-cols-3 gap-3 max-[1200px]:grid-cols-2 max-[780px]:grid-cols-1">
             {filtered.map((b) => {
               const desc = clampText(b.description, "No description provided.");
@@ -696,6 +751,101 @@ export default function AdminBoardsPage() {
                 </div>
               );
             })}
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-[18px] border border-slate-900/10 bg-white/95 shadow-[0_14px_34px_rgba(15,23,42,0.07)]">
+            <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_110px_110px_140px] gap-3 border-b border-slate-200 bg-[linear-gradient(180deg,rgba(109,94,252,0.06),rgba(109,94,252,0.02))] px-4 py-3 text-[12px] font-black uppercase tracking-[0.08em] text-slate-500 max-[920px]:hidden">
+              <div>Board</div>
+              <div>Supervisor</div>
+              <div>Lists</div>
+              <div>Cards</div>
+              <div className="text-right">Actions</div>
+            </div>
+
+            <div className="divide-y divide-slate-200">
+              {filtered.map((b) => {
+                const desc = clampText(b.description, "No description provided.");
+                const sup = clampText(b.supervisor_name, "Unknown supervisor");
+
+                return (
+                  <div
+                    key={b.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => nav(`/admin/boards/${b.id}?from=boards`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        nav(`/admin/boards/${b.id}?from=boards`);
+                      }
+                    }}
+                    className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_110px_110px_140px] gap-3 px-4 py-3 transition hover:bg-[#faf8ff] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#6d5efc]/15 max-[920px]:grid-cols-1"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-10 w-10 flex-none place-items-center rounded-2xl border border-[#6d5efc]/20 bg-[#6d5efc]/10 text-[#6d5efc]">
+                          <BoardIcon />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="truncate text-[15px] font-black text-slate-900">{b.name}</div>
+                          <div className="mt-0.5 line-clamp-1 text-[12px] font-semibold text-slate-500">{desc}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex min-w-0 items-center">
+                      <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 px-3 py-1 text-[12px] font-black text-slate-800">
+                        <UserIcon />
+                        <span className="truncate">{sup}</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center text-[13px] font-black text-slate-700">
+                      {b.lists_count}
+                    </div>
+
+                    <div className="flex items-center text-[13px] font-black text-slate-700">
+                      {b.cards_count}
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 max-[920px]:justify-start">
+                      <button
+                        type="button"
+                        className="h-8 w-8 grid place-items-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100"
+                        title="Board members"
+                        aria-label="Board members"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMembers(b);
+                        }}
+                      >
+                        <UsersIcon />
+                      </button>
+
+                      {canDeleteBoards ? (
+                        <button
+                          type="button"
+                          className="h-8 w-8 grid place-items-center rounded-full border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          title={deletingBoardID === b.id ? "Deleting..." : "Delete board"}
+                          aria-label={deletingBoardID === b.id ? "Deleting board" : "Delete board"}
+                          disabled={deletingBoardID === b.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteBoard(b);
+                          }}
+                        >
+                          <BinIcon size={14} />
+                        </button>
+                      ) : null}
+
+                      <span className="inline-flex items-center gap-1 text-[12px] font-black text-slate-500">
+                        Open <ArrowIcon size={14} />
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
