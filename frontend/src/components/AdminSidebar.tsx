@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import faviconIcon from "/favicon-icon.png";
 
@@ -12,9 +14,35 @@ export default function AdminSidebar({ active }: Props) {
   const nav = useNavigate();
   const { isAdmin, login, email, role } = useAuth();
   const fallbackName = login || email || "User";
-  const footerName = isAdmin ? "Admin" : fallbackName;
+  const [profileName, setProfileName] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfileName() {
+      try {
+        const profile = await apiFetch("/admin/profile/summary");
+        const nextName = String(profile?.user?.full_name || "").trim();
+        if (!cancelled && nextName) {
+          setProfileName(nextName);
+        }
+      } catch {
+        if (!cancelled) {
+          setProfileName("");
+        }
+      }
+    }
+
+    loadProfileName();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const footerName = profileName || fallbackName;
   const footerSub = isAdmin ? "System access" : role || "workspace";
-  const initials = fallbackName
+  const initials = footerName
     .replace(/^@/, "")
     .split(/[\s._-]+/)
     .filter(Boolean)
@@ -96,7 +124,11 @@ export default function AdminSidebar({ active }: Props) {
         </nav>
 
         <div className="border-t border-slate-200 p-2">
-          <div className="mb-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => nav("/profile")}
+            className="mb-3 flex w-full items-center gap-3 rounded-[14px] text-left transition hover:bg-slate-50"
+          >
             <div className="h-9 w-9 rounded-full border border-slate-200 bg-[#e8ecff] flex items-center justify-center flex-shrink-0">
               <span className="text-[11px] font-extrabold text-[#6d5efc]">{initials}</span>
             </div>
@@ -104,7 +136,7 @@ export default function AdminSidebar({ active }: Props) {
               <div className="truncate text-[13px] font-extrabold text-slate-900">{footerName}</div>
               <div className="mt-0.5 truncate text-[12px] font-bold text-slate-500">{footerSub}</div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
     </aside>

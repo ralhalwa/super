@@ -331,8 +331,9 @@ export default function ProfilePage() {
     }
   }
 
-  if (role === "admin" && !isAdminViewingUser) return <Navigate to="/admin" replace />;
-  if (!isTargetUserView && role !== "supervisor" && role !== "student") return <Navigate to="/login" replace />;
+  if (!isTargetUserView && role !== "admin" && role !== "supervisor" && role !== "student") {
+    return <Navigate to="/login" replace />;
+  }
   if (role === "student" && isTargetUserView) return <Navigate to="/profile" replace />;
 
   return (
