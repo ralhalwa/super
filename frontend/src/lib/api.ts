@@ -5,6 +5,7 @@ export function clearAuth() {
   localStorage.removeItem("role");
   localStorage.removeItem("email");
   localStorage.removeItem("login");
+  localStorage.removeItem("displayName");
   localStorage.removeItem("token");
   localStorage.removeItem("user");
 }

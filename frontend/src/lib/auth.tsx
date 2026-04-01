@@ -14,6 +14,7 @@ type AuthState = {
   role: string;
   email: string;
   login: string;
+  displayName: string;
 };
 
 type AuthContextValue = AuthState & {
@@ -22,6 +23,7 @@ type AuthContextValue = AuthState & {
   isStudent: boolean;
   authenticated: boolean;
   setSession: (s: AuthState) => void;
+  setDisplayName: (displayName: string) => void;
   logout: () => void;
 };
 
@@ -33,6 +35,7 @@ function readStorage(): AuthState {
     role: (localStorage.getItem("role") || "").trim().toLowerCase(),
     email: (localStorage.getItem("email") || "").trim(),
     login: (localStorage.getItem("login") || "").trim(),
+    displayName: (localStorage.getItem("displayName") || "").trim(),
   };
 }
 
@@ -60,9 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("role");
     localStorage.removeItem("email");
     localStorage.removeItem("login");
+    localStorage.removeItem("displayName");
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    setState({ jwt: "", role: "", email: "", login: "" });
+    setState({ jwt: "", role: "", email: "", login: "", displayName: "" });
     nav("/login", { replace: true });
   }, [nav]);
 
@@ -71,7 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("role", s.role);
     localStorage.setItem("email", s.email);
     localStorage.setItem("login", s.login);
+    localStorage.setItem("displayName", s.displayName);
     setState(s);
+  }, []);
+
+  const setDisplayName = useCallback((displayName: string) => {
+    const nextName = String(displayName || "").trim();
+    localStorage.setItem("displayName", nextName);
+    setState((prev) => ({ ...prev, displayName: nextName }));
   }, []);
 
   useEffect(() => {
@@ -82,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (["jwt", "role", "email", "login"].includes(e.key || "")) {
+      if (["jwt", "role", "email", "login", "displayName"].includes(e.key || "")) {
         setState(readStorage());
       }
     };
@@ -99,9 +110,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSupervisor: state.role === "supervisor",
       isStudent: state.role === "student",
       setSession,
+      setDisplayName,
       logout,
     };
-  }, [state, setSession, logout]);
+  }, [state, setSession, setDisplayName, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

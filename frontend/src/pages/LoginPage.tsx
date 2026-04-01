@@ -232,7 +232,7 @@ export default function LoginPage() {
         login = String(localUser.nickname || me?.login || ident.login || inputIdentifier).trim();
       }
 
-      auth.setSession({ jwt, email, login, role });
+      auth.setSession({ jwt, email, login, role, displayName: "" });
 
       if (role === "admin") nav("/admin");
       else nav("/admin/boards");
@@ -326,4 +326,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

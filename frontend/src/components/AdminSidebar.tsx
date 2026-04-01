@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -12,11 +12,12 @@ function cn(...xs: Array<string | false | null | undefined>) {
 
 export default function AdminSidebar({ active }: Props) {
   const nav = useNavigate();
-  const { isAdmin, login, email, role } = useAuth();
+  const { isAdmin, login, email, role, displayName, setDisplayName } = useAuth();
   const fallbackName = login || email || "User";
-  const [profileName, setProfileName] = useState("");
 
   useEffect(() => {
+    if (displayName) return;
+
     let cancelled = false;
 
     async function loadProfileName() {
@@ -24,12 +25,10 @@ export default function AdminSidebar({ active }: Props) {
         const profile = await apiFetch("/admin/profile/summary");
         const nextName = String(profile?.user?.full_name || "").trim();
         if (!cancelled && nextName) {
-          setProfileName(nextName);
+          setDisplayName(nextName);
         }
       } catch {
-        if (!cancelled) {
-          setProfileName("");
-        }
+        // Keep the fallback login/email label if the profile request fails.
       }
     }
 
@@ -38,9 +37,9 @@ export default function AdminSidebar({ active }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [displayName, setDisplayName]);
 
-  const footerName = profileName || fallbackName;
+  const footerName = displayName || fallbackName;
   const footerSub = isAdmin ? "System access" : role || "workspace";
   const initials = footerName
     .replace(/^@/, "")
@@ -127,7 +126,7 @@ export default function AdminSidebar({ active }: Props) {
           <button
             type="button"
             onClick={() => nav("/profile")}
-            className="mb-3 flex w-full items-center gap-3 rounded-[14px] text-left transition hover:bg-slate-50"
+            className="mb-3 flex w-full items-center gap-3 rounded-[14px] text-left transition outline-none hover:bg-slate-50 focus:outline-none"
           >
             <div className="h-9 w-9 rounded-full border border-slate-200 bg-[#e8ecff] flex items-center justify-center flex-shrink-0">
               <span className="text-[11px] font-extrabold text-[#6d5efc]">{initials}</span>
