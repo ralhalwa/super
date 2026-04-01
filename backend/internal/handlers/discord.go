@@ -322,6 +322,7 @@ func (a *API) notifyMeetingBooked(meetingID, actorID int64) bool {
 		log.Printf("discord meeting notify skipped: bad end time for meeting %d: %v", meetingID, err)
 		return false
 	}
+	location := meetingLocation()
 
 	message := fmt.Sprintf(
 		"%s booked a new meeting for **%s** in **%s**.\nLocation: **%s**\nTime: `%s - %s`",
@@ -329,8 +330,8 @@ func (a *API) notifyMeetingBooked(meetingID, actorID int64) bool {
 		meeting.Title,
 		meeting.BoardName,
 		meeting.Location,
-		startAt.Local().Format("02 Jan 2006 03:04 PM"),
-		endAt.Local().Format("03:04 PM"),
+		startAt.In(location).Format("02 Jan 2006 03:04 PM"),
+		endAt.In(location).Format("03:04 PM"),
 	)
 	if strings.TrimSpace(meeting.Notes) != "" {
 		message += "\nNotes: " + strings.TrimSpace(meeting.Notes)
@@ -365,6 +366,7 @@ func (a *API) notifyMeetingChanged(meeting models.Meeting, verb string) bool {
 	if err != nil {
 		return false
 	}
+	location := meetingLocation()
 
 	message := fmt.Sprintf(
 		"Meeting update: **%s** was %s in **%s**.\nLocation: **%s**\nTime: `%s - %s`",
@@ -372,8 +374,8 @@ func (a *API) notifyMeetingChanged(meeting models.Meeting, verb string) bool {
 		verb,
 		meeting.BoardName,
 		meeting.Location,
-		startAt.Local().Format("02 Jan 2006 03:04 PM"),
-		endAt.Local().Format("03:04 PM"),
+		startAt.In(location).Format("02 Jan 2006 03:04 PM"),
+		endAt.In(location).Format("03:04 PM"),
 	)
 	if strings.TrimSpace(meeting.OutcomeNotes) != "" && (meeting.Status == "completed" || meeting.Status == "canceled") {
 		message += "\nNotes: " + strings.TrimSpace(meeting.OutcomeNotes)
@@ -437,7 +439,7 @@ func (a *API) sendMeetingRoomBookingNotice(meeting models.Meeting, location *tim
 		dayWord = "tomorrow"
 	}
 
-		message := fmt.Sprintf(
+	message := fmt.Sprintf(
 		"%s Please note that %s will be occupied from %s to %s %s.",
 		mention,
 		strings.TrimSpace(meeting.Location),
@@ -474,7 +476,7 @@ func (a *API) notifyMeetingRoomBookingIfDue(meetingID int64) bool {
 		return false
 	}
 
-	location, err := time.LoadLocation("Asia/Bahrain")
+	location, err := time.LoadLocation(appMeetingTimezone)
 	if err != nil {
 		log.Printf("meeting room notify skipped: failed to load Bahrain timezone: %v", err)
 		return false
@@ -664,7 +666,7 @@ func (a *API) StartDiscordReminderWorker() {
 	a.stop = cancel
 
 	go func() {
-		location, err := time.LoadLocation("Asia/Bahrain")
+		location, err := time.LoadLocation(appMeetingTimezone)
 		if err != nil {
 			log.Printf("discord due reminder worker disabled: failed to load Bahrain timezone: %v", err)
 			return
@@ -691,7 +693,7 @@ func (a *API) StartDiscordReminderWorker() {
 	}()
 
 	go func() {
-		location, err := time.LoadLocation("Asia/Bahrain")
+		location, err := time.LoadLocation(appMeetingTimezone)
 		if err != nil {
 			log.Printf("meeting reminder worker disabled: failed to load Bahrain timezone: %v", err)
 			return

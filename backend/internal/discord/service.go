@@ -31,6 +31,7 @@ type Service struct {
 	applicationID string
 	guildID       string
 	categoryID    string
+	techTeamRoleID string
 	httpClient    *http.Client
 }
 
@@ -96,6 +97,7 @@ func NewFromEnv() *Service {
 	appID := strings.TrimSpace(os.Getenv("DISCORD_APPLICATION_ID"))
 	guildID := strings.TrimSpace(os.Getenv("DISCORD_GUILD_ID"))
 	categoryID := strings.TrimSpace(os.Getenv("DISCORD_CATEGORY_ID"))
+	techTeamRoleID := strings.TrimSpace(os.Getenv("DISCORD_TECH_TEAM_ROLE_ID"))
 
 	if token == "" || appID == "" || guildID == "" || categoryID == "" {
 		return nil
@@ -106,6 +108,7 @@ func NewFromEnv() *Service {
 		applicationID: appID,
 		guildID:       guildID,
 		categoryID:    categoryID,
+		techTeamRoleID: techTeamRoleID,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -274,6 +277,7 @@ func (s *Service) GetChannelPermissionOverwrites(ctx context.Context, channelID 
 
 func (s *Service) permissionOverwrites(members []MemberAccess) []permissionOverwrite {
 	viewAndChat := fmt.Sprintf("%d", permissionViewChannel+permissionSendMessages+permissionReadMessageHistory)
+	viewOnly := fmt.Sprintf("%d", permissionViewChannel+permissionReadMessageHistory)
 	botAllow := fmt.Sprintf("%d", permissionViewChannel+permissionSendMessages+permissionManageMessages+permissionReadMessageHistory+permissionManageChannels+permissionPinMessages)
 
 	seen := map[string]bool{}
@@ -288,6 +292,14 @@ func (s *Service) permissionOverwrites(members []MemberAccess) []permissionOverw
 			Type:  1,
 			Allow: botAllow,
 		},
+	}
+
+	if s.techTeamRoleID != "" {
+		overwrites = append(overwrites, permissionOverwrite{
+			ID:    s.techTeamRoleID,
+			Type:  0,
+			Allow: viewOnly,
+		})
 	}
 
 	for _, member := range members {

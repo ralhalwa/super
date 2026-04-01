@@ -13,6 +13,16 @@ import (
 	"taskflow/internal/utils"
 )
 
+const appMeetingTimezone = "Asia/Bahrain"
+
+func meetingLocation() *time.Location {
+	location, err := time.LoadLocation(appMeetingTimezone)
+	if err != nil {
+		return time.UTC
+	}
+	return location
+}
+
 func (a *API) notifyMeetingParticipants(meetingID, actorID int64, kind, title, meetingTitle, body string) {
 	participants, err := db.ListMeetingParticipants(a.conn, meetingID)
 	if err != nil {
@@ -78,11 +88,12 @@ func formatTimeRangeForNotification(startISO, endISO string) string {
 	if err != nil {
 		return start
 	}
+	location := meetingLocation()
 	endAt, err := time.Parse(time.RFC3339, end)
 	if err != nil {
-		return startAt.Local().Format("02 Jan 2006 3:04 PM")
+		return startAt.In(location).Format("02 Jan 2006 3:04 PM")
 	}
-	return fmt.Sprintf("%s - %s", startAt.Local().Format("02 Jan 2006 3:04 PM"), endAt.Local().Format("3:04 PM"))
+	return fmt.Sprintf("%s - %s", startAt.In(location).Format("02 Jan 2006 3:04 PM"), endAt.In(location).Format("3:04 PM"))
 }
 
 type createMeetingReq struct {
@@ -100,16 +111,16 @@ type deleteMeetingReq struct {
 }
 
 type updateMeetingStatusReq struct {
-	MeetingID     int64  `json:"meeting_id"`
-	Status        string `json:"status"`
-	OutcomeNotes  string `json:"outcome_notes"`
+	MeetingID    int64  `json:"meeting_id"`
+	Status       string `json:"status"`
+	OutcomeNotes string `json:"outcome_notes"`
 }
 
 type updateMeetingParticipantReq struct {
-	MeetingID         int64  `json:"meeting_id"`
-	UserID            int64  `json:"user_id"`
-	RSVPStatus        string `json:"rsvp_status"`
-	AttendanceStatus  string `json:"attendance_status"`
+	MeetingID        int64  `json:"meeting_id"`
+	UserID           int64  `json:"user_id"`
+	RSVPStatus       string `json:"rsvp_status"`
+	AttendanceStatus string `json:"attendance_status"`
 }
 
 func normalizeRole(v string) string {
