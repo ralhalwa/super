@@ -278,7 +278,7 @@ export default function AssignPage() {
       title="Assign students"
       subtitle="Select a supervisor, then assign multiple students at once."
       right={
-        <div className="flex max-w-full flex-wrap items-center justify-end gap-2 overflow-hidden">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             className={cn(
