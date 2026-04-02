@@ -860,10 +860,10 @@ function MetaPill({ label, value }: { label: string; value: string }) {
 
 function meetingSurfaceClass(status: MeetingRow["status"]) {
   if (status === "completed") {
-    return "border-emerald-200 bg-[linear-gradient(180deg,#f4fff7,#dcfce7)] text-emerald-900 shadow-[0_10px_24px_rgba(16,185,129,0.12)]";
+    return "border-emerald-300 bg-emerald-50/40 text-slate-900 shadow-sm";
   }
   if (status === "canceled") {
-    return "border-rose-200 bg-[linear-gradient(180deg,#fff7f7,#ffe4e6)] text-rose-900 shadow-[0_10px_24px_rgba(244,63,94,0.12)]";
+    return "border-rose-300 bg-rose-50/40 text-slate-900 shadow-sm";
   }
   return "border-slate-200 bg-white/95 text-slate-900 shadow-sm";
 }
@@ -885,10 +885,10 @@ function StatCard({ label, value, tone }: { label: string; value: number; tone: 
 
 function StatusPill({ status }: { status: MeetingRow["status"] }) {
   const classes = status === "completed"
-    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    ? "border-emerald-200 bg-white text-emerald-700"
     : status === "canceled"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
-      : "border-amber-200 bg-amber-50 text-amber-700";
+      ? "border-rose-200 bg-white text-rose-700"
+      : "border-slate-200 bg-white text-slate-700";
   return <div className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${classes}`}>{status}</div>;
 }
 
