@@ -110,6 +110,32 @@ function BinIcon({ size = 14 }: { size?: number }) {
   );
 }
 
+function CircleCheckIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 12.5 10.8 15 16.2 9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SlashCircleIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+      <path d="M8.5 15.5 15.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function MeetingsCalendarPage() {
   const { role, email, login } = useAuth();
   const [resolvedRole, setResolvedRole] = useState<string>(role);
@@ -657,10 +683,33 @@ export default function MeetingsCalendarPage() {
                 {canManage ? (
                   <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
                     <div className="text-[12px] font-black uppercase tracking-[0.12em] text-slate-400">Meeting controls</div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button type="button" onClick={() => updateMeetingStatus(selectedMeeting, "scheduled")} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-[12px] font-black text-slate-700">Mark Scheduled</button>
-                      <button type="button" onClick={() => updateMeetingStatus(selectedMeeting, "completed")} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] font-black text-emerald-700">Complete Meeting</button>
-                      <button type="button" onClick={() => updateMeetingStatus(selectedMeeting, "canceled")} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-black text-rose-700">Cancel Meeting</button>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => updateMeetingStatus(selectedMeeting, "completed")}
+                        className="group flex min-h-[52px] items-center gap-3 rounded-[16px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-emerald-700 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-100"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-emerald-200 bg-white/90 text-emerald-700 transition group-hover:bg-white">
+                          <CircleCheckIcon />
+                        </span>
+                        <span>
+                          <span className="block text-[13px] font-black">Complete Meeting</span>
+                          <span className="block text-[11px] font-bold text-emerald-600">Close it out and keep the outcome notes.</span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateMeetingStatus(selectedMeeting, "canceled")}
+                        className="group flex min-h-[52px] items-center gap-3 rounded-[16px] border border-rose-200 bg-rose-50 px-4 py-3 text-left text-rose-700 transition hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-100"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-rose-200 bg-white/90 text-rose-700 transition group-hover:bg-white">
+                          <SlashCircleIcon />
+                        </span>
+                        <span>
+                          <span className="block text-[13px] font-black">Cancel Meeting</span>
+                          <span className="block text-[11px] font-bold text-rose-600">Mark it canceled so everyone sees the update.</span>
+                        </span>
+                      </button>
                     </div>
                     <label className="mt-3 grid gap-1.5">
                       <span className="text-[12px] font-black uppercase tracking-[0.12em] text-slate-500">Outcome notes</span>
@@ -698,6 +747,7 @@ export default function MeetingsCalendarPage() {
                               <SelectField
                                 label="RSVP"
                                 value={participant.rsvp_status}
+                                kind="rsvp"
                                 disabled={!canEditParticipant || savingParticipantKey === key}
                                 options={[
                                   ["pending", "Pending"],
@@ -711,6 +761,7 @@ export default function MeetingsCalendarPage() {
                                 <SelectField
                                   label="Attendance"
                                   value={participant.attendance_status}
+                                  kind="attendance"
                                   disabled={savingParticipantKey === key}
                                   options={[
                                     ["pending", "Pending"],
@@ -844,22 +895,51 @@ function StatusPill({ status }: { status: MeetingRow["status"] }) {
 function SelectField({
   label,
   value,
+  kind,
   options,
   disabled,
   onChange,
 }: {
   label: string;
   value: string;
+  kind: "rsvp" | "attendance";
   options: Array<[string, string]>;
   disabled: boolean;
   onChange: (value: string) => void;
 }) {
+  const toneClass =
+    kind === "rsvp"
+      ? value === "going"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : value === "maybe"
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : value === "cant"
+            ? "border-rose-200 bg-rose-50 text-rose-700"
+            : "border-slate-200 bg-slate-50 text-slate-600"
+      : value === "attended"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : value === "late"
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : value === "missed"
+            ? "border-rose-200 bg-rose-50 text-rose-700"
+            : "border-slate-200 bg-slate-50 text-slate-600";
+
   return (
-    <label className="grid gap-1">
+    <label className="grid gap-1.5">
       <span className="text-[10px] font-black uppercase tracking-[0.08em] text-slate-400">{label}</span>
-      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} className="h-9 rounded-[10px] border border-slate-200 bg-slate-50 px-2 text-[11px] font-black text-slate-700 disabled:opacity-60">
-        {options.map(([optionValue, labelText]) => <option key={optionValue} value={optionValue}>{labelText}</option>)}
-      </select>
+      <div className={`relative min-w-[132px] rounded-[12px] border shadow-[0_6px_18px_rgba(15,23,42,0.05)] transition ${toneClass}`}>
+        <select
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-11 w-full appearance-none rounded-[12px] bg-transparent pl-3 pr-9 text-[12px] font-black outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {options.map(([optionValue, labelText]) => <option key={optionValue} value={optionValue}>{labelText}</option>)}
+        </select>
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+          <ChevronDownIcon />
+        </span>
+      </div>
     </label>
   );
 }
