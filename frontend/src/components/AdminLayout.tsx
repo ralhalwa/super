@@ -212,14 +212,14 @@ export default function AdminLayout({
         className={cn(
           "grid min-h-screen",
           isAdmin
-            ? "grid-cols-[280px_1fr] max-[1050px]:grid-cols-1"
+            ? "grid-cols-[242px_1fr] gap-5 max-[1050px]:grid-cols-1"
             : "grid-cols-[242px_1fr] gap-5 max-[1050px]:grid-cols-1"
         )}
       >
         {isAdmin ? <AdminSidebar active={active} /> : null}
         {!isAdmin ? nonAdminNav : null}
 
-        <main className={cn("p-[22px]", !isAdmin ? "pl-0 max-[1050px]:pl-[22px]" : "")}>
+        <main className={cn("p-[22px]", "pl-0 max-[1050px]:pl-[22px]")}>
           <header className="mb-4 flex items-start justify-between gap-3 max-[1050px]:flex-col">
             <div>
               <div className="text-[13px] font-bold text-slate-500">Welcome back</div>

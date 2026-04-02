@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -53,10 +53,12 @@ export default function AdminSidebar({ active }: Props) {
     id,
     label,
     to,
+    icon,
   }: {
     id: NonNullable<Props["active"]>;
     label: string;
     to: string;
+    icon: ReactNode;
   }) => {
     const isActive = active === id;
     return (
@@ -64,17 +66,16 @@ export default function AdminSidebar({ active }: Props) {
         type="button"
         onClick={() => nav(to)}
         className={cn(
-          "h-10 w-full rounded-[14px] border px-3 text-left font-extrabold transition",
-          "flex items-center gap-3",
+          "flex w-full items-center gap-3 rounded-[14px] border px-3 py-2 text-left font-extrabold transition",
           isActive
-            ? "border-[#6d5efc]/25 bg-[#6d5efc]/10 text-slate-900"
-            : "border-transparent bg-transparent text-slate-900 hover:border-slate-200 hover:bg-slate-50"
+            ? "border-[#6d5efc]/22 bg-[#f3f1ff] text-slate-900"
+            : "border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
         )}
       >
-        <span
-          className={cn("h-2.5 w-2.5 rounded-full", isActive ? "bg-[#6d5efc]" : "bg-slate-300")}
-        />
-        {label}
+        <span className="grid h-8 w-8 place-items-center rounded-full border border-current/15 bg-white/70">
+          {icon}
+        </span>
+        <span className="text-[14px] leading-none">{label}</span>
       </button>
     );
   };
@@ -88,55 +89,154 @@ export default function AdminSidebar({ active }: Props) {
   );
 
   return (
-    <aside
-      className={cn(
-        "w-[240px] border-r border-slate-200 bg-white p-[18px]",
-        "h-screen sticky top-0 self-start",
-        "overflow-y-auto overscroll-contain",
-        "max-[1050px]:w-full max-[1050px]:h-auto max-[1050px]:sticky max-[1050px]:top-0 max-[1050px]:overflow-visible"
-      )}
-    >
-      <div className="grid h-full grid-rows-[auto_1fr_auto] gap-2">
-        <div
-          onClick={() => nav(isAdmin ? "/admin" : "/admin/boards")}
-          className="flex cursor-pointer items-center gap-3 rounded-[14px] px-2 py-2"
-        >
-          <img src={faviconIcon} alt="Reboot" className="h-10 w-10 rounded-[14px] object-cover shadow-[0_10px_25px_rgba(15,23,42,0.06)]" />
-          <div>
-            <div className="font-black tracking-[-0.2px] text-slate-900">TaskFlow</div>
-            <div className="mt-0.5 text-[12px] font-bold text-slate-500">
-              {isAdmin ? "Admin Console" : "Boards Workspace"}
+    <aside className="sticky top-[22px] self-start max-[1050px]:top-0">
+      <div className="flex min-h-[calc(100vh-44px)] w-[220px] max-w-full flex-col rounded-[22px] border border-slate-200 bg-white px-3 py-3 shadow-[0_16px_40px_rgba(15,23,42,0.06)] max-[1050px]:min-h-0 max-[1050px]:w-full">
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => nav(isAdmin ? "/admin" : "/admin/boards")}
+            className="flex items-center gap-3 rounded-[16px] px-1 py-1 text-left transition hover:bg-slate-50"
+          >
+            <img
+              src={faviconIcon}
+              alt="TaskFlow"
+              className="h-12 w-12 rounded-[18px] object-cover shadow-[0_10px_25px_rgba(15,23,42,0.08)]"
+            />
+            <div className="min-w-0">
+              <div className="truncate text-[17px] font-black tracking-[-0.3px] text-slate-900">TaskFlow</div>
+              <div className="mt-0.5 text-[12px] font-bold text-slate-500">
+                {isAdmin ? "Admin Console" : "Boards Workspace"}
+              </div>
             </div>
-          </div>
-        </div>
+          </button>
 
-        <nav className="grid content-start auto-rows-min gap-1.5 px-2 py-2">
+          <nav className="flex flex-col gap-2">
           {isAdmin ? (
             <>
-              <Item id="dashboard" label="Dashboard" to="/admin" />
-              <Item id="supervisors" label="Supervisors" to="/admin/supervisors" />
-              <Item id="boards" label="Boards" to="/admin/boards" />
-              <Item id="users" label="Users" to="/admin/users" />
-              <Item id="meetings" label="Meetings" to="/admin/meetings" />
-              <Item id="notifications" label="Notifications" to="/notifications" />
-              <Item id="reports" label="Reports" to="/admin/reports" />
+              <Item
+                id="dashboard"
+                label="Dashboard"
+                to="/admin"
+                icon={
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                    <path d="M4 12c0-4.42 3.58-8 8-8h8v8c0 4.42-3.58 8-8 8H4v-8Z" stroke="#6d5efc" strokeWidth="2" strokeLinejoin="round" />
+                    <path d="M12 4v8h8" stroke="#6d5efc" strokeWidth="2" strokeLinejoin="round" />
+                  </svg>
+                }
+              />
+              <Item
+                id="supervisors"
+                label="Supervisors"
+                to="/admin/supervisors"
+                icon={
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                    <path d="M16 20v-1.5A3.5 3.5 0 0 0 12.5 15h-5A3.5 3.5 0 0 0 4 18.5V20" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                    <circle cx="10" cy="8" r="3.5" stroke="#6d5efc" strokeWidth="2" />
+                    <path d="M20 20v-1.5A3.5 3.5 0 0 0 17 15.1" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M15.5 4.7a3.5 3.5 0 0 1 0 6.6" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                }
+              />
+              <Item
+                id="boards"
+                label="Boards"
+                to="/admin/boards"
+                icon={
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                    <rect x="4" y="5" width="16" height="14" rx="3" stroke="#2563eb" strokeWidth="2" />
+                    <path d="M8 9h8M8 13h8M8 17h5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                }
+              />
+              <Item
+                id="users"
+                label="Users"
+                to="/admin/users"
+                icon={
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                    <path d="M16 20v-1.5A3.5 3.5 0 0 0 12.5 15h-5A3.5 3.5 0 0 0 4 18.5V20" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                    <circle cx="10" cy="8" r="3.5" stroke="#6d5efc" strokeWidth="2" />
+                    <path d="M20 20v-1.5A3.5 3.5 0 0 0 17 15.1" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M15.5 4.7a3.5 3.5 0 0 1 0 6.6" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                }
+              />
+              <Item
+                id="meetings"
+                label="Meetings"
+                to="/admin/meetings"
+                icon={
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                    <path d="M7 3v3M17 3v3M4 9h16" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                    <rect x="4" y="5" width="16" height="15" rx="3" stroke="#6d5efc" strokeWidth="2" />
+                    <path d="M8 13h3v3H8z" fill="#6d5efc" />
+                  </svg>
+                }
+              />
+              <Item
+                id="notifications"
+                label="Notifications"
+                to="/notifications"
+                icon={
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                    <path d="M15 17H5l1.4-1.4A2 2 0 0 0 7 14.2V10a5 5 0 1 1 10 0v4.2a2 2 0 0 0 .6 1.4L19 17h-4Z" stroke="#6d5efc" strokeWidth="2" strokeLinejoin="round" />
+                    <path d="M10 20a2 2 0 0 0 4 0" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                }
+              />
+              <Item
+                id="reports"
+                label="Reports"
+                to="/admin/reports"
+                icon={
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                    <path d="M7 19h10" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M9 15V9" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M12 15V5" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M15 15v-3" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                }
+              />
             </>
           ) : (
             <>
-              <Item id="boards" label="Boards" to="/admin/boards" />
-              <Item id="profile" label="Profile" to="/profile" />
+              <Item
+                id="boards"
+                label="Boards"
+                to="/admin/boards"
+                icon={
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                    <rect x="4" y="5" width="16" height="14" rx="3" stroke="#2563eb" strokeWidth="2" />
+                    <path d="M8 9h8M8 13h8M8 17h5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                }
+              />
+              <Item
+                id="profile"
+                label="Profile"
+                to="/profile"
+                icon={
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3.5" stroke="#6d5efc" strokeWidth="2" />
+                    <path d="M5 20a7 7 0 0 1 14 0" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                }
+              />
             </>
           )}
-        </nav>
+          </nav>
+        </div>
 
-        <div className="border-t border-slate-200 p-2">
-          <div className="mb-3 flex items-center gap-2">
+        <div className="mt-auto flex flex-col gap-2 border-t border-slate-200 pt-3">
+          <div className="flex flex-col gap-2">
             <button
               type="button"
               onClick={() => nav("/profile")}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-[14px] text-left transition outline-none hover:bg-slate-50 focus:outline-none"
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-[16px] border border-slate-200 bg-white px-3 py-2 text-left transition hover:bg-slate-50"
+              title="Open profile"
+              aria-label="Open profile"
             >
-              <div className="h-9 w-9 rounded-full border border-slate-200 bg-[#e8ecff] flex items-center justify-center flex-shrink-0">
+              <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-slate-200 bg-[#e8ecff]">
                 <span className="text-[11px] font-extrabold text-[#6d5efc]">{initials}</span>
               </div>
               <div className="min-w-0 flex-1">
@@ -150,9 +250,12 @@ export default function AdminSidebar({ active }: Props) {
               onClick={logout}
               title="Log out"
               aria-label="Log out"
-              className="grid h-10 w-10 flex-none place-items-center rounded-[14px] border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+              className="flex items-center gap-3 rounded-[14px] border border-slate-200 bg-white px-3 py-2 font-extrabold text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
             >
-              <SignOutIcon />
+              <span className="grid h-8 w-8 place-items-center rounded-full border border-current/15 bg-white/70">
+                <SignOutIcon size={15} />
+              </span>
+              <span className="text-[14px] leading-none">Log out</span>
             </button>
           </div>
         </div>
