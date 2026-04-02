@@ -414,19 +414,6 @@ export default function AdminBoardsPage() {
       active="boards"
       title="Boards"
       subtitle={isSupervisor ? "Your boards and members" : "All boards across supervisors"}
-      right={
-        isSupervisor ? (
-          <button
-            type="button"
-            onClick={() => nav("/workspace")}
-            className="h-10 w-10 grid place-items-center rounded-xl border border-[#6d5efc]/25 bg-[#6d5efc] text-white hover:bg-[#5f50f6]"
-            title="Workspace"
-            aria-label="Open workspace"
-          >
-            <BoardIcon size={16} />
-          </button>
-        ) : null
-      }
     >
       <div className="w-full">
         {/* Toolbar */}
@@ -482,33 +469,47 @@ export default function AdminBoardsPage() {
               )}
             </div>
 
-            <div className="inline-flex w-fit items-center gap-1 rounded-2xl border border-[#6d5efc]/18 bg-white/90 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-              <button
-                className={[
-                  "inline-flex h-10 items-center gap-2 rounded-[14px] px-3.5 text-[13px] font-black transition",
-                  viewMode === "boards"
-                    ? "bg-[#6d5efc] text-white shadow-[0_10px_24px_rgba(109,94,252,0.28)]"
-                    : "text-slate-600 hover:bg-[#f4f1ff] hover:text-[#6d5efc]",
-                ].join(" ")}
-                type="button"
-                onClick={() => setViewMode("boards")}
-              >
-                <ViewBoardsIcon />
-                Boards
-              </button>
-              <button
-                className={[
-                  "inline-flex h-10 items-center gap-2 rounded-[14px] px-3.5 text-[13px] font-black transition",
-                  viewMode === "lists"
-                    ? "bg-[#6d5efc] text-white shadow-[0_10px_24px_rgba(109,94,252,0.28)]"
-                    : "text-slate-600 hover:bg-[#f4f1ff] hover:text-[#6d5efc]",
-                ].join(" ")}
-                type="button"
-                onClick={() => setViewMode("lists")}
-              >
-                <ViewListIcon />
-                Lists
-              </button>
+            <div className="flex w-fit items-center gap-2">
+              <div className="inline-flex items-center gap-1 rounded-2xl border border-[#6d5efc]/18 bg-white/90 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                <button
+                  className={[
+                    "inline-flex h-10 items-center gap-2 rounded-[14px] px-3.5 text-[13px] font-black transition",
+                    viewMode === "boards"
+                      ? "bg-[#6d5efc] text-white shadow-[0_10px_24px_rgba(109,94,252,0.28)]"
+                      : "text-slate-600 hover:bg-[#f4f1ff] hover:text-[#6d5efc]",
+                  ].join(" ")}
+                  type="button"
+                  onClick={() => setViewMode("boards")}
+                >
+                  <ViewBoardsIcon />
+                  Boards
+                </button>
+                <button
+                  className={[
+                    "inline-flex h-10 items-center gap-2 rounded-[14px] px-3.5 text-[13px] font-black transition",
+                    viewMode === "lists"
+                      ? "bg-[#6d5efc] text-white shadow-[0_10px_24px_rgba(109,94,252,0.28)]"
+                      : "text-slate-600 hover:bg-[#f4f1ff] hover:text-[#6d5efc]",
+                  ].join(" ")}
+                  type="button"
+                  onClick={() => setViewMode("lists")}
+                >
+                  <ViewListIcon />
+                  Lists
+                </button>
+              </div>
+
+              {isSupervisor ? (
+                <button
+                  type="button"
+                  onClick={() => nav("/workspace")}
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#6d5efc]/20 bg-white/90 text-[#6d5efc] shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition hover:-translate-y-[1px] hover:border-[#6d5efc]/30 hover:bg-[#f4f1ff]"
+                  title="Workspace"
+                  aria-label="Open workspace"
+                >
+                  <BoardIcon size={16} />
+                </button>
+              ) : null}
             </div>
           </div>
 

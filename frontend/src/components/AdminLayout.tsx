@@ -23,7 +23,7 @@ export default function AdminLayout({
   children,
 }: Props) {
   const nav = useNavigate();
-  const { isAdmin, login, email } = useAuth();
+  const { isAdmin, login, email, logout } = useAuth();
   const baseName = login || email || "User";
   const profileInitials = baseName
     .replace(/^@/, "")
@@ -33,13 +33,21 @@ export default function AdminLayout({
     .map((x) => x[0]?.toUpperCase() || "")
     .join("") || "U";
 
+  const SignOutIcon = ({ size = 16 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M10 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 12H4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="m8 8-4 4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+
   return (
     <div className="min-h-screen bg-[#f4f6fb] text-slate-900">
       <div className={cn("grid min-h-screen", isAdmin ? "grid-cols-[280px_1fr] max-[1050px]:grid-cols-1" : "grid-cols-1")}>
         {isAdmin ? <AdminSidebar active={active} /> : null}
 
         <main className="p-[22px]">
-          <header className="mb-4 flex items-start justify-between gap-3 max-[1050px]:flex-col">
+          <header className="mb-4 grid gap-3 max-[1050px]:grid-cols-1" style={isAdmin ? undefined : { gridTemplateColumns: "1fr auto 1fr" }}>
             <div>
               <div className="text-[13px] font-bold text-slate-500">Welcome back</div>
 
@@ -50,13 +58,13 @@ export default function AdminLayout({
               ) : null}
             </div>
 
-            <div className="flex items-center gap-2 max-[1050px]:w-full">
-              {!isAdmin && active !== "profile" ? (
-                <>
+            {!isAdmin && active !== "profile" ? (
+              <div className="flex items-center justify-center max-[1050px]:order-3">
+                <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur">
                   <button
                     type="button"
                     onClick={() => nav("/admin/boards")}
-                    className="relative grid h-12 w-12 place-items-center rounded-full border border-[#bfd7ff] bg-[#e8f1ff] font-black text-[#334155] transition hover:border-[#93c5fd] hover:bg-[#dbeafe]"
+                    className="relative grid h-11 w-11 place-items-center rounded-full border border-[#bfd7ff] bg-[#e8f1ff] font-black text-[#334155] transition hover:-translate-y-[1px] hover:border-[#93c5fd] hover:bg-[#dbeafe]"
                     title="Boards"
                     aria-label="Open boards"
                   >
@@ -68,7 +76,7 @@ export default function AdminLayout({
                   <button
                     type="button"
                     onClick={() => nav("/calendar")}
-                    className="relative grid h-12 w-12 place-items-center rounded-full border border-[#d9c8a8] bg-[#fff4de] font-black text-[#334155] transition hover:border-[#d8b56f] hover:bg-[#ffefcf]"
+                    className="relative grid h-11 w-11 place-items-center rounded-full border border-[#d9c8a8] bg-[#fff4de] font-black text-[#334155] transition hover:-translate-y-[1px] hover:border-[#d8b56f] hover:bg-[#ffefcf]"
                     title="Meetings calendar"
                     aria-label="Open meetings calendar"
                   >
@@ -81,7 +89,7 @@ export default function AdminLayout({
                   <button
                     type="button"
                     onClick={() => nav("/notifications")}
-                    className="relative grid h-12 w-12 place-items-center rounded-full border border-[#f2d7ad] bg-[#fff7e8] font-black text-[#334155] transition hover:border-[#f0bf6b] hover:bg-[#fff1d5]"
+                    className="relative grid h-11 w-11 place-items-center rounded-full border border-[#f2d7ad] bg-[#fff7e8] font-black text-[#334155] transition hover:-translate-y-[1px] hover:border-[#f0bf6b] hover:bg-[#fff1d5]"
                     title="Notifications"
                     aria-label="Open notifications"
                   >
@@ -93,21 +101,34 @@ export default function AdminLayout({
                   <button
                     type="button"
                     onClick={() => nav("/profile")}
-                    className="relative grid h-12 w-12 place-items-center rounded-full border border-[#cfc4ff] bg-[#e9e2ff] font-black text-[#334155] transition hover:border-[#b8a8ff] hover:bg-[#e3d9ff]"
+                    className="relative grid h-11 w-11 place-items-center rounded-full border border-[#cfc4ff] bg-[#e9e2ff] font-black text-[#334155] transition hover:-translate-y-[1px] hover:border-[#b8a8ff] hover:bg-[#e3d9ff]"
                     title="Profile"
                     aria-label="Open profile"
                   >
-                    <span className="text-[20px] tracking-[-0.02em]">{profileInitials}</span>
-                    <span className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white shadow-sm">
+                    <span className="text-[18px] tracking-[-0.02em]">{profileInitials}</span>
+                    <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border border-slate-200 bg-white shadow-sm">
                       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
                         <circle cx="12" cy="8" r="4.5" stroke="#7c3aed" strokeWidth="2" />
                         <path d="M12 12.5V21M8 17h8" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
                       </svg>
                     </span>
                   </button>
-                </>
-              ) : null}
+                  <button
+                    type="button"
+                    onClick={logout}
+                    title="Log out"
+                    aria-label="Log out"
+                    className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:-translate-y-[1px] hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                  >
+                    <SignOutIcon size={15} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              !isAdmin ? <div /> : null
+            )}
 
+            <div className="flex items-center gap-2 justify-end max-[1050px]:w-full">
               {right}
             </div>
           </header>
