@@ -134,7 +134,7 @@ export default function SupervisorsPage() {
       right={
         <div className="flex items-center gap-2">
           <button
-            className="h-10 rounded-xl border border-indigo-200 bg-indigo-50 px-3 text-sm font-extrabold text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100"
+            className="h-10 rounded-xl bg-gradient-to-br from-[#6d5efc] to-[#9a8cff] px-4 text-sm font-black text-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] transition hover:brightness-[1.03]"
             onClick={() => nav("/admin/assign")}
           >
             Assign Students
