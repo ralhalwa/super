@@ -76,7 +76,7 @@ export default function AdminLayout({
   children,
 }: Props) {
   const nav = useNavigate();
-  const { isAdmin, login, email, logout } = useAuth();
+  const { isAdmin, isSupervisor, login, email, logout } = useAuth();
   const baseName = login || email || "User";
   const profileInitials = baseName
     .replace(/^@/, "")
@@ -129,6 +129,21 @@ export default function AdminLayout({
                   </svg>
                 }
               />
+              {isSupervisor ? (
+                <NavItem
+                  activeItem={active === "users"}
+                  label="Users"
+                  onClick={() => nav("/users")}
+                  icon={
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                      <path d="M16 20v-1.5A3.5 3.5 0 0 0 12.5 15h-5A3.5 3.5 0 0 0 4 18.5V20" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                      <circle cx="10" cy="8" r="3.5" stroke="#6d5efc" strokeWidth="2" />
+                      <path d="M20 20v-1.5A3.5 3.5 0 0 0 17 15.1" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M15.5 4.7a3.5 3.5 0 0 1 0 6.6" stroke="#6d5efc" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  }
+                />
+              ) : null}
               <NavItem
                 activeItem={active === "meetings"}
                 label="Meetings"

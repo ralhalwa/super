@@ -285,7 +285,14 @@ export default function ProfilePage() {
   const adminBackTo = isAdminViewingUser
     ? String((location.state as { backTo?: string } | null)?.backTo || "/admin/users")
     : "";
-  const activeSection = isAdminViewingUser ? (adminBackTo === "/profile" ? "profile" : "users") : "profile";
+  const supervisorBackTo = isSupervisorViewingStudent
+    ? String((location.state as { backTo?: string } | null)?.backTo || "/users")
+    : "";
+  const activeSection = isAdminViewingUser
+    ? (adminBackTo === "/profile" ? "profile" : "users")
+    : isSupervisorViewingStudent && supervisorBackTo === "/users"
+    ? "users"
+    : "profile";
 
   const [localProfile, setLocalProfile] = useState<LocalProfile | null>(null);
   const [rebootProfile, setRebootProfile] = useState<RebootProfile | null>(null);
@@ -450,7 +457,7 @@ export default function ProfilePage() {
         ) : isSupervisorViewingStudent ? (
           <button
             type="button"
-            onClick={() => nav("/profile")}
+            onClick={() => nav(supervisorBackTo)}
             className="h-10 rounded-[14px] border border-[#6d5efc]/25 bg-[#6d5efc] px-3 font-extrabold text-white transition hover:bg-[#5f50f6]"
           >
             Back
@@ -641,7 +648,7 @@ export default function ProfilePage() {
                         type="button"
                         onClick={() => {
                           if (role === "admin") nav(`/admin/users/${s.id}/profile`, { state: { backTo: "/profile" } });
-                          else if (role === "supervisor") nav(`/profile/${s.id}`);
+                          else if (role === "supervisor") nav(`/profile/${s.id}`, { state: { backTo: "/profile" } });
                         }}
                         className={[
                           "w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-left transition",

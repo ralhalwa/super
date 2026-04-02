@@ -15,6 +15,7 @@ import MeetingsCalendarPage from "./pages/MeetingsCalendarPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import BoardMeetingsPage from "./pages/BoardMeetingsPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
+import SupervisorUsersPage from "./pages/SupervisorUsersPage";
 import type { ReactNode } from "react";
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -43,6 +44,13 @@ function RequireManageBoards({ children }: { children: ReactNode }) {
   const { authenticated, isAdmin, isSupervisor } = useAuth();
   if (!authenticated) return <Navigate to="/login" replace />;
   if (!isAdmin && !isSupervisor) return <Navigate to="/admin/boards" />;
+  return <>{children}</>;
+}
+
+function RequireSupervisor({ children }: { children: ReactNode }) {
+  const { authenticated, isSupervisor } = useAuth();
+  if (!authenticated) return <Navigate to="/login" replace />;
+  if (!isSupervisor) return <Navigate to="/admin/boards" replace />;
   return <>{children}</>;
 }
 
@@ -156,6 +164,11 @@ export default function App() {
       <Route
         path="/profile/:userId"
         element={<RequireBoardsAccess><ProfilePage /></RequireBoardsAccess>}
+      />
+
+      <Route
+        path="/users"
+        element={<RequireSupervisor><SupervisorUsersPage /></RequireSupervisor>}
       />
 
       <Route path="*" element={<CatchAll />} />
