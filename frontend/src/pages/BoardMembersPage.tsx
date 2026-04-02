@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
+import BackButton from "../components/BackButton";
 import { SkeletonBlock } from "../components/Skeleton";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -385,12 +386,7 @@ export default function BoardMembersPage() {
       subtitle={subtitle}
       right={
         <div className="flex items-center gap-2">
-          <button
-            className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-extrabold text-slate-900 transition hover:border-violet-200 hover:bg-violet-50"
-            onClick={() => nav("/admin/boards")}
-          >
-            Back
-          </button>
+          <BackButton onClick={() => nav("/admin/boards")} />
           <button
             className="h-10 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-900 transition hover:border-violet-200 hover:bg-violet-50"
             onClick={() => nav(`/admin/boards/${boardID}`)}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
+import BackButton from "../components/BackButton";
 import { SkeletonBlock } from "../components/Skeleton";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -447,21 +448,9 @@ export default function ProfilePage() {
       }
       right={
         isAdminViewingUser ? (
-          <button
-            type="button"
-            onClick={() => nav(adminBackTo)}
-            className="h-10 rounded-[14px] border border-slate-200 bg-slate-50 px-3 font-extrabold text-slate-900 transition hover:border-[#6d5efc]/25 hover:bg-[#f2f5ff]"
-          >
-            Back
-          </button>
+          <BackButton onClick={() => nav(adminBackTo)} />
         ) : isSupervisorViewingStudent ? (
-          <button
-            type="button"
-            onClick={() => nav(supervisorBackTo)}
-            className="h-10 rounded-[14px] border border-[#6d5efc]/25 bg-[#6d5efc] px-3 font-extrabold text-white transition hover:bg-[#5f50f6]"
-          >
-            Back
-          </button>
+          <BackButton onClick={() => nav(supervisorBackTo)} />
         ) : null
       }
     >

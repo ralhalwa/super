@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import AdminLayout from "../components/AdminLayout";
+import BackButton from "../components/BackButton";
 
 type SupervisorRow = {
   supervisor_user_id: number;
@@ -165,12 +166,7 @@ export default function SupervisorsPage() {
             <UserPlusIcon size={15} />
             Assign Students
           </button>
-          <button
-            className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-900 hover:border-violet-300 hover:bg-violet-50"
-            onClick={() => nav("/admin")}
-          >
-            Back
-          </button>
+          <BackButton onClick={() => nav("/admin")} />
         </div>
       }
     >
