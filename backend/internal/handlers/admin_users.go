@@ -4,9 +4,11 @@ import (
 	// "crypto/rand"
 	// "encoding/base64"
 	"database/sql"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"taskflow/internal/auth"
 	"taskflow/internal/db"
@@ -359,6 +361,114 @@ func (a *API) AdminListSupervisors(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, out)
+}
+
+func (a *API) AdminSupervisorActivity(w http.ResponseWriter, r *http.Request) {
+	location, err := time.LoadLocation("Asia/Bahrain")
+	if err != nil {
+		location = time.UTC
+	}
+	nowLocal := time.Now().In(location)
+	startLocal := time.Date(nowLocal.Year(), nowLocal.Month(), nowLocal.Day(), 0, 0, 0, 0, location)
+	startLocal = startLocal.AddDate(0, 0, -int(startLocal.Weekday()))
+	endLocal := startLocal.AddDate(0, 0, 7)
+	startUTC := startLocal.UTC().Format("2006-01-02 15:04:05")
+	endUTC := endLocal.UTC().Format("2006-01-02 15:04:05")
+
+	row := a.conn.QueryRow(`
+		WITH supervisors AS (
+			SELECT u.id
+			FROM users u
+			WHERE
+				u.role = 'supervisor'
+				OR EXISTS (
+					SELECT 1
+					FROM user_roles ur
+					WHERE ur.user_id = u.id AND ur.role = 'supervisor'
+				)
+		)
+		SELECT
+			COALESCE(SUM(
+				CASE
+					WHEN
+						EXISTS (
+							SELECT 1 FROM boards b
+							WHERE b.created_by = s.id
+							  AND b.created_at >= ?
+							  AND b.created_at < ?
+						)
+						OR EXISTS (
+							SELECT 1
+							FROM meetings m
+							WHERE m.created_by = s.id
+							  AND m.created_at >= ?
+							  AND m.created_at < ?
+						)
+						OR EXISTS (
+							SELECT 1
+							FROM card_activity ca
+							WHERE ca.actor_user_id = s.id
+							  AND ca.created_at >= ?
+							  AND ca.created_at < ?
+						)
+					THEN 1 ELSE 0
+				END
+			), 0) AS active_count,
+			COALESCE(SUM(
+				CASE
+					WHEN
+						EXISTS (
+							SELECT 1 FROM boards b
+							WHERE b.created_by = s.id
+							  AND b.created_at >= ?
+							  AND b.created_at < ?
+						)
+						OR EXISTS (
+							SELECT 1
+							FROM meetings m
+							WHERE m.created_by = s.id
+							  AND m.created_at >= ?
+							  AND m.created_at < ?
+						)
+						OR EXISTS (
+							SELECT 1
+							FROM card_activity ca
+							WHERE ca.actor_user_id = s.id
+							  AND ca.created_at >= ?
+							  AND ca.created_at < ?
+						)
+					THEN 0 ELSE 1
+				END
+			), 0) AS inactive_count
+		FROM supervisors s
+	`, startUTC, endUTC, startUTC, endUTC, startUTC, endUTC, startUTC, endUTC, startUTC, endUTC, startUTC, endUTC)
+
+	var activeCount int
+	var inactiveCount int
+	if err := row.Scan(&activeCount, &inactiveCount); err != nil {
+		writeErr(w, http.StatusInternalServerError, "db error")
+		return
+	}
+
+	total := activeCount + inactiveCount
+	activePct := 0
+	inactivePct := 0
+	if total > 0 {
+		activePct = int(math.Round((float64(activeCount) / float64(total)) * 100))
+		inactivePct = 100 - activePct
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"active": map[string]any{
+			"count":      activeCount,
+			"percentage": activePct,
+		},
+		"inactive": map[string]any{
+			"count":      inactiveCount,
+			"percentage": inactivePct,
+		},
+		"total": total,
+	})
 }
 
 type createBoardReq struct {

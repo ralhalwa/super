@@ -103,6 +103,7 @@ func main() {
 		ar.Get("/users", api.AdminSearchUsers)
 
 		ar.Get("/supervisors", api.AdminListSupervisors)
+		ar.Get("/dashboard/supervisor-activity", api.AdminSupervisorActivity)
 		ar.Post("/boards", api.AdminCreateBoard)
 		ar.Get("/boards", api.AdminListBoardsByFile)
 		ar.Post("/boards/update", api.AdminUpdateBoard)

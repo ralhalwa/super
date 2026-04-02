@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
-import { useConfirm } from "../lib/useConfirm";
 
 type SupervisorRow = {
   supervisor_user_id: number;
@@ -11,626 +10,203 @@ type SupervisorRow = {
   created_at: string;
 };
 
-type Role = "supervisor" | "student";
+type BoardRow = {
+  id: number;
+  cards_count: number;
+};
 
-function RoleIcon({ role }: { role: Role }) {
-  if (role === "supervisor") {
-    return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path
-          d="M12 2l7 4v6c0 5-3 9-7 10-4-1-7-5-7-10V6l7-4Z"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M9.5 12.5l1.8 1.8L15.8 9.8"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
+type SupervisorActivity = {
+  active?: {
+    count: number;
+    percentage: number;
+  };
+  inactive?: {
+    count: number;
+    percentage: number;
+  };
+  total?: number;
+};
+
+function PieChart({ activePercent }: { activePercent: number }) {
+  const pct = Math.max(0, Math.min(100, activePercent));
+  const angle = (pct / 100) * 360;
 
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 3l10 5-10 5L2 8l10-5Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path d="M22 8v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <div
+      className="relative h-[220px] w-[220px] flex-none rounded-full"
+      style={{
+        background:
+          pct <= 0
+            ? "#fde2e2"
+            : pct >= 100
+            ? "#dff7e8"
+            : `conic-gradient(#22c55e 0deg ${angle}deg, #f87171 ${angle}deg 360deg)`,
+      }}
+    >
+      <div className="absolute inset-[28px] grid place-items-center rounded-full border border-slate-200 bg-white text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+        <div>
+          <div className="text-[42px] font-black tracking-[-0.04em] text-slate-900">{pct}%</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Active</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-const GQL_URL = "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
-
-type RebootFetchedUser = {
-  nickname: string;
-  email: string;
-  full_name: string;
-  cohort: string;
-};
-
-async function fetchRebootUserByLogin(login: string): Promise<RebootFetchedUser | null> {
-  const jwt = (localStorage.getItem("jwt") || "").trim();
-  if (!jwt) throw new Error("Missing Reboot JWT in localStorage (jwt).");
-
-  // Cohort is derived dynamically from module event IDs.
-  // New cohorts are picked up automatically as larger event IDs appear.
-  const query = `
-    query GetUserForTaskflow($login: String!) {
-      user(where: { login: { _eq: $login } }, limit: 1) {
-        email
-        firstName
-        lastName
-        login
-      }
-
-      myModuleEvents: event_user(
-        where: {
-          userLogin: { _eq: $login }
-          event: { path: { _eq: "/bahrain/bh-module" } }
-        }
-        order_by: [{ eventId: asc }]
-      ) {
-        eventId
-      }
-
-      allModuleCohortEvents: event_user(
-        where: { event: { path: { _eq: "/bahrain/bh-module" } } }
-        distinct_on: eventId
-        order_by: [{ eventId: asc }]
-      ) {
-        eventId
-      }
-    }
-  `;
-
-  const res = await fetch(GQL_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${jwt}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query, variables: { login } }),
-  });
-
-  const json = await res.json();
-
-  // GraphQL errors handling
-  if (json?.errors?.length) {
-    const msg = json.errors?.[0]?.message || "GraphQL error";
-    throw new Error(msg);
-  }
-
-  const u = json?.data?.user?.[0];
-  if (!u?.email) return null;
-
-  const fullName = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.login || login;
-
-  const userEventIDs = (json?.data?.myModuleEvents || [])
-    .map((r: any) => Number(r?.eventId))
-    .filter((n: number) => Number.isFinite(n))
-    .sort((a: number, b: number) => a - b);
-  const userEventID = userEventIDs.length ? userEventIDs[userEventIDs.length - 1] : 0;
-
-  const moduleEventIDs = (json?.data?.allModuleCohortEvents || [])
-    .map((r: any) => Number(r?.eventId))
-    .filter((n: number) => Number.isFinite(n))
-    .sort((a: number, b: number) => a - b)
-    .filter((n: number, i: number, arr: number[]) => i === 0 || n !== arr[i - 1]);
-
-  let cohort = "Unknown cohort";
-  if (userEventID > 0 && moduleEventIDs.length > 0) {
-    const exactIndex = moduleEventIDs.indexOf(userEventID);
-    if (exactIndex >= 0) {
-      cohort = `Cohort ${exactIndex + 1}`;
-    } else {
-      // If a new eventId appears that is not in the distinct set yet, place it by numeric order.
-      const inferredIndex = moduleEventIDs.filter((id: number) => id < userEventID).length;
-      cohort = `Cohort ${inferredIndex + 1}`;
-    }
-  }
-
-  return {
-    nickname: u.login || login,
-    email: u.email,
-    full_name: fullName,
-    cohort,
-  };
+function StatCard({
+  label,
+  value,
+  icon,
+  subtitle,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  subtitle?: string;
+}) {
+  return (
+    <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-extrabold text-slate-500">{label}</div>
+          <div className="mt-1.5 text-2xl font-black text-slate-900">{value}</div>
+        </div>
+        <div className="grid h-11 w-11 place-items-center rounded-[14px] border border-slate-200 bg-slate-50">
+          {icon}
+        </div>
+      </div>
+      {subtitle ? <div className="mt-2 text-[13px] text-slate-500">{subtitle}</div> : null}
+    </div>
+  );
 }
 
 export default function AdminDashboard() {
-  const { confirm, dialog: confirmDialog } = useConfirm();
-  const [nickname, setNickname] = useState("");
-
-  // auto-filled from Reboot
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [cohort, setCohort] = useState("");
-
-  const [role, setRole] = useState<Role>("supervisor");
-
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-
-  const [checking, setChecking] = useState(false);
-  const [exists, setExists] = useState(false);
-  const [accountExists, setAccountExists] = useState(false);
-  const existsCheckSeq = useRef(0);
-
-  const [loading, setLoading] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
+  const [boardsCount, setBoardsCount] = useState(0);
+  const [cardsCount, setCardsCount] = useState(0);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [studentCount, setStudentCount] = useState<number>(0);
-
-  async function loadDashboardStats() {
-    setStatsLoading(true);
-    try {
-      const [sups, students] = await Promise.all([
-        apiFetch("/admin/supervisors"),
-        apiFetch("/admin/users?role=student&q="),
-      ]);
-
-      setSupervisors(sups || []);
-      setStudentCount((students || []).length);
-    } catch (e: any) {
-      console.error(e);
-    } finally {
-      setStatsLoading(false);
-    }
-  }
+  const [studentCount, setStudentCount] = useState(0);
+  const [supervisorActivity, setSupervisorActivity] = useState<SupervisorActivity | null>(null);
 
   useEffect(() => {
-    loadDashboardStats();
+    let mounted = true;
+
+    async function loadDashboardStats() {
+      setStatsLoading(true);
+      try {
+        const [sups, students, boards, activity] = await Promise.all([
+          apiFetch("/admin/supervisors"),
+          apiFetch("/admin/users?role=student&q="),
+          apiFetch("/admin/all-boards"),
+          apiFetch("/admin/dashboard/supervisor-activity"),
+        ]);
+
+        if (!mounted) return;
+        setSupervisors(Array.isArray(sups) ? sups : []);
+        setStudentCount(Array.isArray(students) ? students.length : 0);
+        const boardRows = Array.isArray(boards) ? (boards as BoardRow[]) : [];
+        setBoardsCount(boardRows.length);
+        setCardsCount(boardRows.reduce((sum, board) => sum + (board.cards_count || 0), 0));
+        setSupervisorActivity(activity || null);
+      } catch (e) {
+        console.error(e);
+        if (!mounted) return;
+        setSupervisors([]);
+        setStudentCount(0);
+        setBoardsCount(0);
+        setCardsCount(0);
+        setSupervisorActivity(null);
+      } finally {
+        if (mounted) setStatsLoading(false);
+      }
+    }
+
+    void loadDashboardStats();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // ✅ When nickname changes -> fetch from Reboot -> check exists in DB
-  useEffect(() => {
-    const login = nickname.trim();
-    if (!login) {
-      existsCheckSeq.current += 1;
-      setFullName("");
-      setEmail("");
-      setCohort("");
-      setExists(false);
-      setAccountExists(false);
-      setErr("");
-      return;
-    }
-
-    let alive = true;
-
-    async function run() {
-      const seq = ++existsCheckSeq.current;
-      setChecking(true);
-      setErr("");
-      setExists(false);
-
-      try {
-        const u = await fetchRebootUserByLogin(login);
-        if (!alive || seq !== existsCheckSeq.current) return;
-
-        if (!u) {
-          setErr("User not found in Reboot API.");
-          setFullName("");
-          setEmail("");
-          setCohort("");
-          return;
-        }
-
-        setFullName(u.full_name);
-        setEmail(u.email);
-        setCohort(u.cohort);
-
-        const res = await apiFetch(
-          `/admin/users/exists?email=${encodeURIComponent(u.email)}&role=${encodeURIComponent(role)}`
-        );
-        if (!alive || seq !== existsCheckSeq.current) return;
-
-        setAccountExists(!!res?.any_exists);
-
-        if (res?.exists) {
-          setExists(true);
-          setMsg(`${role === "supervisor" ? "Supervisor" : "Student"} role already added.`);
-        } else {
-          setExists(false);
-          setMsg(res?.any_exists ? `Account exists. You can add the ${role} role.` : "");
-        }
-      } catch (e: any) {
-        if (!alive || seq !== existsCheckSeq.current) return;
-        setErr(e?.message || "Failed to fetch user.");
-        setFullName("");
-        setEmail("");
-        setCohort("");
-      } finally {
-        if (alive && seq === existsCheckSeq.current) {
-          setChecking(false);
-        }
-      }
-    }
-
-    run();
-    return () => {
-      alive = false;
-    };
-  }, [nickname, role]);
-
-  async function createUser(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg("");
-    setErr("");
-    setLoading(true);
-
-    try {
-      if (!nickname.trim()) throw new Error("Enter nickname/login first.");
-      if (!email) throw new Error("User not found in Reboot API.");
-      if (exists) throw new Error(`${role === "supervisor" ? "Supervisor" : "Student"} role already added.`);
-
-      await apiFetch("/admin/users", {
-        method: "POST",
-        body: JSON.stringify({
-          nickname: nickname.trim(),
-          cohort: cohort || "Unknown cohort",
-          full_name: fullName,
-          email,
-          password: "", // backend generates
-          role,
-        }),
-      });
-
-      setMsg(
-        `${role === "supervisor" ? "Supervisor" : "Student"} ${
-          accountExists ? "role added successfully." : "created successfully."
-        }`
-      );
-
-      setNickname("");
-      setFullName("");
-      setEmail("");
-      setCohort("");
-      setExists(false);
-      setAccountExists(false);
-
-      await loadDashboardStats();
-    } catch (e: any) {
-      setErr(e.message || "Failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function deleteExistingUser() {
-    setMsg("");
-    setErr("");
-
-    try {
-      if (!exists) throw new Error("User does not exist in TaskFlow.");
-      if (!email) throw new Error("No user email to delete.");
-      const ok = await confirm({
-        title: role === "supervisor" || role === "student" ? `Delete ${role} access` : "Delete user",
-        message:
-          accountExists && role
-            ? `Remove ${role} access for ${email}? Admin access will stay.`
-            : `Delete ${email} from TaskFlow? This cannot be undone.`,
-      });
-      if (!ok) return;
-
-      setDeleting(true);
-      existsCheckSeq.current += 1; // invalidate any pending "exists" checks
-      await apiFetch("/admin/users/delete", {
-        method: "POST",
-        body: JSON.stringify({ email, role }),
-      });
-
-      // Immediate re-check to guarantee UI reflects DB state.
-      const verify = await apiFetch(
-        `/admin/users/exists?email=${encodeURIComponent(email)}&role=${encodeURIComponent(role)}`
-      );
-      const stillHasRole = !!verify?.exists;
-      setExists(stillHasRole);
-      setAccountExists(!!verify?.any_exists);
-      setMsg(stillHasRole ? "Delete requested, but the role still exists." : `${role} access removed successfully.`);
-      if (!verify?.any_exists) {
-        setNickname("");
-        setFullName("");
-        setEmail("");
-        setCohort("");
-        setAccountExists(false);
-      }
-      await loadDashboardStats();
-    } catch (e: any) {
-      setErr(e?.message || "Failed to delete user.");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
   const totalSupervisors = supervisors.length;
-
-  const canSubmit =
-    nickname.trim().length >= 2 &&
-    email.trim().includes("@") &&
-    !exists &&
-    !checking &&
-    !loading;
-
-  const initials = useMemo(() => {
-    const n = (fullName || nickname).trim();
-    if (!n) return role === "supervisor" ? "SU" : "ST";
-    return n
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() ?? "")
-      .join("");
-  }, [fullName, nickname, role]);
+  const activeSupervisorPercent = supervisorActivity?.active?.percentage || 0;
 
   return (
-    <>
-    {confirmDialog}
     <AdminLayout active="dashboard" title="Admin Dashboard" subtitle="Manage users and supervise the system.">
-      {/* KPI row */}
-      <section className="grid grid-cols-1 gap-3.5 lg:grid-cols-3">
-        {/* Supervisors */}
-        <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-extrabold text-slate-500">Supervisors</div>
-              <div className="mt-1.5 text-2xl font-black text-slate-900">
-                {statsLoading ? "…" : totalSupervisors}
-              </div>
-            </div>
-            <div className="grid h-11 w-11 place-items-center rounded-[14px] border border-slate-200 bg-slate-50">
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-600 shadow-[0_0_0_0_rgba(37,99,235,0.25)] animate-[admPulse_1.5s_ease-in-out_infinite]" />
-            </div>
-          </div>
-          {/* <div className="mt-2 text-[13px] text-slate-500">Each supervisor has a workspace</div> */}
-        </div>
-
-        {/* Students */}
-        <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-extrabold text-slate-500">Students</div>
-              <div className="mt-1.5 text-2xl font-black text-slate-900">
-                {statsLoading ? "…" : studentCount}
-              </div>
-            </div>
-            <div className="flex h-11 w-11 items-end justify-center gap-1 rounded-[14px] border border-slate-200 bg-slate-50 px-2">
+      <section className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-5">
+        <StatCard
+          label="Supervisors"
+          value={statsLoading ? "..." : totalSupervisors}
+          icon={<span className="h-2.5 w-2.5 rounded-full bg-blue-600 shadow-[0_0_0_0_rgba(37,99,235,0.25)] animate-[admPulse_1.5s_ease-in-out_infinite]" />}
+        />
+        <StatCard
+          label="Students"
+          value={statsLoading ? "..." : studentCount}
+          icon={
+            <div className="flex h-11 w-11 items-end justify-center gap-1 px-2">
               <span className="h-2.5 w-1.5 rounded bg-emerald-500 animate-bounce [animation-duration:1.1s]" />
               <span className="h-4 w-1.5 rounded bg-emerald-500 animate-bounce [animation-duration:1.1s] [animation-delay:.12s]" />
               <span className="h-3 w-1.5 rounded bg-emerald-500 animate-bounce [animation-duration:1.1s] [animation-delay:.24s]" />
             </div>
-          </div>
-          {/* <div className="mt-2 text-[13px] text-slate-500">Connect to stats endpoint later</div> */}
-        </div>
-
-        {/* Admin */}
-        <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-extrabold text-slate-500">Admin</div>
-              <div className="mt-1.5 text-2xl font-black text-slate-900">System</div>
-            </div>
-            <div className="grid h-11 w-11 place-items-center rounded-[14px] border border-slate-200 bg-slate-50">
-              <span className="h-[18px] w-[18px] rounded-full border-2 border-slate-300 border-t-violet-500 animate-spin" />
-            </div>
-          </div>
-          <div className="mt-2 text-[13px] text-slate-500">You’re managing the platform</div>
-        </div>
+          }
+        />
+        <StatCard
+          label="Boards"
+          value={statsLoading ? "..." : boardsCount}
+          icon={
+            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden="true">
+              <rect x="4" y="5" width="16" height="14" rx="3" stroke="#2563eb" strokeWidth="2" />
+              <path d="M8 9h8M8 13h8M8 17h5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Cards"
+          value={statsLoading ? "..." : cardsCount}
+          icon={
+            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden="true">
+              <rect x="6" y="5" width="12" height="14" rx="2.5" stroke="#f59e0b" strokeWidth="2" />
+              <path d="M9 9h6M9 13h6" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Admin"
+          value="System"
+          subtitle="You're managing the platform"
+          icon={<span className="h-[18px] w-[18px] rounded-full border-2 border-slate-300 border-t-violet-500 animate-spin" />}
+        />
       </section>
 
-      {/* Create user */}
       <section className="mt-3.5">
-        <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-base font-black text-slate-900">Create user</div>
-              {/* <div className="mt-1 text-[13px] text-slate-500">
-                Type nickname/login, we’ll auto-fill from Reboot.
-              </div> */}
+        <div className="grid justify-start">
+          <div className="relative h-[500px] w-[500px] max-w-full rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_10px_25px_rgba(15,23,42,0.06)] max-[760px]:h-auto">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-extrabold text-slate-500">Supervisor Activity</div>
+                <div className="mt-1.5 text-[18px] font-black text-slate-900">This week</div>
+              </div>
+              <div className="grid h-11 w-11 place-items-center rounded-[14px] border border-slate-200 bg-slate-50">
+                <span className="h-[18px] w-[18px] rounded-full bg-[conic-gradient(#22c55e_0deg_220deg,#f87171_220deg_360deg)]" />
+              </div>
             </div>
 
-            <button
-              className="h-10 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm font-extrabold text-slate-800 hover:border-violet-200 hover:bg-violet-50"
-              type="button"
-              onClick={() => {
-                setNickname("");
-                setFullName("");
-                setEmail("");
-                setCohort("");
-                setErr("");
-                setMsg("");
-                setExists(false);
-                setAccountExists(false);
-              }}
-            >
-              Reset
-            </button>
+            <div className="flex min-h-[360px] items-center justify-center max-[760px]:min-h-[280px]">
+              <PieChart activePercent={statsLoading ? 0 : activeSupervisorPercent} />
+            </div>
+
+            <div className="absolute bottom-5 right-5 flex items-center gap-6 text-right">
+              <div className="inline-flex items-center gap-2 text-[11px] font-bold text-slate-500">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span>Active</span>
+              </div>
+              <div className="inline-flex items-center gap-2 text-[11px] font-bold text-slate-500">
+                <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+                <span>Inactive</span>
+              </div>
+            </div>
           </div>
-
-          {/* role selector */}
-          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => setRole("supervisor")}
-              className={[
-                "flex w-full gap-3 rounded-[16px] border bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.06)] transition",
-                "hover:-translate-y-[1px] hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)]",
-                role === "supervisor"
-                  ? "border-blue-200 shadow-[0_18px_38px_rgba(37,99,235,0.12)]"
-                  : "border-slate-200",
-              ].join(" ")}
-            >
-              <span className="grid h-[42px] w-[42px] place-items-center rounded-[14px] border border-slate-200 bg-slate-50 text-slate-800">
-                <RoleIcon role="supervisor" />
-              </span>
-              <span className="grid">
-                <span className="leading-tight font-black text-slate-900">Supervisor</span>
-                <span className="mt-0.5 text-xs font-bold text-slate-500">
-                  Creates a new workspace file
-                </span>
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setRole("student")}
-              className={[
-                "flex w-full gap-3 rounded-[16px] border bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.06)] transition",
-                "hover:-translate-y-[1px] hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)]",
-                role === "student"
-                  ? "border-emerald-200 shadow-[0_18px_38px_rgba(16,185,129,0.12)]"
-                  : "border-slate-200",
-              ].join(" ")}
-            >
-              <span className="grid h-[42px] w-[42px] place-items-center rounded-[14px] border border-slate-200 bg-slate-50 text-slate-800">
-                <RoleIcon role="student" />
-              </span>
-              <span className="grid">
-                <span className="leading-tight font-black text-slate-900">Student</span>
-                <span className="mt-0.5 text-xs font-bold text-slate-500">
-                  Can be added to boards & tasks
-                </span>
-              </span>
-            </button>
-          </div>
-
-          <form onSubmit={createUser} className="mt-3.5 grid gap-3">
-            {/* Only nickname input */}
-            <label className="grid gap-1.5">
-              <span className="text-xs font-extrabold text-slate-500">Nickname / Login</span>
-              <input
-                className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
-                placeholder="e.g. ralhlawa"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                autoComplete="off"
-              />
-              {checking ? (
-                <span className="text-xs font-bold text-slate-500">Checking Reboot API…</span>
-              ) : (
-                <span className="text-xs font-bold text-slate-500"></span>
-              )}
-            </label>
-
-            {/* Preview */}
-            <div className="grid gap-1.5">
-              <span className="text-xs font-extrabold text-slate-500">Preview</span>
-
-              <div className="flex items-center gap-3 rounded-[16px] border border-slate-200 bg-slate-50 p-3">
-                <div className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white font-black text-slate-800">
-                  {initials}
-                </div>
-
-                <div className="min-w-0">
-                  <div className="truncate font-black text-slate-900">
-                    {fullName ||
-                      (nickname.trim()
-                        ? nickname.trim()
-                        : role === "supervisor"
-                        ? "New Supervisor"
-                        : "New Student")}
-                  </div>
-{nickname.trim() && (
-  <div className="mt-1 text-xs font-extrabold text-slate-500">
-    Nickname: <span className="text-slate-700">{nickname.trim()}</span>
-  </div>
-)}
-                  <div className="mt-1.5 flex min-w-0 items-center gap-2">
-                    <span
-                      className={[
-                        "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-black",
-                        role === "supervisor"
-                          ? "border-blue-200 bg-blue-50 text-blue-700"
-                          : "border-emerald-200 bg-emerald-50 text-emerald-700",
-                      ].join(" ")}
-                    >
-                      <RoleIcon role={role} /> {role}
-                    </span>
-
-                    <span className="min-w-0 truncate text-xs font-bold text-slate-500">
-                      {email || "email@example.com"}
-                    </span>
-                  </div>
-
-                  {cohort && (
-                    <div className="mt-2 text-xs font-bold text-slate-600">
-                      Cohort: <span className="font-extrabold">{cohort}</span>
-                    </div>
-                  )}
-
-                  {exists && (
-                    <div className="mt-2 text-xs font-extrabold text-amber-700">
-                      {role === "supervisor" ? "Supervisor" : "Student"} access already added.
-                    </div>
-                  )}
-
-                  {!exists && accountExists && (
-                    <div className="mt-2 text-xs font-extrabold text-blue-700">
-                      Account already exists. Creating now will add only the {role} role.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {err && (
-              <div className="rounded-[14px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {err}
-              </div>
-            )}
-            {msg && (
-              <div className="rounded-[14px] border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                {msg}
-              </div>
-            )}
-
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <button
-                className="h-11 rounded-[14px] px-4 font-black text-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] disabled:opacity-70 disabled:cursor-not-allowed"
-                style={{ background: "linear-gradient(135deg, #6d5efc, #9a8cff)" }}
-                disabled={!canSubmit}
-              >
-                {loading ? "Creating..." : `Create ${role}`}
-              </button>
-
-              {exists && (
-                <button
-                  type="button"
-                  onClick={deleteExistingUser}
-                  disabled={deleting || loading || checking}
-                  className="h-11 rounded-[14px] border border-rose-200 bg-rose-50 px-4 font-black text-rose-700 hover:bg-rose-100 disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {deleting ? "Deleting..." : `Delete ${role} access`}
-                </button>
-              )}
-
-              {/* <button
-                type="button"
-                className="h-11 rounded-[14px] border border-slate-200 bg-white px-4 font-black text-slate-900 hover:bg-slate-50"
-                onClick={() => nav("/admin/supervisors")}
-              >
-                Open Supervisors
-              </button> */}
-            </div>
-          </form>
         </div>
       </section>
     </AdminLayout>
-    </>
   );
 }

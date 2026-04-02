@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
+import CreateUserPanel from "../components/CreateUserPanel";
 import { apiFetch } from "../lib/api";
 
 type UserRow = {
@@ -83,6 +84,10 @@ export default function AdminUsersPage() {
           {err}
         </div>
       ) : null}
+
+      <div className="mb-3">
+        <CreateUserPanel onUserCreated={() => loadUsers(q, role)} />
+      </div>
 
       <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
         <div className="mb-3 grid gap-2 md:grid-cols-[1fr_auto]">
