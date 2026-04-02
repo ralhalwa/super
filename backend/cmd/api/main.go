@@ -104,6 +104,7 @@ func main() {
 
 		ar.Get("/supervisors", api.AdminListSupervisors)
 		ar.Get("/dashboard/supervisor-activity", api.AdminSupervisorActivity)
+		ar.Get("/dashboard/task-completion", api.AdminTaskCompletionStats)
 		ar.Post("/boards", api.AdminCreateBoard)
 		ar.Get("/boards", api.AdminListBoardsByFile)
 		ar.Post("/boards/update", api.AdminUpdateBoard)

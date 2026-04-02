@@ -27,6 +27,23 @@ type SupervisorActivity = {
   total?: number;
 };
 
+type TaskCompletionStats = {
+  tasks?: {
+    count: number;
+  };
+  subtasks?: {
+    count: number;
+  };
+  on_time?: {
+    count: number;
+    percentage: number;
+  };
+  overdue?: {
+    count: number;
+  };
+  total?: number;
+};
+
 function PieChart({ activePercent }: { activePercent: number }) {
   const pct = Math.max(0, Math.min(100, activePercent));
   const angle = (pct / 100) * 360;
@@ -87,6 +104,7 @@ export default function AdminDashboard() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [studentCount, setStudentCount] = useState(0);
   const [supervisorActivity, setSupervisorActivity] = useState<SupervisorActivity | null>(null);
+  const [taskCompletion, setTaskCompletion] = useState<TaskCompletionStats | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -94,11 +112,12 @@ export default function AdminDashboard() {
     async function loadDashboardStats() {
       setStatsLoading(true);
       try {
-        const [sups, students, boards, activity] = await Promise.all([
+        const [sups, students, boards, activity, completion] = await Promise.all([
           apiFetch("/admin/supervisors"),
           apiFetch("/admin/users?role=student&q="),
           apiFetch("/admin/all-boards"),
           apiFetch("/admin/dashboard/supervisor-activity"),
+          apiFetch("/admin/dashboard/task-completion"),
         ]);
 
         if (!mounted) return;
@@ -108,6 +127,7 @@ export default function AdminDashboard() {
         setBoardsCount(boardRows.length);
         setCardsCount(boardRows.reduce((sum, board) => sum + (board.cards_count || 0), 0));
         setSupervisorActivity(activity || null);
+        setTaskCompletion(completion || null);
       } catch (e) {
         console.error(e);
         if (!mounted) return;
@@ -116,6 +136,7 @@ export default function AdminDashboard() {
         setBoardsCount(0);
         setCardsCount(0);
         setSupervisorActivity(null);
+        setTaskCompletion(null);
       } finally {
         if (mounted) setStatsLoading(false);
       }
@@ -129,6 +150,12 @@ export default function AdminDashboard() {
 
   const totalSupervisors = supervisors.length;
   const activeSupervisorPercent = supervisorActivity?.active?.percentage || 0;
+  const taskCount = taskCompletion?.tasks?.count || 0;
+  const subtaskCount = taskCompletion?.subtasks?.count || 0;
+  const onTimeCount = taskCompletion?.on_time?.count || 0;
+  const overdueCount = taskCompletion?.overdue?.count || 0;
+  const onTimePercent = taskCompletion?.on_time?.percentage || 0;
+  const totalTrackedItems = taskCompletion?.total || 0;
 
   return (
     <AdminLayout active="dashboard" title="Admin Dashboard" subtitle="Manage users and supervise the system.">
@@ -177,7 +204,7 @@ export default function AdminDashboard() {
         />
       </section>
 
-      <section className="mt-3.5">
+      <section className="mt-3.5 grid grid-cols-1 gap-3.5 xl:grid-cols-2">
         <div className="grid justify-start">
           <div className="relative h-[500px] w-[500px] max-w-full rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_10px_25px_rgba(15,23,42,0.06)] max-[760px]:h-auto">
             <div className="mb-4 flex items-start justify-between gap-3">
@@ -203,6 +230,75 @@ export default function AdminDashboard() {
                 <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
                 <span>Inactive</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-extrabold text-slate-500">Task Completion</div>
+              <div className="mt-1.5 text-[18px] font-black text-slate-900">Tasks and subtasks</div>
+            </div>
+            <div className="grid h-11 w-11 place-items-center rounded-[14px] border border-slate-200 bg-slate-50">
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden="true">
+                <path d="M7 12.5l3 3 7-8" stroke="#22c55e" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                <rect x="4" y="4" width="16" height="16" rx="4" stroke="#94a3b8" strokeWidth="1.8" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard
+              label="Tasks"
+              value={statsLoading ? "..." : taskCount}
+              subtitle="All cards across boards"
+              icon={
+                <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden="true">
+                  <rect x="6" y="5" width="12" height="14" rx="2.5" stroke="#2563eb" strokeWidth="2" />
+                  <path d="M9 9h6M9 13h6" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              }
+            />
+            <StatCard
+              label="Subtasks"
+              value={statsLoading ? "..." : subtaskCount}
+              subtitle="Checklist items included"
+              icon={
+                <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden="true">
+                  <path d="M7 8h10M7 12h10M7 16h10" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M4.5 8h.01M4.5 12h.01M4.5 16h.01" stroke="#7c3aed" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              }
+            />
+            <StatCard
+              label="On time"
+              value={statsLoading ? "..." : onTimeCount}
+              subtitle={`${statsLoading ? "..." : `${onTimePercent}%`} on track`}
+              icon={<span className="h-3 w-3 rounded-full bg-emerald-500" />}
+            />
+            <StatCard
+              label="Overdue"
+              value={statsLoading ? "..." : overdueCount}
+              subtitle="Open items past due date"
+              icon={<span className="h-3 w-3 rounded-full bg-rose-500" />}
+            />
+          </div>
+
+          <div className="mt-5 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-3 text-[12px] font-bold text-slate-500">
+              <span>Completion overview</span>
+              <span>{statsLoading ? "..." : `${totalTrackedItems} tracked items`}</span>
+            </div>
+            <div className="mt-3 h-3 overflow-hidden rounded-full bg-white shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)]">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 transition-all duration-500"
+                style={{ width: `${statsLoading ? 0 : onTimePercent}%` }}
+              />
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3 text-[12px] font-semibold text-slate-500">
+              <span>On time items stay ahead of their due dates.</span>
+              <span className="font-black text-slate-700">{statsLoading ? "..." : `${onTimeCount} / ${totalTrackedItems}`}</span>
             </div>
           </div>
         </div>

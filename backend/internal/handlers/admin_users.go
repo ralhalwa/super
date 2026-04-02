@@ -471,6 +471,80 @@ func (a *API) AdminSupervisorActivity(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (a *API) AdminTaskCompletionStats(w http.ResponseWriter, r *http.Request) {
+	location, err := time.LoadLocation("Asia/Bahrain")
+	if err != nil {
+		location = time.UTC
+	}
+	today := time.Now().In(location)
+	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, location)
+	todayKey := todayStart.Format("2006-01-02")
+
+	row := a.conn.QueryRow(`
+		WITH task_items AS (
+			SELECT
+				COALESCE(NULLIF(TRIM(c.due_date), ''), '') AS due_date,
+				CASE WHEN LOWER(TRIM(COALESCE(c.status, 'todo'))) = 'done' THEN 1 ELSE 0 END AS is_done
+			FROM cards c
+			UNION ALL
+			SELECT
+				COALESCE(NULLIF(TRIM(cs.due_date), ''), '') AS due_date,
+				CASE WHEN COALESCE(cs.is_done, 0) = 1 THEN 1 ELSE 0 END AS is_done
+			FROM card_subtasks cs
+		)
+		SELECT
+			(SELECT COUNT(*) FROM cards) AS tasks_count,
+			(SELECT COUNT(*) FROM card_subtasks) AS subtasks_count,
+			COALESCE(SUM(
+				CASE
+					WHEN is_done = 1 THEN 1
+					WHEN due_date = '' THEN 1
+					WHEN due_date >= ? THEN 1
+					ELSE 0
+				END
+			), 0) AS on_time_count,
+			COALESCE(SUM(
+				CASE
+					WHEN is_done = 0 AND due_date <> '' AND due_date < ? THEN 1
+					ELSE 0
+				END
+			), 0) AS overdue_count
+		FROM task_items
+	`, todayKey, todayKey)
+
+	var tasksCount int
+	var subtasksCount int
+	var onTimeCount int
+	var overdueCount int
+	if err := row.Scan(&tasksCount, &subtasksCount, &onTimeCount, &overdueCount); err != nil {
+		writeErr(w, http.StatusInternalServerError, "db error")
+		return
+	}
+
+	totalItems := tasksCount + subtasksCount
+	onTimePct := 0
+	if totalItems > 0 {
+		onTimePct = int(math.Round((float64(onTimeCount) / float64(totalItems)) * 100))
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"tasks": map[string]any{
+			"count": tasksCount,
+		},
+		"subtasks": map[string]any{
+			"count": subtasksCount,
+		},
+		"on_time": map[string]any{
+			"count":      onTimeCount,
+			"percentage": onTimePct,
+		},
+		"overdue": map[string]any{
+			"count": overdueCount,
+		},
+		"total": totalItems,
+	})
+}
+
 type createBoardReq struct {
 	SupervisorFileID int64  `json:"supervisor_file_id"`
 	Name             string `json:"name"`
