@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export function useEscClose(open: boolean, onClose: () => void) {
   useEffect(() => {
@@ -27,8 +28,9 @@ export default function Modal({
   useEscClose(open, onClose);
 
   if (!open) return null;
+  if (typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
       className="modalOverlayIn fixed inset-0 z-[9999] grid place-items-center bg-slate-900/45 p-4 backdrop-blur-[2px]"
       onMouseDown={onClose}
@@ -57,6 +59,7 @@ export default function Modal({
           {footer}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

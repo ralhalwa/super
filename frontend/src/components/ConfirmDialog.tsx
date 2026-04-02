@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useEscClose } from "./Modal";
 
 type Props = {
@@ -24,8 +25,9 @@ export default function ConfirmDialog({
   useEscClose(open, onCancel);
 
   if (!open) return null;
+  if (typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[9999] grid place-items-center bg-slate-900/50 p-4 backdrop-blur-[2px]"
       onMouseDown={onCancel}
@@ -62,6 +64,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
