@@ -110,6 +110,17 @@ function UserPlusIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function ViewGridIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="4" y="4" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2" />
+      <rect x="13" y="4" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2" />
+      <rect x="4" y="13" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2" />
+      <rect x="13" y="13" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
 export default function SupervisorsPage() {
   const nav = useNavigate();
 
@@ -117,6 +128,7 @@ export default function SupervisorsPage() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [viewMode, setViewMode] = useState<"cards" | "workspaces">("cards");
 
   async function load() {
     setErr("");
@@ -170,30 +182,74 @@ export default function SupervisorsPage() {
         </div>
       }
     >
-      <div className="mb-5 flex justify-center">
-        <div className="flex h-12 w-full max-w-[520px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/90 px-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur">
-          <span className="text-slate-400" aria-hidden="true">
-            <SearchIcon size={18} />
-          </span>
-          <input
-            className="w-full bg-transparent text-[14px] font-bold text-slate-900 outline-none placeholder:font-semibold placeholder:text-slate-400"
-            placeholder="Search by name, email, or username..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          {q.trim() ? (
+      <div className="mb-5 flex items-center justify-between gap-3 max-[1180px]:flex-col max-[1180px]:items-stretch">
+        <div className="flex min-w-0 flex-[1.2] items-center gap-3 max-[1180px]:flex-col max-[1180px]:items-stretch">
+          <div className="flex h-12 min-w-[420px] flex-1 items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/90 px-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur max-[1180px]:min-w-0">
+            <span className="text-slate-400" aria-hidden="true">
+              <SearchIcon size={18} />
+            </span>
+            <input
+              className="w-full bg-transparent text-[14px] font-bold text-slate-900 outline-none placeholder:font-semibold placeholder:text-slate-400"
+              placeholder="Search by name, email, or username..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            {q.trim() ? (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                className="inline-flex h-8 items-center rounded-full border border-slate-200 bg-slate-50 px-3 text-[11px] font-black text-slate-500 transition hover:border-slate-300 hover:bg-white hover:text-slate-700"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+
+          <div className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <button
               type="button"
-              onClick={() => setQ("")}
-              className="inline-flex h-8 items-center rounded-full border border-slate-200 bg-slate-50 px-3 text-[11px] font-black text-slate-500 transition hover:border-slate-300 hover:bg-white hover:text-slate-700"
+              onClick={() => setViewMode("cards")}
+              className={[
+                "inline-flex h-10 items-center gap-2 rounded-[14px] border border-transparent px-3.5 text-[13px] font-black outline-none transition duration-200 focus-visible:border-[#6d5efc]/18 focus-visible:ring-4 focus-visible:ring-[#6d5efc]/10",
+                viewMode === "cards"
+                  ? "border border-[#6d5efc]/18 bg-white text-[#6d5efc] shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+              ].join(" ")}
             >
-              Clear
+              <ViewGridIcon />
+              Cards
             </button>
-          ) : null}
+            <button
+              type="button"
+              onClick={() => setViewMode("workspaces")}
+              className={[
+                "inline-flex h-10 items-center gap-2 rounded-[14px] border border-transparent px-3.5 text-[13px] font-black outline-none transition duration-200 focus-visible:border-[#6d5efc]/18 focus-visible:ring-4 focus-visible:ring-[#6d5efc]/10",
+                viewMode === "workspaces"
+                  ? "border border-[#6d5efc]/18 bg-white text-[#6d5efc] shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+              ].join(" ")}
+            >
+              <FolderIcon size={15} />
+              Workspaces
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-end gap-2.5 max-[1180px]:justify-start">
+          <div className="inline-flex items-center gap-3 rounded-2xl border border-[#6d5efc]/18 bg-white/90 px-4 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+            <span className="grid h-11 w-11 place-items-center rounded-full border border-[#6d5efc]/20 bg-[#f7f5ff] text-[#6d5efc]">
+              <FolderIcon size={18} />
+            </span>
+            <div className="leading-none">
+              <div className="text-[24px] font-black tracking-[-0.03em] text-slate-900">
+                {loading ? "..." : filtered.length}
+              </div>
+              <div className="mt-1 text-[12px] font-black text-slate-500">Supervisors</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* List card */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
         {err && (
           <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
@@ -205,6 +261,49 @@ export default function SupervisorsPage() {
           <div className="text-sm font-semibold text-slate-500">Loading…</div>
         ) : filtered.length === 0 ? (
           <div className="text-sm font-semibold text-slate-500">No supervisors found.</div>
+        ) : viewMode === "workspaces" ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((s) => {
+              const workspaceName = (s.nickname || "").trim() || s.full_name.split(/\s+/)[0] || "workspace";
+              return (
+                <button
+                  key={s.supervisor_user_id}
+                  type="button"
+                  onClick={() => nav(`/admin/files/${s.file_id}`)}
+                  title="Open workspace"
+                  className="group relative flex flex-col items-center rounded-[26px] p-3 text-center transition duration-200 hover:-translate-y-[2px]"
+                >
+                  <div className="relative h-28 w-44 cursor-pointer origin-bottom [perspective:1500px]">
+                    <div className="absolute inset-0">
+                      <div className="absolute inset-x-0 bottom-0 h-full origin-top rounded-[18px] rounded-tl-none bg-[#7c6cf8] transition-all duration-300 ease-out after:absolute after:bottom-[99%] after:left-0 after:h-3 after:w-14 after:rounded-t-[14px] after:bg-[#7c6cf8] after:content-[''] before:absolute before:-top-[11px] before:left-[52px] before:h-3 before:w-3 before:bg-[#7c6cf8] before:[clip-path:polygon(0_35%,0%_100%,50%_100%)] before:content-[''] group-hover:shadow-[0_18px_34px_rgba(109,94,252,0.16)]" />
+                      <div className="absolute inset-1 origin-bottom rounded-[18px] bg-[#ddd8ff] transition-all duration-300 ease-out select-none group-hover:[transform:rotateX(-18deg)]" />
+                      <div className="absolute inset-1 origin-bottom rounded-[18px] bg-[#f0edff] transition-all duration-300 ease-out group-hover:[transform:rotateX(-28deg)]" />
+                      <div className="absolute inset-1 origin-bottom rounded-[18px] bg-[#faf9ff] transition-all duration-300 ease-out group-hover:[transform:rotateX(-36deg)]" />
+                      <div className="absolute bottom-0 flex h-[108px] w-full origin-bottom items-end rounded-[18px] rounded-tr-none bg-gradient-to-t from-[#6d5efc] to-[#9b90ff] transition-all duration-300 ease-out after:absolute after:bottom-[99%] after:right-0 after:h-3 after:w-[106px] after:rounded-t-[14px] after:bg-[#9b90ff] after:content-[''] before:absolute before:-top-[8px] before:right-[102px] before:size-2.5 before:bg-[#9b90ff] before:[clip-path:polygon(100%_14%,50%_100%,100%_100%)] before:content-[''] group-hover:shadow-[inset_0_18px_34px_rgba(196,188,255,0.55),_inset_0_-18px_32px_rgba(79,70,229,0.22)] group-hover:[transform:rotateX(-46deg)_translateY(1px)]">
+                        <div className="flex w-full items-end px-3.5 pb-3.5">
+                          <div className="min-w-0">
+                            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-violet-100/80">
+                              Workspace
+                            </div>
+                            <div className="mt-1 max-w-[92px] truncate text-[13px] font-black text-white">
+                              {workspaceName}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="text-[15px] font-black text-slate-900">{s.full_name}</div>
+                    <div className="mt-1 text-[12px] font-bold text-[#6d5efc]">
+                      @{(s.nickname || "").trim() || s.email.split("@")[0]}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         ) : (
           <div className="grid gap-2.5">
             {filtered.map((s) => (
