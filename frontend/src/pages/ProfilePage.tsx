@@ -119,6 +119,13 @@ function normalizeGender(v: string) {
   return "unspecified";
 }
 
+function normalizeCohort(value: string) {
+  const cohort = String(value || "").trim();
+  if (!cohort) return "";
+  if (cohort.toLowerCase() === "unknown cohort") return "";
+  return cohort;
+}
+
 function formatBahrainDateTime(value: string) {
   const raw = String(value || "").trim();
   if (!raw) return "-";
@@ -484,7 +491,7 @@ export default function ProfilePage() {
                     {roleLabel}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                    {localProfile.user.cohort || "No cohort"}
+                    {normalizeCohort(localProfile.user.cohort) || "No cohort"}
                   </span>
                 </div>
               </div>

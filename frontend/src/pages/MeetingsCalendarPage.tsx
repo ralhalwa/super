@@ -42,6 +42,20 @@ type BoardRow = {
   supervisor_name: string;
 };
 
+type SupervisorRow = {
+  supervisor_user_id: number;
+  full_name: string;
+  email: string;
+  nickname?: string;
+  file_id: number;
+  created_at: string;
+};
+
+type SupervisorOption = {
+  id: number;
+  name: string;
+};
+
 const MEETING_LOCATIONS = ["Sandbox", "Quest", "Pixel", "Online"] as const;
 
 function normalizeMeetingLocation(value: string) {
@@ -149,9 +163,11 @@ export default function MeetingsCalendarPage() {
 
   const [meetings, setMeetings] = useState<MeetingRow[]>([]);
   const [boards, setBoards] = useState<BoardRow[]>([]);
+  const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
   const [participantsByMeeting, setParticipantsByMeeting] = useState<Record<number, MeetingParticipant[]>>({});
   const [participantsLoading, setParticipantsLoading] = useState<Record<number, boolean>>({});
   const [selectedBoardFilter, setSelectedBoardFilter] = useState("all");
+  const [selectedSupervisorFilter, setSelectedSupervisorFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState(toLocalDateInput());
   const [selectedMeetingID, setSelectedMeetingID] = useState<number | null>(null);
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -182,20 +198,23 @@ export default function MeetingsCalendarPage() {
     setLoading(true);
     setError("");
     try {
-      const [meetingsRes, boardsRes, profileRes] = await Promise.all([
+      const [meetingsRes, boardsRes, supervisorsRes, profileRes] = await Promise.all([
         apiFetch("/admin/meetings"),
         apiFetch("/admin/all-boards"),
+        apiFetch("/admin/supervisors"),
         apiFetch("/admin/profile/summary"),
       ]);
       const nextMeetings = Array.isArray(meetingsRes) ? meetingsRes : [];
       setMeetings(nextMeetings);
       setBoards(Array.isArray(boardsRes) ? boardsRes : []);
+      setSupervisors(Array.isArray(supervisorsRes) ? supervisorsRes : []);
       const nextRole = String((profileRes as any)?.user?.role || role).trim().toLowerCase();
       setResolvedRole(nextRole || role);
     } catch (e: any) {
       setError(e?.message || "Failed to load meetings");
       setMeetings([]);
       setBoards([]);
+      setSupervisors([]);
       setResolvedRole(role);
     } finally {
       setLoading(false);
@@ -234,11 +253,64 @@ export default function MeetingsCalendarPage() {
     return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [boards, meetings]);
 
+  const supervisorOptions = useMemo(() => {
+    const seen = new Map<number, SupervisorOption>();
+    supervisors.forEach((supervisor) => {
+      if (!seen.has(supervisor.supervisor_user_id)) {
+        seen.set(supervisor.supervisor_user_id, {
+          id: supervisor.supervisor_user_id,
+          name: supervisor.full_name,
+        });
+      }
+    });
+    meetings.forEach((meeting) => {
+      if (!seen.has(meeting.supervisor_id)) {
+        seen.set(meeting.supervisor_id, {
+          id: meeting.supervisor_id,
+          name: meeting.supervisor_name,
+        });
+      }
+    });
+    return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [meetings, supervisors]);
+
+  const filteredBoardOptions = useMemo(() => {
+    if (selectedSupervisorFilter === "all") {
+      return boardOptions;
+    }
+
+    const selectedSupervisor = supervisorOptions.find(
+      (supervisor) => String(supervisor.id) === selectedSupervisorFilter
+    );
+    const selectedName = (selectedSupervisor?.name || "").trim().toLowerCase();
+    const allowedBoardIDs = new Set(
+      meetings
+        .filter((meeting) => String(meeting.supervisor_id) === selectedSupervisorFilter)
+        .map((meeting) => meeting.board_id)
+    );
+
+    return boardOptions.filter((board) => {
+      if (allowedBoardIDs.has(board.id)) return true;
+      return selectedName !== "" && board.supervisor_name.trim().toLowerCase() === selectedName;
+    });
+  }, [boardOptions, meetings, selectedSupervisorFilter, supervisorOptions]);
+
+  useEffect(() => {
+    if (selectedBoardFilter === "all") return;
+    const stillVisible = filteredBoardOptions.some(
+      (board) => String(board.id) === selectedBoardFilter
+    );
+    if (!stillVisible) {
+      setSelectedBoardFilter("all");
+    }
+  }, [filteredBoardOptions, selectedBoardFilter]);
+
   const filteredMeetings = useMemo(() => {
     return meetings
+      .filter((meeting) => selectedSupervisorFilter === "all" || String(meeting.supervisor_id) === selectedSupervisorFilter)
       .filter((meeting) => selectedBoardFilter === "all" || String(meeting.board_id) === selectedBoardFilter)
       .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-  }, [meetings, selectedBoardFilter]);
+  }, [meetings, selectedBoardFilter, selectedSupervisorFilter]);
 
   const meetingsByDay = useMemo(() => {
     const map = new Map<string, MeetingRow[]>();
@@ -523,12 +595,22 @@ export default function MeetingsCalendarPage() {
 
         <section className="mb-4 flex flex-wrap items-center gap-2">
           <select
+            value={selectedSupervisorFilter}
+            onChange={(e) => setSelectedSupervisorFilter(e.target.value)}
+            className="h-11 min-w-[220px] rounded-[14px] border border-slate-200 bg-white px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-amber-300"
+          >
+            <option value="all">All supervisors</option>
+            {supervisorOptions.map((supervisor) => (
+              <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>
+            ))}
+          </select>
+          <select
             value={selectedBoardFilter}
             onChange={(e) => setSelectedBoardFilter(e.target.value)}
             className="h-11 min-w-[220px] rounded-[14px] border border-slate-200 bg-white px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-amber-300"
           >
             <option value="all">All boards</option>
-            {boardOptions.map((board) => (
+            {filteredBoardOptions.map((board) => (
               <option key={board.id} value={board.id}>{board.name}</option>
             ))}
           </select>

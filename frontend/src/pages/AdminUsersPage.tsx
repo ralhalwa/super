@@ -58,6 +58,93 @@ function roleLabel(role: CreateRole) {
   return role === "supervisor" ? "Supervisor" : "Student";
 }
 
+function normalizeCohort(value: string) {
+  const cohort = String(value || "").trim();
+  if (!cohort) return "";
+  if (cohort.toLowerCase() === "unknown cohort") return "";
+  return cohort;
+}
+
+async function fetchRebootUserByLogin(login: string): Promise<RebootCandidate | null> {
+  const jwt = (localStorage.getItem("jwt") || "").trim();
+  if (!jwt) throw new Error("Missing Reboot session.");
+
+  const query = `
+    query GetUserForTaskflow($login: String!) {
+      user(where: { login: { _eq: $login } }, limit: 1) {
+        email
+        firstName
+        lastName
+        login
+      }
+      myModuleEvents: event_user(
+        where: {
+          userLogin: { _eq: $login }
+          event: { path: { _eq: "/bahrain/bh-module" } }
+        }
+        order_by: [{ eventId: asc }]
+      ) {
+        eventId
+      }
+      allModuleCohortEvents: event_user(
+        where: { event: { path: { _eq: "/bahrain/bh-module" } } }
+        distinct_on: eventId
+        order_by: [{ eventId: asc }]
+      ) {
+        eventId
+      }
+    }
+  `;
+
+  const res = await fetch(GQL_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables: { login } }),
+  });
+
+  const json = await res.json().catch(() => null);
+  if (!res.ok || json?.errors?.length) {
+    throw new Error(json?.errors?.[0]?.message || "Failed to load Reboot user.");
+  }
+
+  const user = json?.data?.user?.[0];
+  if (!user?.email) return null;
+
+  const fullName =
+    `${String(user?.firstName || "").trim()} ${String(user?.lastName || "").trim()}`.trim() ||
+    String(user?.login || "").trim() ||
+    login;
+  const userEventIDs = (json?.data?.myModuleEvents || [])
+    .map((row: any) => Number(row?.eventId))
+    .filter((value: number) => Number.isFinite(value))
+    .sort((a: number, b: number) => a - b);
+  const userEventID = userEventIDs.length ? userEventIDs[userEventIDs.length - 1] : 0;
+  const moduleEventIDs = (json?.data?.allModuleCohortEvents || [])
+    .map((row: any) => Number(row?.eventId))
+    .filter((value: number) => Number.isFinite(value))
+    .sort((a: number, b: number) => a - b)
+    .filter((value: number, index: number, all: number[]) => index === 0 || value !== all[index - 1]);
+
+  let cohort = "";
+  if (userEventID > 0 && moduleEventIDs.length > 0) {
+    const exactIndex = moduleEventIDs.indexOf(userEventID);
+    cohort =
+      exactIndex >= 0
+        ? `Cohort ${exactIndex + 1}`
+        : `Cohort ${moduleEventIDs.filter((id: number) => id < userEventID).length + 1}`;
+  }
+
+  return {
+    nickname: String(user?.login || login).trim(),
+    email: String(user?.email || "").trim().toLowerCase(),
+    full_name: fullName,
+    cohort,
+  };
+}
+
 async function searchRebootUsers(query: string): Promise<RebootCandidate[]> {
   const jwt = (localStorage.getItem("jwt") || "").trim();
   if (!jwt) throw new Error("Missing Reboot session.");
@@ -99,7 +186,7 @@ async function searchRebootUsers(query: string): Promise<RebootCandidate[]> {
   }
 
   const seen = new Set<string>();
-  return (json?.data?.user || [])
+  const baseUsers = (json?.data?.user || [])
     .map((u: any) => {
       const nickname = String(u?.login || "").trim();
       const email = String(u?.email || "").trim().toLowerCase();
@@ -108,7 +195,7 @@ async function searchRebootUsers(query: string): Promise<RebootCandidate[]> {
         nickname,
         email,
         full_name,
-        cohort: "Unknown cohort",
+        cohort: "",
       } satisfies RebootCandidate;
     })
     .filter((u: RebootCandidate) => {
@@ -117,6 +204,18 @@ async function searchRebootUsers(query: string): Promise<RebootCandidate[]> {
       seen.add(key);
       return true;
     });
+
+  const enriched = await Promise.all(
+    baseUsers.map(async (user: RebootCandidate) => {
+      try {
+        return (await fetchRebootUserByLogin(user.nickname)) || user;
+      } catch {
+        return user;
+      }
+    })
+  );
+
+  return enriched;
 }
 
 async function enrichCandidatesWithRoleState(
@@ -441,7 +540,7 @@ export default function AdminUsersPage() {
           method: "POST",
           body: JSON.stringify({
             nickname: u.nickname.trim(),
-            cohort: u.cohort || "Unknown cohort",
+            cohort: normalizeCohort(u.cohort),
             full_name: u.full_name,
             email: u.email,
             password: "",
@@ -879,7 +978,7 @@ export default function AdminUsersPage() {
                         {u.role}
                       </span>
                       <span className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-white px-2.5 text-[11px] font-extrabold text-slate-700">
-                        {u.cohort || "No cohort"}
+                        {normalizeCohort(u.cohort) || "No cohort"}
                       </span>
                     </div>
                   </div>
