@@ -526,6 +526,7 @@ func (a *API) AdminUpdateMeetingStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	updatedMeeting, _ := db.GetMeetingByID(a.conn, req.MeetingID)
+	statusChanged := status != meeting.Status
 	title := "Meeting updated"
 	body := "A meeting status changed."
 	switch status {
@@ -536,12 +537,22 @@ func (a *API) AdminUpdateMeetingStatus(w http.ResponseWriter, r *http.Request) {
 		title = "Meeting canceled"
 		body = "A meeting was canceled."
 	}
-	a.notifyMeetingParticipants(req.MeetingID, actor, "meeting_status", title, updatedMeeting.Title, body)
-	adminDetail := body
-	if strings.TrimSpace(req.OutcomeNotes) != "" {
-		adminDetail += " Notes: " + strings.TrimSpace(req.OutcomeNotes)
+
+	if statusChanged {
+		a.notifyMeetingParticipants(req.MeetingID, actor, "meeting_status", title, updatedMeeting.Title, body)
+		adminDetail := body
+		if strings.TrimSpace(req.OutcomeNotes) != "" {
+			adminDetail += " Notes: " + strings.TrimSpace(req.OutcomeNotes)
+		}
+		a.notifyAdmins("meeting_status", title, meetingAdminBody(updatedMeeting, a.adminActorLabel(actor), adminDetail))
+
+		switch status {
+		case "completed":
+			_ = a.notifyMeetingChanged(updatedMeeting, "completed")
+		case "canceled":
+			_ = a.notifyMeetingChanged(updatedMeeting, "canceled")
+		}
 	}
-	a.notifyAdmins("meeting_status", title, meetingAdminBody(updatedMeeting, a.adminActorLabel(actor), adminDetail))
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }

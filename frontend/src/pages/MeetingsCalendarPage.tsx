@@ -499,7 +499,7 @@ export default function MeetingsCalendarPage() {
               <div>
                 <div className="text-[12px] font-black uppercase tracking-[0.18em] text-amber-700"></div>
                 <div className="mt-2 text-[26px] font-black tracking-[-0.03em] text-slate-900">{monthLabel(currentMonth)}</div>
-                <div className="mt-1 text-[13px] font-semibold text-slate-600">Room conflict checks, RSVP, attendance, outcomes, and cancellation.</div>
+                {/* <div className="mt-1 text-[13px] font-semibold text-slate-600">Room conflict checks, RSVP, attendance, outcomes, and cancellation.</div> */}
               </div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="h-10 w-10 rounded-full border border-slate-200 bg-white text-lg font-black text-slate-700">‹</button>
@@ -532,9 +532,9 @@ export default function MeetingsCalendarPage() {
               <option key={board.id} value={board.id}>{board.name}</option>
             ))}
           </select>
-          <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-3 text-[13px] font-semibold text-slate-600">
+          {/* <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-3 text-[13px] font-semibold text-slate-600">
             {isEffectiveSupervisor ? "You can schedule, reschedule, cancel, and manage attendance for your boards." : isEffectiveAdmin ? "Admin sees all meeting attendance and outcomes." : "Update your RSVP so supervisors can plan around attendance."}
-          </div>
+          </div> */}
           <button
             type="button"
             onClick={exportCalendar}
