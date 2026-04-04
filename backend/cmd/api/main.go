@@ -168,6 +168,7 @@ func main() {
 		ar.Get("/meeting-participants", api.AdminListMeetingParticipants)
 		ar.Post("/meeting-participants/update", api.AdminUpdateMeetingParticipant)
 		ar.Get("/notifications", api.ListNotifications)
+		ar.Get("/notifications/stream", api.NotificationStream)
 		ar.Post("/notifications/read", api.MarkNotificationRead)
 		ar.Post("/notifications/read-all", api.MarkAllNotificationsRead)
 		ar.Get("/settings/discord", api.DiscordSettings)

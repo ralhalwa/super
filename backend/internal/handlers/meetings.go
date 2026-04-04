@@ -33,8 +33,7 @@ func (a *API) notifyMeetingParticipants(meetingID, actorID int64, kind, title, m
 		if participant.UserID == actorID {
 			continue
 		}
-		_ = db.CreateNotification(
-			a.conn,
+		a.createAndBroadcastNotification(
 			participant.UserID,
 			kind,
 			title,
@@ -50,7 +49,7 @@ func (a *API) notifyAdmins(kind, title, body string) {
 		return
 	}
 	for _, admin := range admins {
-		_ = db.CreateNotification(a.conn, admin.ID, kind, title, body, "/notifications")
+		a.createAndBroadcastNotification(admin.ID, kind, title, body, "/notifications")
 	}
 }
 

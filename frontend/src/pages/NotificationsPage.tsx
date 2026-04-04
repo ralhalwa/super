@@ -1,20 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
-import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
-
-type NotificationRow = {
-  id: number;
-  user_id: number;
-  user_name: string;
-  user_login: string;
-  kind: string;
-  title: string;
-  body: string;
-  link: string;
-  is_read: boolean;
-  created_at: string;
-};
+import { useNotifications, type NotificationItem } from "../lib/notifications";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -56,46 +44,12 @@ function kindTone(kind: string) {
 }
 
 export default function NotificationsPage() {
+  const nav = useNavigate();
   const { isAdmin } = useAuth();
-  const [items, setItems] = useState<NotificationRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await apiFetch("/admin/notifications");
-      setItems(Array.isArray(res) ? res : []);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load notifications");
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
+  const { items, loading, error, isRecent } = useNotifications();
   const unreadCount = useMemo(() => items.filter((item) => !item.is_read).length, [items]);
   const readCount = items.length - unreadCount;
   const latestItem = items[0] || null;
-  async function markAllRead() {
-    try {
-      await apiFetch("/admin/notifications/read-all", { method: "POST" });
-      setItems((prev) => prev.map((item) => ({ ...item, is_read: true })));
-    } catch (e: any) {
-      setError(e?.message || "Failed to mark all notifications");
-    }
-  }
-
-  useEffect(() => {
-    if (loading) return;
-    if (!items.some((item) => !item.is_read)) return;
-    void markAllRead();
-  }, [loading, items]);
 
   return (
     <AdminLayout
@@ -127,9 +81,9 @@ export default function NotificationsPage() {
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-stretch gap-2.5">
+              <div className="mt-5 flex flex-wrap items-stretch gap-2.5">
             <InlineStat label="Total" value={items.length} tone="slate" />
-            {/* <InlineStat label="Unread" value={unreadCount} tone="violet" /> */}
+            <InlineStat label="New" value={items.filter((item) => isRecent(item.id)).length} tone="violet" />
             <InlineStat label="Read" value={readCount} tone="emerald" />
             {latestItem ? (
               <div className="min-w-0 flex-1 rounded-[18px] border border-slate-200 bg-white/88 px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
@@ -183,7 +137,9 @@ export default function NotificationsPage() {
                 <NotificationCard
                   key={item.id}
                   item={item}
+                  isNew={isRecent(item.id)}
                   showRecipient={false}
+                  onOpen={() => nav(item.link || "/notifications")}
                 />
               ))}
             </div>
@@ -196,17 +152,32 @@ export default function NotificationsPage() {
 
 function NotificationCard({
   item,
+  isNew,
+  onOpen,
   showRecipient,
 }: {
-  item: NotificationRow;
+  item: NotificationItem;
+  isNew: boolean;
+  onOpen: () => void;
   showRecipient: boolean;
 }) {
   const tone = kindTone(item.kind);
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
       className={`group relative overflow-hidden rounded-[20px] border px-4 py-3.5 transition ${tone.row} ${
-        item.is_read
+        isNew
+          ? "border-amber-200 bg-[linear-gradient(180deg,#fffdf5,#fff8e8)] shadow-[0_14px_28px_rgba(245,158,11,0.12)]"
+          : item.is_read
           ? "border-transparent bg-transparent"
           : "border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fbfcff)] shadow-[0_10px_22px_rgba(15,23,42,0.04)]"
       }`}
@@ -237,6 +208,11 @@ function NotificationCard({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {isNew ? (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-700">
+                New
+              </span>
+            ) : null}
             <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${tone.badge}`}>
               {kindLabel(item.kind)}
             </span>

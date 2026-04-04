@@ -14,6 +14,7 @@ import (
 type API struct {
 	conn                   *sql.DB
 	discord                *discord.Service
+	notifications          *notificationHub
 	stop                   context.CancelFunc
 	roomsBookingsChannelID string
 	roomsBookingsRoleID    string
@@ -26,6 +27,7 @@ func NewAPI(conn *sql.DB, discordSvc *discord.Service) *API {
 	return &API{
 		conn:                   conn,
 		discord:                discordSvc,
+		notifications:          newNotificationHub(),
 		roomsBookingsChannelID: channelID,
 		roomsBookingsRoleID:    roleID,
 	}

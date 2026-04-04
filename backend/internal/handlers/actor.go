@@ -18,6 +18,16 @@ func actorID(r *http.Request, conn *sql.DB) int64 {
 	role := strings.TrimSpace(strings.ToLower(r.Header.Get("X-User-Role")))
 	login := strings.TrimSpace(strings.ToLower(r.Header.Get("X-User-Login")))
 
+	if email == "" {
+		email = strings.TrimSpace(strings.ToLower(r.URL.Query().Get("email")))
+	}
+	if role == "" {
+		role = strings.TrimSpace(strings.ToLower(r.URL.Query().Get("role")))
+	}
+	if login == "" {
+		login = strings.TrimSpace(strings.ToLower(r.URL.Query().Get("login")))
+	}
+
 	// no identity → fallback
 	if email == "" && login == "" {
 		return DevActorID

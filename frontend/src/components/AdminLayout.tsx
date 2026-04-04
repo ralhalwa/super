@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 import UserAvatar from "./UserAvatar";
 import { useAuth } from "../lib/auth";
+import { useNotifications } from "../lib/notifications";
 import faviconIcon from "/favicon-icon.png";
 import { fetchRebootAvatar, getCachedRebootAvatar } from "../lib/rebootAvatars";
 
@@ -36,6 +37,7 @@ function NavItem({
   tone = "slate",
   ariaLabel,
   title,
+  showNotificationDot = false,
 }: {
   label: string;
   icon: React.ReactNode;
@@ -44,6 +46,7 @@ function NavItem({
   tone?: "slate" | "amber";
   ariaLabel?: string;
   title?: string;
+  showNotificationDot?: boolean;
 }) {
   const toneClass =
     tone === "amber"
@@ -62,8 +65,11 @@ function NavItem({
       aria-label={ariaLabel || label}
       className={cn("flex items-center gap-3 rounded-[14px] border px-3 py-2 text-left font-extrabold transition", toneClass)}
     >
-      <span className="grid h-8 w-8 place-items-center rounded-full border border-current/15 bg-white/70">
+      <span className="relative grid h-8 w-8 place-items-center rounded-full border border-current/15 bg-white/70">
         {icon}
+        {showNotificationDot ? (
+          <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border border-white bg-red-500" />
+        ) : null}
       </span>
       <span className="text-[14px] leading-none">{label}</span>
     </button>
@@ -79,6 +85,7 @@ export default function AdminLayout({
 }: Props) {
   const nav = useNavigate();
   const { isAdmin, isSupervisor, login, email, logout } = useAuth();
+  const { hasUnread } = useNotifications();
   const baseName = login || email || "User";
   const avatarLogin = String(login || String(email || "").split("@")[0] || "").trim();
   const [avatarUrl, setAvatarUrl] = useState(() => getCachedRebootAvatar(avatarLogin));
@@ -189,6 +196,7 @@ export default function AdminLayout({
                 label="Notifications"
                 onClick={() => nav("/notifications")}
                 ariaLabel="Open notifications"
+                showNotificationDot={hasUnread}
                 icon={
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
                     <path d="M15 17H5l1.4-1.4A2 2 0 0 0 7 14.2V10a5 5 0 1 1 10 0v4.2a2 2 0 0 0 .6 1.4L19 17h-4Z" stroke="#6d5efc" strokeWidth="2" strokeLinejoin="round" />

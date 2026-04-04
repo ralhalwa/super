@@ -7,12 +7,38 @@ import (
 	"taskflow/internal/models"
 )
 
-func CreateNotification(conn DBTX, userID int64, kind, title, body, link string) error {
-	_, err := conn.Exec(`
+func CreateNotification(conn DBTX, userID int64, kind, title, body, link string) (models.AppNotification, error) {
+	res, err := conn.Exec(`
 		INSERT INTO app_notifications (user_id, kind, title, body, link)
 		VALUES (?, ?, ?, ?, ?)
 	`, userID, strings.TrimSpace(kind), strings.TrimSpace(title), strings.TrimSpace(body), strings.TrimSpace(link))
-	return err
+	if err != nil {
+		return models.AppNotification{}, err
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return models.AppNotification{}, err
+	}
+
+	return GetNotificationByID(conn, id)
+}
+
+func GetNotificationByID(conn DBTX, notificationID int64) (models.AppNotification, error) {
+	var item models.AppNotification
+	var readInt int
+	err := conn.QueryRow(`
+		SELECT n.id, n.user_id, IFNULL(u.full_name, ''), IFNULL(u.nickname, ''), n.kind, n.title, n.body, n.link, n.is_read, n.created_at
+		FROM app_notifications n
+		LEFT JOIN users u ON u.id = n.user_id
+		WHERE n.id = ?
+		LIMIT 1
+	`, notificationID).Scan(&item.ID, &item.UserID, &item.UserName, &item.UserLogin, &item.Kind, &item.Title, &item.Body, &item.Link, &readInt, &item.CreatedAt)
+	if err != nil {
+		return models.AppNotification{}, err
+	}
+	item.IsRead = readInt == 1
+	return item, nil
 }
 
 func ListNotificationsByUser(conn DBTX, userID int64) ([]models.AppNotification, error) {

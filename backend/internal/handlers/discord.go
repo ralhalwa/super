@@ -565,9 +565,7 @@ func (a *API) runMeetingReminderSweep(location *time.Location) {
 				if err != nil || sent {
 					continue
 				}
-				if err := db.CreateNotification(a.conn, admin.ID, "meeting_reminder", title, meetingAdminBody(meeting, "", adminDetail), "/notifications"); err != nil {
-					continue
-				}
+				a.createAndBroadcastNotification(admin.ID, "meeting_reminder", title, meetingAdminBody(meeting, "", adminDetail), "/notifications")
 				if err := db.MarkMeetingReminderEvent(a.conn, meeting.ID, admin.ID, "admin_"+reminderType, meeting.StartsAt); err != nil {
 					log.Printf("admin reminder mark failed for meeting %d user %d: %v", meeting.ID, admin.ID, err)
 				}
@@ -584,9 +582,7 @@ func (a *API) runMeetingReminderSweep(location *time.Location) {
 				continue
 			}
 
-			if err := db.CreateNotification(a.conn, participant.UserID, "meeting_reminder", title, body, "/calendar"); err != nil {
-				continue
-			}
+			a.createAndBroadcastNotification(participant.UserID, "meeting_reminder", title, body, "/calendar")
 			if err := db.MarkMeetingReminderEvent(a.conn, meeting.ID, participant.UserID, reminderType, meeting.StartsAt); err != nil {
 				log.Printf("meeting reminder mark failed for meeting %d user %d: %v", meeting.ID, participant.UserID, err)
 			}

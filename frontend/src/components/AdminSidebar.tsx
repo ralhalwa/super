@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { useNotifications } from "../lib/notifications";
 import faviconIcon from "/favicon-icon.png";
 import { fetchRebootAvatar, getCachedRebootAvatar } from "../lib/rebootAvatars";
 import UserAvatar from "./UserAvatar";
@@ -15,6 +16,7 @@ function cn(...xs: Array<string | false | null | undefined>) {
 export default function AdminSidebar({ active }: Props) {
   const nav = useNavigate();
   const { isAdmin, login, email, role, displayName, setDisplayName, logout } = useAuth();
+  const { hasUnread } = useNotifications();
   const fallbackName = login || email || "User";
   const avatarLogin = String(login || String(email || "").split("@")[0] || "").trim();
   const [avatarUrl, setAvatarUrl] = useState(() => getCachedRebootAvatar(avatarLogin));
@@ -81,11 +83,13 @@ export default function AdminSidebar({ active }: Props) {
     label,
     to,
     icon,
+    showNotificationDot = false,
   }: {
     id: NonNullable<Props["active"]>;
     label: string;
     to: string;
     icon: ReactNode;
+    showNotificationDot?: boolean;
   }) => {
     const isActive = active === id;
     return (
@@ -99,8 +103,11 @@ export default function AdminSidebar({ active }: Props) {
             : "border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
         )}
       >
-        <span className="grid h-8 w-8 place-items-center rounded-full border border-current/15 bg-white/70">
+        <span className="relative grid h-8 w-8 place-items-center rounded-full border border-current/15 bg-white/70">
           {icon}
+          {showNotificationDot ? (
+            <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border border-white bg-red-500" />
+          ) : null}
         </span>
         <span className="text-[14px] leading-none">{label}</span>
       </button>
@@ -204,6 +211,7 @@ export default function AdminSidebar({ active }: Props) {
                 id="notifications"
                 label="Notifications"
                 to="/notifications"
+                showNotificationDot={hasUnread}
                 icon={
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
                     <path d="M15 17H5l1.4-1.4A2 2 0 0 0 7 14.2V10a5 5 0 1 1 10 0v4.2a2 2 0 0 0 .6 1.4L19 17h-4Z" stroke="#6d5efc" strokeWidth="2" strokeLinejoin="round" />
