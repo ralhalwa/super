@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import { useAuth } from "../lib/auth";
 import { useNotifications, type NotificationItem } from "../lib/notifications";
+import { getNotificationTone } from "../lib/notificationTheme";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -16,31 +17,6 @@ function formatDate(value: string) {
 
 function kindLabel(kind: string) {
   return kind.replaceAll("_", " ");
-}
-
-function kindTone(kind: string) {
-  if (kind.includes("reminder")) {
-    return {
-      dot: "bg-[#8b7fff]",
-      badge: "border-[#6d5efc]/18 bg-[#f7f5ff] text-[#6d5efc]",
-      icon: "border-[#6d5efc]/18 bg-[#f7f5ff] text-[#6d5efc]",
-      row: "hover:border-[#6d5efc]/18 hover:bg-[#f8f7ff]",
-    };
-  }
-  if (kind.includes("status")) {
-    return {
-      dot: "bg-emerald-500",
-      badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
-      icon: "border-emerald-200 bg-emerald-50 text-emerald-700",
-      row: "hover:border-emerald-200/80 hover:bg-emerald-50/30",
-    };
-  }
-  return {
-    dot: "bg-sky-500",
-    badge: "border-sky-200 bg-sky-50 text-sky-700",
-    icon: "border-sky-200 bg-sky-50 text-sky-700",
-    row: "hover:border-sky-200/80 hover:bg-sky-50/30",
-  };
 }
 
 export default function NotificationsPage() {
@@ -161,7 +137,7 @@ function NotificationCard({
   onOpen: () => void;
   showRecipient: boolean;
 }) {
-  const tone = kindTone(item.kind);
+  const tone = getNotificationTone(item);
 
   return (
     <article
@@ -174,6 +150,7 @@ function NotificationCard({
           onOpen();
         }
       }}
+      aria-label={item.title}
       className={`group relative overflow-hidden rounded-[20px] border px-4 py-3.5 transition ${tone.row} ${
         isNew
           ? "border-amber-200 bg-[linear-gradient(180deg,#fffdf5,#fff8e8)] shadow-[0_14px_28px_rgba(245,158,11,0.12)]"
@@ -187,11 +164,8 @@ function NotificationCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-start gap-2.5">
-              <div className={`mt-0.5 grid h-9 w-9 place-items-center rounded-[14px] border ${tone.icon}`}>
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-                  <path d="M15 17H5l1.4-1.4A2 2 0 0 0 7 14.2V10a5 5 0 1 1 10 0v4.2a2 2 0 0 0 .6 1.4L19 17h-4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                  <path d="M10 20a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+              <div className={`mt-0.5 grid h-9 w-9 place-items-center rounded-[14px] border ${tone.iconWrap}`}>
+                {tone.icon}
               </div>
               <div className="min-w-0">
                 <div className="truncate text-[14px] font-black tracking-[-0.015em] text-slate-900">{item.title}</div>
@@ -213,6 +187,9 @@ function NotificationCard({
                 New
               </span>
             ) : null}
+            <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${tone.accent}`}>
+              {tone.label}
+            </span>
             <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${tone.badge}`}>
               {kindLabel(item.kind)}
             </span>
