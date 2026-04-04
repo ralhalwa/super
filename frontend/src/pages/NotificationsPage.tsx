@@ -15,6 +15,28 @@ function formatDate(value: string) {
   });
 }
 
+function formatDateGroup(value: string) {
+  const date = new Date(value);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (sameDay(date, today)) return "Today";
+  if (sameDay(date, yesterday)) return "Yesterday";
+
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function kindLabel(kind: string) {
   return kind.replaceAll("_", " ");
 }
@@ -23,9 +45,23 @@ export default function NotificationsPage() {
   const nav = useNavigate();
   const { isAdmin } = useAuth();
   const { items, loading, error, isRecent } = useNotifications();
-  const unreadCount = useMemo(() => items.filter((item) => !item.is_read).length, [items]);
-  const readCount = items.length - unreadCount;
   const latestItem = items[0] || null;
+  const groupedItems = useMemo(() => {
+    const groups: Array<{ label: string; items: NotificationItem[] }> = [];
+    const lookup = new Map<string, NotificationItem[]>();
+
+    for (const item of items) {
+      const label = formatDateGroup(item.created_at);
+      if (!lookup.has(label)) {
+        const list: NotificationItem[] = [];
+        lookup.set(label, list);
+        groups.push({ label, items: list });
+      }
+      lookup.get(label)!.push(item);
+    }
+
+    return groups;
+  }, [items]);
 
   return (
     <AdminLayout
@@ -60,7 +96,6 @@ export default function NotificationsPage() {
               <div className="mt-5 flex flex-wrap items-stretch gap-2.5">
             <InlineStat label="Total" value={items.length} tone="slate" />
             <InlineStat label="New" value={items.filter((item) => isRecent(item.id)).length} tone="violet" />
-            <InlineStat label="Read" value={readCount} tone="emerald" />
             {latestItem ? (
               <div className="min-w-0 flex-1 rounded-[18px] border border-slate-200 bg-white/88 px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                 <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Latest</div>
@@ -109,14 +144,26 @@ export default function NotificationsPage() {
             </div>
           ) : (
             <div className="px-3 py-3">
-              {items.map((item) => (
-                <NotificationCard
-                  key={item.id}
-                  item={item}
-                  isNew={isRecent(item.id)}
-                  showRecipient={false}
-                  onOpen={() => nav(item.link || "/notifications")}
-                />
+              {groupedItems.map((group) => (
+                <section key={group.label} className="mb-4 last:mb-0">
+                  <div className="sticky top-0 z-[1] mb-2 rounded-[16px] border border-slate-200 bg-slate-50/95 px-3 py-2 backdrop-blur">
+                    <div className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+                      {group.label}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {group.items.map((item) => (
+                      <NotificationCard
+                        key={item.id}
+                        item={item}
+                        isNew={isRecent(item.id)}
+                        showRecipient={false}
+                        onOpen={() => nav(item.link || "/notifications")}
+                      />
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           )}
