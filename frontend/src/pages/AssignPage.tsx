@@ -624,7 +624,7 @@ export default function AssignPage() {
                   disabled={selectedAssignedIds.size === 0 || saving}
                 >
                   <BinIcon size={14} />
-                  {saving ? "Removing..." : `Remove selected ${selectedAssignedIds.size}`}
+                  {saving ? "Removing..." : `${selectedAssignedIds.size}`}
                 </button>
               </div>
             ) : null}

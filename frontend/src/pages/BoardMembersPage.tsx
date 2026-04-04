@@ -652,7 +652,7 @@ export default function BoardMembersPage() {
                 disabled={selectedMemberIds.size === 0 || removing}
               >
                 <BinIcon size={14} />
-                {removing ? "Removing..." : `Remove selected ${selectedMemberIds.size}`}
+                {removing ? "Removing..." : `${selectedMemberIds.size}`}
               </button>
             </div>
 
