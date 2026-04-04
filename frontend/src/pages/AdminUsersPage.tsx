@@ -1020,7 +1020,13 @@ export default function AdminUsersPage() {
                         />
                       </label>
                     ) : null}
-                    <UserAvatar src={avatarUrl} alt={u.full_name} fallback={initialsOf(u.full_name)} sizeClass="h-11 w-11" />
+                    <UserAvatar
+                      src={avatarUrl}
+                      alt={u.full_name}
+                      fallback={initialsOf(u.full_name)}
+                      sizeClass="h-11 w-11"
+                      previewable
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[14px] font-black text-slate-900">{u.full_name}</div>
                       <div className="truncate text-[12px] font-semibold text-slate-500">{u.email}</div>

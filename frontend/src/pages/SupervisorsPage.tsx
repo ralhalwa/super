@@ -332,6 +332,7 @@ export default function SupervisorsPage() {
                         fallback={initials(s.full_name)}
                         sizeClass="h-11 w-11"
                         className="bg-slate-100"
+                        previewable
                       />
                     </div>
                     <div className="text-[14px] font-black text-slate-900">{s.full_name}</div>
@@ -362,6 +363,7 @@ export default function SupervisorsPage() {
                       fallback={initials(s.full_name)}
                       sizeClass="h-11 w-11"
                       className="bg-slate-100"
+                      previewable
                     />
 
                     <div className="min-w-0">

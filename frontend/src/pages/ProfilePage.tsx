@@ -894,6 +894,7 @@ function AvatarPlaceholder({
         sizeClass="h-full w-full"
         textClass="text-[22px]"
         className={`border-0 bg-gradient-to-br ${tone}`}
+        previewable
       />
       <div className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full border border-white bg-white shadow-sm">
         <GenderIcon gender={gender} />
