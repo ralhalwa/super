@@ -256,8 +256,10 @@ function CardItem({
     <div
       ref={sortable.setNodeRef}
       style={style}
+      onDoubleClick={() => onOpen(card.id)}
+      title="Double click to open"
       className={[
-        "boardCardIn rounded-xl border bg-white shadow-sm transition",
+        "boardCardIn select-none rounded-xl border bg-white shadow-sm transition",
         "border-slate-200 hover:-translate-y-0.5 hover:border-[#6d5efc]/25 hover:bg-[#f7f6ff] hover:shadow-md",
         "active:scale-[0.997]",
         isOverlay ? "shadow-lg ring-1 ring-slate-200/70" : "",
@@ -267,6 +269,7 @@ function CardItem({
         {!isOverlay && canDrag && (
           <button
             type="button"
+            onDoubleClick={(e) => e.stopPropagation()}
             className={[
               "h-9 w-9 rounded-lg border border-slate-200 bg-slate-50",
               "grid place-items-center cursor-grab active:cursor-grabbing",
@@ -282,37 +285,37 @@ function CardItem({
         )}
 
         <div className="flex-1 min-w-0">
-          {/* labels */}
-          {labels.length > 0 && (
-            <div className="flex items-center gap-1.5 mb-2">
-              {labels.slice(0, 4).map((l) => (
-                <span
-                  key={l.label_id}
-                  title={l.name}
-                  className={[
-                    "inline-block h-2.5 w-2.5 rounded-full",
-                    "shadow-[0_0_0_2px_rgba(255,255,255,0.95)]",
-                    labelDotClass(l.color),
-                  ].join(" ")}
-                />
-              ))}
-              {labels.length > 4 && (
-                <span className="text-[11px] font-extrabold text-slate-500">
-                  +{labels.length - 4}
-                </span>
-              )}
-            </div>
-          )}
+          <div className="min-w-0 cursor-default">
+            {/* labels */}
+            {labels.length > 0 && (
+              <div className="flex items-center gap-1.5 mb-2">
+                {labels.slice(0, 4).map((l) => (
+                  <span
+                    key={l.label_id}
+                    title={l.name}
+                    className={[
+                      "inline-block h-2.5 w-2.5 rounded-full",
+                      "shadow-[0_0_0_2px_rgba(255,255,255,0.95)]",
+                      labelDotClass(l.color),
+                    ].join(" ")}
+                  />
+                ))}
+                {labels.length > 4 && (
+                  <span className="text-[11px] font-extrabold text-slate-500">
+                    +{labels.length - 4}
+                  </span>
+                )}
+              </div>
+            )}
 
-          <div
-            className={[
-              "font-extrabold text-slate-900 truncate cursor-default transition",
-              isDone ? "text-slate-500 line-through decoration-slate-300" : "",
-            ].join(" ")}
-            onDoubleClick={() => onOpen(card.id)}
-            title="Double click to open"
-          >
-            {card.title}
+            <div
+              className={[
+                "max-w-full truncate font-extrabold text-slate-900 transition",
+                isDone ? "text-slate-500 line-through decoration-slate-300" : "",
+              ].join(" ")}
+            >
+              {card.title}
+            </div>
           </div>
 
           {/* completion + priority */}
@@ -320,6 +323,7 @@ function CardItem({
             <button
               type="button"
               onClick={() => onToggleDone(card.id, !isDone)}
+              onDoubleClick={(e) => e.stopPropagation()}
               className={[
                 "h-7 px-2.5 inline-flex items-center gap-1.5 rounded-full border text-xs font-extrabold transition",
                 isDone
