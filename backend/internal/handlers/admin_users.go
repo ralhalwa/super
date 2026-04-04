@@ -472,6 +472,13 @@ func (a *API) AdminSupervisorActivity(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) AdminTaskCompletionStats(w http.ResponseWriter, r *http.Request) {
+	role := normalizeRole(r.Header.Get("X-User-Role"))
+	actor := actorID(r, a.conn)
+	if role != "admin" && role != "supervisor" {
+		writeErr(w, http.StatusForbidden, "forbidden")
+		return
+	}
+
 	location, err := time.LoadLocation("Asia/Bahrain")
 	if err != nil {
 		location = time.UTC
@@ -480,21 +487,37 @@ func (a *API) AdminTaskCompletionStats(w http.ResponseWriter, r *http.Request) {
 	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, location)
 	todayKey := todayStart.Format("2006-01-02")
 
-	row := a.conn.QueryRow(`
-		WITH task_items AS (
-			SELECT
-				COALESCE(NULLIF(TRIM(c.due_date), ''), '') AS due_date,
+	baseQuery := `
+		WITH scoped_cards AS (
+			SELECT c.id, COALESCE(NULLIF(TRIM(c.due_date), ''), '') AS due_date,
 				CASE WHEN LOWER(TRIM(COALESCE(c.status, 'todo'))) = 'done' THEN 1 ELSE 0 END AS is_done
 			FROM cards c
-			UNION ALL
-			SELECT
-				COALESCE(NULLIF(TRIM(cs.due_date), ''), '') AS due_date,
+	`
+	args := []any{}
+	if role == "supervisor" {
+		baseQuery += `
+			JOIN boards b ON b.id = c.board_id
+			JOIN supervisor_files sf ON sf.id = b.supervisor_file_id
+			WHERE sf.supervisor_user_id = ?
+		`
+		args = append(args, actor)
+	}
+	baseQuery += `
+		),
+		scoped_subtasks AS (
+			SELECT cs.id, COALESCE(NULLIF(TRIM(cs.due_date), ''), '') AS due_date,
 				CASE WHEN COALESCE(cs.is_done, 0) = 1 THEN 1 ELSE 0 END AS is_done
 			FROM card_subtasks cs
+			JOIN scoped_cards c ON c.id = cs.card_id
+		),
+		task_items AS (
+			SELECT due_date, is_done FROM scoped_cards
+			UNION ALL
+			SELECT due_date, is_done FROM scoped_subtasks
 		)
 		SELECT
-			(SELECT COUNT(*) FROM cards) AS tasks_count,
-			(SELECT COUNT(*) FROM card_subtasks) AS subtasks_count,
+			(SELECT COUNT(*) FROM scoped_cards) AS tasks_count,
+			(SELECT COUNT(*) FROM scoped_subtasks) AS subtasks_count,
 			COALESCE(SUM(
 				CASE
 					WHEN is_done = 1 THEN 1
@@ -510,7 +533,10 @@ func (a *API) AdminTaskCompletionStats(w http.ResponseWriter, r *http.Request) {
 				END
 			), 0) AS overdue_count
 		FROM task_items
-	`, todayKey, todayKey)
+	`
+	args = append(args, todayKey, todayKey)
+
+	row := a.conn.QueryRow(baseQuery, args...)
 
 	var tasksCount int
 	var subtasksCount int

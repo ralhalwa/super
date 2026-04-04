@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 type UserAvatarProps = {
@@ -25,13 +25,29 @@ export default function UserAvatar({
   previewable = false,
 }: UserAvatarProps) {
   const [open, setOpen] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(Boolean(src));
   const [imgFailed, setImgFailed] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const canPreview = Boolean(src && imgLoaded && !imgFailed && previewable);
 
   useEffect(() => {
-    setImgLoaded(false);
+    setImgLoaded(Boolean(src));
     setImgFailed(false);
+  }, [src]);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!src || !img) return;
+    if (!img.complete) return;
+
+    if (img.naturalWidth > 0) {
+      setImgLoaded(true);
+      setImgFailed(false);
+      return;
+    }
+
+    setImgLoaded(false);
+    setImgFailed(true);
   }, [src]);
 
   useEffect(() => {
@@ -77,12 +93,10 @@ export default function UserAvatar({
         </div>
         {src && !imgFailed ? (
           <img
+            ref={imgRef}
             src={src}
             alt={alt}
-            className={cn(
-              "absolute inset-0 h-full w-full scale-[1.12] object-cover object-center transition-opacity",
-              imgLoaded ? "opacity-100" : "opacity-0"
-            )}
+            className="absolute inset-0 h-full w-full scale-[1.12] object-cover object-center"
             onLoad={() => setImgLoaded(true)}
             onError={() => {
               setImgFailed(true);
