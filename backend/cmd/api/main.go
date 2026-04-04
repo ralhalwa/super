@@ -331,6 +331,9 @@ func runMigrations(conn *sql.DB) error {
 			return err
 		}
 	}
+	if err := ensureMeetingsSchema(conn); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -359,6 +362,89 @@ func ensureDiscordSchema(conn *sql.DB) error {
 		  channel_id TEXT NOT NULL UNIQUE,
 		  created_at TEXT NOT NULL DEFAULT (datetime('now')),
 		  FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+		)
+	`); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ensureMeetingsSchema(conn *sql.DB) error {
+	if _, err := conn.Exec(`
+		CREATE TABLE IF NOT EXISTS meetings (
+		  id INTEGER PRIMARY KEY AUTOINCREMENT,
+		  board_id INTEGER NOT NULL,
+		  created_by INTEGER NOT NULL,
+		  title TEXT NOT NULL,
+		  location TEXT NOT NULL,
+		  notes TEXT NOT NULL DEFAULT '',
+		  starts_at TEXT NOT NULL,
+		  ends_at TEXT NOT NULL,
+		  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+		  status TEXT NOT NULL DEFAULT 'scheduled',
+		  outcome_notes TEXT NOT NULL DEFAULT '',
+		  FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE,
+		  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+		)
+	`); err != nil {
+		return err
+	}
+
+	hasStatus, err := sqliteColumnExists(conn, "meetings", "status")
+	if err != nil {
+		return err
+	}
+	if !hasStatus {
+		if _, err := conn.Exec(`ALTER TABLE meetings ADD COLUMN status TEXT NOT NULL DEFAULT 'scheduled'`); err != nil {
+			return err
+		}
+	}
+
+	hasOutcomeNotes, err := sqliteColumnExists(conn, "meetings", "outcome_notes")
+	if err != nil {
+		return err
+	}
+	if !hasOutcomeNotes {
+		if _, err := conn.Exec(`ALTER TABLE meetings ADD COLUMN outcome_notes TEXT NOT NULL DEFAULT ''`); err != nil {
+			return err
+		}
+	}
+
+	if _, err := conn.Exec(`CREATE INDEX IF NOT EXISTS idx_meetings_board_id ON meetings(board_id)`); err != nil {
+		return err
+	}
+	if _, err := conn.Exec(`CREATE INDEX IF NOT EXISTS idx_meetings_created_by ON meetings(created_by)`); err != nil {
+		return err
+	}
+	if _, err := conn.Exec(`CREATE INDEX IF NOT EXISTS idx_meetings_starts_at ON meetings(starts_at)`); err != nil {
+		return err
+	}
+
+	if _, err := conn.Exec(`
+		CREATE TABLE IF NOT EXISTS meeting_participants (
+		  meeting_id INTEGER NOT NULL,
+		  user_id INTEGER NOT NULL,
+		  rsvp_status TEXT NOT NULL DEFAULT 'pending',
+		  attendance_status TEXT NOT NULL DEFAULT 'pending',
+		  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+		  PRIMARY KEY (meeting_id, user_id),
+		  FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE,
+		  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)
+	`); err != nil {
+		return err
+	}
+
+	if _, err := conn.Exec(`
+		CREATE TABLE IF NOT EXISTS meeting_room_notifications (
+		  id INTEGER PRIMARY KEY AUTOINCREMENT,
+		  meeting_id INTEGER NOT NULL,
+		  days_before INTEGER NOT NULL,
+		  meeting_date TEXT NOT NULL,
+		  sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+		  FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE,
+		  UNIQUE(meeting_id, days_before, meeting_date)
 		)
 	`); err != nil {
 		return err
