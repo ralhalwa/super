@@ -159,7 +159,7 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout active="dashboard" title="Admin Dashboard" subtitle="Manage users and supervise the system.">
-      <section className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Supervisors"
           value={statsLoading ? "..." : totalSupervisors}
@@ -203,12 +203,12 @@ export default function AdminDashboard() {
             </svg>
           }
         />
-        <StatCard
+        {/* <StatCard
           label="Admin"
           value="System"
           subtitle="You're managing the platform"
           icon={<span className="h-[18px] w-[18px] rounded-full border-2 border-slate-300 border-t-violet-500 animate-spin" />}
-        />
+        /> */}
       </section>
 
       <section className="mt-3.5 grid grid-cols-1 gap-3.5 xl:grid-cols-2">
