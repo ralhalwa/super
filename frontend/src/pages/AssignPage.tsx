@@ -485,35 +485,37 @@ export default function AssignPage() {
 
             </div>
 
-            <input
-              className={cn(
-                "mb-2 w-full rounded-xl border bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none",
-                "focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10",
-                !selectedSup && "cursor-not-allowed opacity-60"
-              )}
-              placeholder="Search talents by name/email/nickname..."
-              value={stuQ}
-              onChange={(e) => setStuQ(e.target.value)}
-              disabled={!selectedSup}
-            />
+            <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px]">
+              <input
+                className={cn(
+                  "w-full rounded-xl border bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none",
+                  "focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10",
+                  !selectedSup && "cursor-not-allowed opacity-60"
+                )}
+                placeholder="Search talents by name/email/nickname..."
+                value={stuQ}
+                onChange={(e) => setStuQ(e.target.value)}
+                disabled={!selectedSup}
+              />
 
-            <select
-              className={cn(
-                "mb-2 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none",
-                "focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10",
-                !selectedSup && "cursor-not-allowed opacity-60"
-              )}
-              value={stuCohort}
-              onChange={(e) => setStuCohort(e.target.value)}
-              disabled={!selectedSup}
-            >
-              <option value="all">All cohorts</option>
-              {availableCohortOptions.map((cohort) => (
-                <option key={cohort} value={cohort}>
-                  {cohort}
-                </option>
-              ))}
-            </select>
+              <select
+                className={cn(
+                  "w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none",
+                  "focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10",
+                  !selectedSup && "cursor-not-allowed opacity-60"
+                )}
+                value={stuCohort}
+                onChange={(e) => setStuCohort(e.target.value)}
+                disabled={!selectedSup}
+              >
+                <option value="all">All cohorts</option>
+                {availableCohortOptions.map((cohort) => (
+                  <option key={cohort} value={cohort}>
+                    {cohort}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {selectedSup ? (
               <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -635,15 +637,15 @@ export default function AssignPage() {
             </div>
 
             {selectedSup ? (
-              <>
+              <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px]">
                 <input
-                  className="mb-2 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
+                  className="w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
                   placeholder="Search assigned by name/email/nickname..."
                   value={assignedQ}
                   onChange={(e) => setAssignedQ(e.target.value)}
                 />
                 <select
-                  className="mb-2 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
+                  className="w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
                   value={assignedCohort}
                   onChange={(e) => setAssignedCohort(e.target.value)}
                 >
@@ -654,7 +656,7 @@ export default function AssignPage() {
                     </option>
                   ))}
                 </select>
-              </>
+              </div>
             ) : null}
 
             {selectedSup ? (

@@ -349,6 +349,7 @@ export default function AdminUsersPage() {
   const { confirm, dialog: confirmDialog } = useConfirm();
   const [q, setQ] = useState("");
   const [role, setRole] = useState<"all" | "supervisor" | "student">("all");
+  const [cohort, setCohort] = useState("all");
   const [rows, setRows] = useState<UserRow[]>([]);
   const [avatarByLogin, setAvatarByLogin] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -391,6 +392,19 @@ export default function AdminUsersPage() {
     return () => clearTimeout(t);
   }, [q, role]);
 
+  const cohortOptions = useMemo(
+    () =>
+      [...new Set(rows.map((row) => normalizeCohort(row.cohort)).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b)
+      ),
+    [rows]
+  );
+
+  const visibleRows = useMemo(
+    () => rows.filter((row) => cohort === "all" || normalizeCohort(row.cohort) === cohort),
+    [rows, cohort]
+  );
+
   useEffect(() => {
     if (!deleteMode) {
       setSelectedUserIds(new Set());
@@ -399,14 +413,14 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     setSelectedUserIds((prev) => {
-      const visibleIds = new Set(rows.map((row) => row.id));
+      const visibleIds = new Set(visibleRows.map((row) => row.id));
       const next = new Set<number>();
       prev.forEach((id) => {
         if (visibleIds.has(id)) next.add(id);
       });
       return next;
     });
-  }, [rows]);
+  }, [visibleRows]);
 
   useEffect(() => {
     let alive = true;
@@ -470,10 +484,10 @@ export default function AdminUsersPage() {
   }, [lookup, createRole, createOpen]);
 
   const counters = useMemo(() => {
-    const sup = rows.filter((r) => r.role === "supervisor").length;
-    const stu = rows.filter((r) => r.role === "student").length;
-    return { all: rows.length, sup, stu };
-  }, [rows]);
+    const sup = visibleRows.filter((r) => r.role === "supervisor").length;
+    const stu = visibleRows.filter((r) => r.role === "student").length;
+    return { all: visibleRows.length, sup, stu };
+  }, [visibleRows]);
 
   const queuedKeys = useMemo(
     () => new Set(queue.map((u) => `${u.email.toLowerCase()}::${u.role}`)),
@@ -495,8 +509,8 @@ export default function AdminUsersPage() {
   );
 
   const selectedRows = useMemo(
-    () => rows.filter((u) => selectedUserIds.has(u.id)),
-    [rows, selectedUserIds]
+    () => visibleRows.filter((u) => selectedUserIds.has(u.id)),
+    [visibleRows, selectedUserIds]
   );
 
   function toggleUserSelection(id: number) {
@@ -509,7 +523,7 @@ export default function AdminUsersPage() {
   }
 
   function selectAllVisibleUsers() {
-    setSelectedUserIds(new Set(rows.map((u) => u.id)));
+    setSelectedUserIds(new Set(visibleRows.map((u) => u.id)));
   }
 
   function clearSelectedUsers() {
@@ -877,30 +891,34 @@ export default function AdminUsersPage() {
       ) : null}
 
       <section className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-        <div className="mb-3 grid gap-2 md:grid-cols-[1fr_auto]">
+        <div className="mb-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_150px_150px]">
           <input
             className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[14px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12"
             placeholder="Search by name, email, or nickname..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <div className="flex items-center gap-2">
-            {(["all", "supervisor", "student"] as const).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRole(r)}
-                className={[
-                  "h-11 rounded-[14px] border px-3 text-[13px] font-black transition",
-                  role === r
-                    ? "border-[#6d5efc]/30 bg-[#6d5efc]/10 text-slate-900"
-                    : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
-                ].join(" ")}
-              >
-                {r === "all" ? "All" : r === "supervisor" ? "Supervisors" : "Talents"}
-              </button>
+          <select
+            className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-black text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12"
+            value={role}
+            onChange={(e) => setRole(e.target.value as "all" | "supervisor" | "student")}
+          >
+            <option value="all">All</option>
+            <option value="supervisor">Supervisors</option>
+            <option value="student">Talents</option>
+          </select>
+          <select
+            className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-black text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12"
+            value={cohort}
+            onChange={(e) => setCohort(e.target.value)}
+          >
+            <option value="all">All cohorts</option>
+            {cohortOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
             ))}
-          </div>
+          </select>
         </div>
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -933,7 +951,7 @@ export default function AdminUsersPage() {
               <button
                 type="button"
                 onClick={selectAllVisibleUsers}
-                disabled={rows.length === 0}
+                disabled={visibleRows.length === 0}
                 className="inline-flex h-11 items-center rounded-2xl border border-slate-200 bg-white px-4 text-[13px] font-black text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:-translate-y-[1px] hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Select all
@@ -975,13 +993,13 @@ export default function AdminUsersPage() {
           <div className="rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-3 text-[13px] font-semibold text-slate-600">
             Loading users...
           </div>
-        ) : rows.length === 0 ? (
+        ) : visibleRows.length === 0 ? (
           <div className="rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-3 text-[13px] font-semibold text-slate-600">
             No users found.
           </div>
         ) : (
           <div className="grid gap-2 lg:grid-cols-2">
-            {rows.map((u) => {
+            {visibleRows.map((u) => {
               const avatarUrl = avatarByLogin[String(u.nickname || "").trim().toLowerCase()] || "";
               return (
                 <article
