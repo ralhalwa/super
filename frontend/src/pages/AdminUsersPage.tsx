@@ -5,6 +5,7 @@ import UserAvatar from "../components/UserAvatar";
 import { apiFetch } from "../lib/api";
 import { useConfirm } from "../lib/useConfirm";
 import { fetchRebootAvatars } from "../lib/rebootAvatars";
+import { fetchRebootPhones } from "../lib/rebootPhones";
 
 type UserRow = {
   id: number;
@@ -352,6 +353,7 @@ export default function AdminUsersPage() {
   const [cohort, setCohort] = useState("all");
   const [rows, setRows] = useState<UserRow[]>([]);
   const [avatarByLogin, setAvatarByLogin] = useState<Record<string, string>>({});
+  const [phoneByLogin, setPhoneByLogin] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
@@ -446,6 +448,31 @@ export default function AdminUsersPage() {
       alive = false;
     };
   }, [rows]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPhones() {
+      const logins = [...rows, ...searchResults, ...queue].map((user) => user.nickname).filter(Boolean);
+      if (logins.length === 0) {
+        setPhoneByLogin({});
+        return;
+      }
+      try {
+        const next = await fetchRebootPhones(logins);
+        if (!alive) return;
+        setPhoneByLogin(next);
+      } catch {
+        if (!alive) return;
+        setPhoneByLogin({});
+      }
+    }
+
+    void loadPhones();
+    return () => {
+      alive = false;
+    };
+  }, [rows, searchResults, queue]);
 
   useEffect(() => {
     const needle = lookup.trim();
@@ -763,7 +790,9 @@ export default function AdminUsersPage() {
                         <div className="mt-0.5 truncate text-[12px] font-extrabold text-[#6d5efc]">
                           {withAt(u.nickname)}
                         </div>
-                        <div className="mt-1 truncate text-[12px] font-semibold text-slate-500">{u.email}</div>
+                        <div className="mt-1 truncate text-[12px] font-semibold text-slate-500">
+                          {phoneByLogin[String(u.nickname || "").trim().toLowerCase()] || "-"}
+                        </div>
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                           <span className={`inline-flex h-7 items-center rounded-full border px-2.5 text-[11px] font-extrabold ${roleTone(createRole)}`}>
                             {roleLabel(createRole)}
@@ -852,7 +881,9 @@ export default function AdminUsersPage() {
                         <div className="mt-0.5 truncate text-[12px] font-extrabold text-[#6d5efc]">
                           {withAt(u.nickname)}
                         </div>
-                        <div className="mt-1 truncate text-[12px] font-semibold text-slate-500">{u.email}</div>
+                        <div className="mt-1 truncate text-[12px] font-semibold text-slate-500">
+                          {phoneByLogin[String(u.nickname || "").trim().toLowerCase()] || "-"}
+                        </div>
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                           <span className={`inline-flex h-7 items-center rounded-full border px-2.5 text-[11px] font-extrabold ${roleTone(u.role)}`}>
                             {roleLabel(u.role)}
@@ -1055,7 +1086,9 @@ export default function AdminUsersPage() {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[14px] font-black text-slate-900">{u.full_name}</div>
-                      <div className="truncate text-[12px] font-semibold text-slate-500">{u.email}</div>
+                      <div className="truncate text-[12px] font-semibold text-slate-500">
+                        {phoneByLogin[String(u.nickname || "").trim().toLowerCase()] || "-"}
+                      </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         <span className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-white px-2.5 text-[11px] font-extrabold text-[#6d5efc]">
                           {withAt(u.nickname)}

@@ -7,6 +7,7 @@ import UserAvatar from "../components/UserAvatar";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { fetchRebootAvatars } from "../lib/rebootAvatars";
+import { fetchRebootPhones } from "../lib/rebootPhones";
 
 type Member = {
   user_id: number;
@@ -25,6 +26,16 @@ type User = {
   email: string;
   role: string;
 };
+
+function contactValue(
+  isAdmin: boolean,
+  phoneByLogin: Record<string, string>,
+  user: { nickname?: string; email: string }
+) {
+  if (!isAdmin) return user.email;
+  const login = String(user.nickname || user.email.split("@")[0] || "").trim().toLowerCase();
+  return phoneByLogin[login] || "-";
+}
 
 type BoardLite = {
   name?: string;
@@ -214,6 +225,7 @@ export default function BoardMembersPage() {
   const canManage = isAdmin || isSupervisor;
 
   const [members, setMembers] = useState<Member[]>([]);
+  const [phoneByLogin, setPhoneByLogin] = useState<Record<string, string>>({});
   const [boardName, setBoardName] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -283,6 +295,33 @@ export default function BoardMembersPage() {
     }
 
     void loadAvatars();
+    return () => {
+      alive = false;
+    };
+  }, [results, members]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPhones() {
+      const logins = [...results, ...members]
+        .map((user) => user.nickname || user.email.split("@")[0])
+        .filter(Boolean);
+      if (logins.length === 0) {
+        setPhoneByLogin({});
+        return;
+      }
+      try {
+        const next = await fetchRebootPhones(logins);
+        if (!alive) return;
+        setPhoneByLogin(next);
+      } catch {
+        if (!alive) return;
+        setPhoneByLogin({});
+      }
+    }
+
+    void loadPhones();
     return () => {
       alive = false;
     };
@@ -602,7 +641,7 @@ export default function BoardMembersPage() {
                               </div>
                               <div className="mt-1 flex flex-wrap items-center gap-2">
                                 <span className="inline-flex min-w-0 items-center gap-2 truncate text-xs font-bold text-slate-500">
-                                  <MailIcon /> <span className="truncate">{u.email}</span>
+                                  <MailIcon /> <span className="truncate">{contactValue(isAdmin, phoneByLogin, u)}</span>
                                 </span>
                                 <RolePill role={u.role} />
                               </div>
@@ -704,7 +743,7 @@ export default function BoardMembersPage() {
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-2">
                             <span className="inline-flex min-w-0 items-center gap-2 truncate text-xs font-bold text-slate-500">
-                              <MailIcon /> <span className="truncate">{m.email}</span>
+                              <MailIcon /> <span className="truncate">{contactValue(isAdmin, phoneByLogin, m)}</span>
                             </span>
                             <RolePill role={m.role} />
                             <BoardRolePill roleInBoard={m.role_in_board} />

@@ -5,6 +5,7 @@ import BackButton from "../components/BackButton";
 import UserAvatar from "../components/UserAvatar";
 import { apiFetch } from "../lib/api";
 import { fetchRebootAvatars } from "../lib/rebootAvatars";
+import { fetchRebootPhones } from "../lib/rebootPhones";
 // import "../admin.css";
 
 type User = {
@@ -97,12 +98,18 @@ function normalizeCohort(value: string) {
   return cohort;
 }
 
+function adminContact(phoneByLogin: Record<string, string>, user: User) {
+  const login = String(user.nickname || user.email.split("@")[0] || "").trim().toLowerCase();
+  return phoneByLogin[login] || "-";
+}
+
 export default function AssignPage() {
   const nav = useNavigate();
   const [supervisors, setSupervisors] = useState<User[]>([]);
   const [students, setStudents] = useState<User[]>([]);
   const [assigned, setAssigned] = useState<User[]>([]);
   const [avatarByLogin, setAvatarByLogin] = useState<Record<string, string>>({});
+  const [phoneByLogin, setPhoneByLogin] = useState<Record<string, string>>({});
 
   const [selectedSup, setSelectedSup] = useState<User | null>(null);
 
@@ -183,6 +190,33 @@ export default function AssignPage() {
     }
 
     void loadAvatars();
+    return () => {
+      alive = false;
+    };
+  }, [supervisors, students, assigned]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPhones() {
+      const logins = [...supervisors, ...students, ...assigned]
+        .map((user) => user.nickname || user.email.split("@")[0])
+        .filter(Boolean);
+      if (logins.length === 0) {
+        setPhoneByLogin({});
+        return;
+      }
+      try {
+        const next = await fetchRebootPhones(logins);
+        if (!alive) return;
+        setPhoneByLogin(next);
+      } catch {
+        if (!alive) return;
+        setPhoneByLogin({});
+      }
+    }
+
+    void loadPhones();
     return () => {
       alive = false;
     };
@@ -460,7 +494,7 @@ export default function AssignPage() {
                           </span>
                           supervisor
                         </span>
-                        <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">{s.email}</span>
+                        <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">{adminContact(phoneByLogin, s)}</span>
                       </div>
                     </div>
                   </button>
@@ -603,7 +637,7 @@ export default function AssignPage() {
                               {normalizeCohort(s.cohort)}
                             </span>
                           ) : null}
-                          <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">{s.email}</span>
+                          <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">{adminContact(phoneByLogin, s)}</span>
                         </div>
                       </div>
                     </label>
@@ -755,7 +789,7 @@ export default function AssignPage() {
                               {normalizeCohort(s.cohort)}
                             </span>
                           ) : null}
-                          <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">{s.email}</span>
+                          <span className="min-w-0 truncate text-[12.5px] font-bold text-slate-500">{adminContact(phoneByLogin, s)}</span>
                         </div>
                       </div>
                     </div>

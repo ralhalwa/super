@@ -7,6 +7,7 @@ import UserAvatar from "../components/UserAvatar";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { fetchRebootAvatar } from "../lib/rebootAvatars";
+import { fetchRebootPhones } from "../lib/rebootPhones";
 
 const GQL_URL = "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
 const BAHRAIN_TIMEZONE = "Asia/Bahrain";
@@ -353,6 +354,7 @@ export default function ProfilePage() {
 
   const [localProfile, setLocalProfile] = useState<LocalProfile | null>(null);
   const [rebootProfile, setRebootProfile] = useState<RebootProfile | null>(null);
+  const [phoneByLogin, setPhoneByLogin] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [membersByBoard, setMembersByBoard] = useState<Record<number, BoardMember[]>>({});
@@ -449,6 +451,37 @@ export default function ProfilePage() {
       cancelled = true;
     };
   }, [canViewPrivateNotes, targetUserID]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPhones() {
+      if (role !== "admin") {
+        setPhoneByLogin({});
+        return;
+      }
+      const logins = [
+        localProfile?.user?.nickname,
+        ...(localProfile?.supervisor?.assigned_students || []).map((student) => student.nickname),
+        ...(Object.values(membersByBoard).flat() || []).map((member) => member.nickname),
+      ].filter(Boolean) as string[];
+      if (logins.length === 0) {
+        setPhoneByLogin({});
+        return;
+      }
+      try {
+        const next = await fetchRebootPhones(logins);
+        if (!cancelled) setPhoneByLogin(next);
+      } catch {
+        if (!cancelled) setPhoneByLogin({});
+      }
+    }
+
+    void loadPhones();
+    return () => {
+      cancelled = true;
+    };
+  }, [localProfile, membersByBoard, role]);
 
   async function addPrivateNote() {
     if (!canViewPrivateNotes || !targetUserID || !noteDraft.trim()) return;
@@ -628,7 +661,9 @@ export default function ProfilePage() {
                                 >
                                   <span className="truncate font-extrabold text-slate-800">{m.full_name}</span>
                                   <span className="shrink-0 text-[11px] font-extrabold text-[#6d5efc]">
-                                    {withAt(m.nickname)}
+                                    {role === "admin"
+                                      ? phoneByLogin[String(m.nickname || "").trim().toLowerCase()] || "-"
+                                      : withAt(m.nickname)}
                                   </span>
                                 </div>
                               ))}
@@ -706,7 +741,10 @@ export default function ProfilePage() {
                       >
                         <div className="truncate text-[13px] font-black text-slate-900">{s.full_name}</div>
                         <div className="mt-0.5 text-[12px] font-semibold text-slate-500">
-                          {withAt(s.nickname)} • {s.email}
+                          {withAt(s.nickname)} •{" "}
+                          {role === "admin"
+                            ? phoneByLogin[String(s.nickname || "").trim().toLowerCase()] || "-"
+                            : s.email}
                         </div>
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
                           {(s.boards || []).length === 0 ? (
