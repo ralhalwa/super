@@ -35,6 +35,43 @@ type QueuedCandidate = RebootCandidate & {
 };
 
 const GQL_URL = "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
+const ADMIN_USERS_STATE_KEY = "taskflow.adminUsers.state";
+
+type AdminUsersPageState = {
+  q: string;
+  role: "all" | "supervisor" | "student";
+  cohort: string;
+  scrollY: number;
+};
+
+function readAdminUsersPageState(): AdminUsersPageState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(ADMIN_USERS_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      q: String(parsed?.q || ""),
+      role:
+        parsed?.role === "supervisor" || parsed?.role === "student" || parsed?.role === "all"
+          ? parsed.role
+          : "all",
+      cohort: String(parsed?.cohort || "all"),
+      scrollY: Number.isFinite(Number(parsed?.scrollY)) ? Number(parsed.scrollY) : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeAdminUsersPageState(state: AdminUsersPageState) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(ADMIN_USERS_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // Ignore storage failures.
+  }
+}
 
 function initialsOf(name: string) {
   const n = (name || "").trim();
@@ -348,9 +385,11 @@ function RoleIcon({ role }: { role: CreateRole }) {
 export default function AdminUsersPage() {
   const nav = useNavigate();
   const { confirm, dialog: confirmDialog } = useConfirm();
-  const [q, setQ] = useState("");
-  const [role, setRole] = useState<"all" | "supervisor" | "student">("all");
-  const [cohort, setCohort] = useState("all");
+  const initialPageState = useRef<AdminUsersPageState | null>(readAdminUsersPageState());
+  const hasRestoredScroll = useRef(false);
+  const [q, setQ] = useState(initialPageState.current?.q || "");
+  const [role, setRole] = useState<"all" | "supervisor" | "student">(initialPageState.current?.role || "all");
+  const [cohort, setCohort] = useState(initialPageState.current?.cohort || "all");
   const [rows, setRows] = useState<UserRow[]>([]);
   const [avatarByLogin, setAvatarByLogin] = useState<Record<string, string>>({});
   const [phoneByLogin, setPhoneByLogin] = useState<Record<string, string>>({});
@@ -394,6 +433,29 @@ export default function AdminUsersPage() {
     return () => clearTimeout(t);
   }, [q, role]);
 
+  useEffect(() => {
+    writeAdminUsersPageState({
+      q,
+      role,
+      cohort,
+      scrollY: typeof window !== "undefined" ? window.scrollY : 0,
+    });
+  }, [q, role, cohort]);
+
+  useEffect(() => {
+    function handleScroll() {
+      writeAdminUsersPageState({
+        q,
+        role,
+        cohort,
+        scrollY: window.scrollY,
+      });
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [q, role, cohort]);
+
   const cohortOptions = useMemo(
     () =>
       [...new Set(rows.map((row) => normalizeCohort(row.cohort)).filter(Boolean))].sort((a, b) =>
@@ -406,6 +468,17 @@ export default function AdminUsersPage() {
     () => rows.filter((row) => cohort === "all" || normalizeCohort(row.cohort) === cohort),
     [rows, cohort]
   );
+
+  useEffect(() => {
+    if (loading || hasRestoredScroll.current === true) return;
+    const nextScrollY = Math.max(0, Number(initialPageState.current?.scrollY || 0));
+    hasRestoredScroll.current = true;
+    if (nextScrollY > 0) {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: nextScrollY, behavior: "auto" });
+      });
+    }
+  }, [loading, visibleRows.length]);
 
   useEffect(() => {
     if (!deleteMode) {
@@ -1042,7 +1115,9 @@ export default function AdminUsersPage() {
                       toggleUserSelection(u.id);
                       return;
                     }
-                    nav(`/admin/users/${u.id}/profile`, { state: { backTo: "/admin/users" } });
+                    nav(`/admin/users/${u.id}/profile`, {
+                      state: { backTo: "/admin/users", preserveListState: true },
+                    });
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -1051,7 +1126,9 @@ export default function AdminUsersPage() {
                         toggleUserSelection(u.id);
                         return;
                       }
-                      nav(`/admin/users/${u.id}/profile`, { state: { backTo: "/admin/users" } });
+                      nav(`/admin/users/${u.id}/profile`, {
+                        state: { backTo: "/admin/users", preserveListState: true },
+                      });
                     }
                   }}
                   className={[

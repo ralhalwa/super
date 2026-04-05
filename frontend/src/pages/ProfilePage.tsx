@@ -340,9 +340,12 @@ export default function ProfilePage() {
     Number.isFinite(targetUserID) && targetUserID > 0 && (role === "admin" || role === "supervisor");
   const isAdminViewingUser = role === "admin" && isTargetUserView;
   const isSupervisorViewingStudent = role === "supervisor" && isTargetUserView;
+  const adminLocationState = (location.state as { backTo?: string; preserveListState?: boolean } | null) || null;
   const adminBackTo = isAdminViewingUser
-    ? String((location.state as { backTo?: string } | null)?.backTo || "/admin/users")
+    ? String(adminLocationState?.backTo || "/admin/users")
     : "";
+  const shouldRestoreAdminUsersState =
+    isAdminViewingUser && adminBackTo === "/admin/users" && !!adminLocationState?.preserveListState;
   const supervisorBackTo = isSupervisorViewingStudent
     ? String((location.state as { backTo?: string } | null)?.backTo || "/users")
     : "";
@@ -537,7 +540,7 @@ export default function ProfilePage() {
       }
       right={
         isAdminViewingUser ? (
-          <BackButton onClick={() => nav(adminBackTo)} />
+          <BackButton onClick={() => (shouldRestoreAdminUsersState ? nav(-1) : nav(adminBackTo))} />
         ) : isSupervisorViewingStudent ? (
           <BackButton onClick={() => nav(supervisorBackTo)} />
         ) : null
