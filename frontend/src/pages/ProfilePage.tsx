@@ -66,6 +66,7 @@ type RebootProfile = {
     lastName?: string;
     login?: string;
     gender?: string;
+    number?: string;
     avatarUrl?: string;
     auditRatio?: number;
     totalUp?: number;
@@ -166,9 +167,15 @@ async function loadRebootProfile(login: string, jwt: string): Promise<RebootProf
         auditRatio
         totalUp
         totalDown
+        number: attrs(path: "PhoneNumber")
+        attrs
       }
       event_user(where: { eventId: { _in: [72, 20, 250, 763] }, userLogin: { _eq: $login } }) {
         level
+        user {
+          number: attrs(path: "PhoneNumber")
+          attrs
+        }
       }
       transaction_aggregate(
         where: {
@@ -201,7 +208,8 @@ async function loadRebootProfile(login: string, jwt: string): Promise<RebootProf
   }
 
   const user = (json?.data?.user?.[0] ?? {}) as RebootProfile["user"];
-  const levels = (json?.data?.event_user ?? [])
+  const eventUsers = Array.isArray(json?.data?.event_user) ? json.data.event_user : [];
+  const levels = eventUsers
     .map((e: any) => Number(e?.level))
     .filter((n: number) => Number.isFinite(n));
   const level = levels.length ? Math.max(...levels) : null;
@@ -209,8 +217,19 @@ async function loadRebootProfile(login: string, jwt: string): Promise<RebootProf
 
   const gender = await loadRebootGender(login, jwt);
   const avatarUrl = jwt ? await fetchRebootAvatar(login) : "";
+  const number =
+    eventUsers
+      .map((e: any) => String(e?.user?.number || "").trim() || pickPhoneFromAttrs(e?.user?.attrs))
+      .find((value: string) => value.length > 0) ||
+    String(user?.number || "").trim() ||
+    pickPhoneFromAttrs((json?.data?.user?.[0] as any)?.attrs);
 
-  const mergedUser = { ...user, ...(gender ? { gender } : {}), ...(avatarUrl ? { avatarUrl } : {}) };
+  const mergedUser = {
+    ...user,
+    ...(gender ? { gender } : {}),
+    ...(number ? { number } : {}),
+    ...(avatarUrl ? { avatarUrl } : {}),
+  };
   return {
     user: mergedUser,
     level,
@@ -237,6 +256,24 @@ function pickGenderFromAttrs(attrs: any): string {
       source.Sex,
       source.profileGender,
     ];
+    const found = candidates.find((v) => typeof v === "string" && v.trim());
+    if (found) return String(found).trim();
+  }
+  return "";
+}
+
+function pickPhoneFromAttrs(attrs: any): string {
+  if (!attrs) return "";
+  let source = attrs;
+  if (typeof source === "string") {
+    try {
+      source = JSON.parse(source);
+    } catch {
+      return "";
+    }
+  }
+  if (typeof source === "object" && !Array.isArray(source)) {
+    const candidates = [source.PhoneNumber, source.phoneNumber, source.phone, source.Phone];
     const found = candidates.find((v) => typeof v === "string" && v.trim());
     if (found) return String(found).trim();
   }
@@ -509,8 +546,9 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className={`mt-3 grid gap-2 sm:grid-cols-2 ${role === "admin" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               <Info label="Email" value={rebootProfile?.user?.email || localProfile.user.email} />
+              {role === "admin" ? <Info label="Phone" value={rebootProfile?.user?.number || "-"} /> : null}
               <Info
                 label="Gender"
                 value={genderNormalized === "female" ? "Female" : genderNormalized === "male" ? "Male" : "-"}
