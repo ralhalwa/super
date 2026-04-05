@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../components/AdminLayout";
 import { apiFetch } from "../lib/api";
 
+const BAHRAIN_TIMEZONE = "Asia/Bahrain";
+
 type SupervisorRow = {
   supervisor_user_id: number;
   full_name: string;
@@ -43,6 +45,37 @@ type TaskCompletionStats = {
   };
   total?: number;
 };
+
+function formatActivityWeekLabel(weekOffset: number) {
+  if (weekOffset <= 0) return "This week";
+  if (weekOffset === 1) return "Last week";
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BAHRAIN_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  }).formatToParts(new Date());
+  const year = Number(parts.find((part) => part.type === "year")?.value || 0);
+  const month = Number(parts.find((part) => part.type === "month")?.value || 1) - 1;
+  const day = Number(parts.find((part) => part.type === "day")?.value || 1);
+  const weekdayShort = String(parts.find((part) => part.type === "weekday")?.value || "Sun").toLowerCase();
+  const weekdayMap: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+  const weekday = weekdayMap[weekdayShort.slice(0, 3)] ?? 0;
+
+  const start = new Date(Date.UTC(year, month, day));
+  start.setUTCDate(start.getUTCDate() - weekday - weekOffset * 7);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  return `${formatter.format(start)} - ${formatter.format(end)}`;
+}
 
 function PieChart({ activePercent }: { activePercent: number }) {
   const pct = Math.max(0, Math.min(100, activePercent));
@@ -105,6 +138,7 @@ export default function AdminDashboard() {
   const [studentCount, setStudentCount] = useState(0);
   const [supervisorActivity, setSupervisorActivity] = useState<SupervisorActivity | null>(null);
   const [taskCompletion, setTaskCompletion] = useState<TaskCompletionStats | null>(null);
+  const [activityWeekOffset, setActivityWeekOffset] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -116,7 +150,7 @@ export default function AdminDashboard() {
           apiFetch("/admin/supervisors"),
           apiFetch("/admin/users?role=student&q="),
           apiFetch("/admin/all-boards"),
-          apiFetch("/admin/dashboard/supervisor-activity"),
+          apiFetch(`/admin/dashboard/supervisor-activity?week_offset=${activityWeekOffset}`),
           apiFetch("/admin/dashboard/task-completion"),
         ]);
 
@@ -146,7 +180,7 @@ export default function AdminDashboard() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [activityWeekOffset]);
 
   const totalSupervisors = supervisors.length;
   const activeSupervisorPercent = supervisorActivity?.active?.percentage || 0;
@@ -156,6 +190,7 @@ export default function AdminDashboard() {
   const overdueCount = taskCompletion?.overdue?.count || 0;
   const onTimePercent = taskCompletion?.on_time?.percentage || 0;
   const totalTrackedItems = taskCompletion?.total || 0;
+  const activityWeekLabel = formatActivityWeekLabel(activityWeekOffset);
 
   return (
     <AdminLayout active="dashboard" title="Admin Dashboard" subtitle="Manage users and supervise the system.">
@@ -217,7 +252,24 @@ export default function AdminDashboard() {
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <div className="text-xs font-extrabold text-slate-500">Supervisor Activity</div>
-                <div className="mt-1.5 text-[18px] font-black text-slate-900">This week</div>
+                <div className="mt-1.5 text-[18px] font-black text-slate-900">{activityWeekLabel}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActivityWeekOffset((prev) => prev + 1)}
+                    className="inline-flex h-8 items-center rounded-full border border-slate-200 bg-white px-3 text-[12px] font-black text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    Previous week
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivityWeekOffset((prev) => Math.max(0, prev - 1))}
+                    disabled={activityWeekOffset === 0}
+                    className="inline-flex h-8 items-center rounded-full border border-slate-200 bg-white px-3 text-[12px] font-black text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
               <div className="grid h-11 w-11 place-items-center rounded-[14px] border border-slate-200 bg-slate-50">
                 <span className="h-[18px] w-[18px] rounded-full bg-[conic-gradient(#22c55e_0deg_220deg,#f87171_220deg_360deg)]" />

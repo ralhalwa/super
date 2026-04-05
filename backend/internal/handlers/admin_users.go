@@ -365,6 +365,16 @@ func (a *API) AdminListSupervisors(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) AdminSupervisorActivity(w http.ResponseWriter, r *http.Request) {
+	weekOffset := 0
+	if raw := strings.TrimSpace(r.URL.Query().Get("week_offset")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			writeErr(w, http.StatusBadRequest, "invalid week_offset")
+			return
+		}
+		weekOffset = n
+	}
+
 	location, err := time.LoadLocation("Asia/Bahrain")
 	if err != nil {
 		location = time.UTC
@@ -372,6 +382,7 @@ func (a *API) AdminSupervisorActivity(w http.ResponseWriter, r *http.Request) {
 	nowLocal := time.Now().In(location)
 	startLocal := time.Date(nowLocal.Year(), nowLocal.Month(), nowLocal.Day(), 0, 0, 0, 0, location)
 	startLocal = startLocal.AddDate(0, 0, -int(startLocal.Weekday()))
+	startLocal = startLocal.AddDate(0, 0, -7*weekOffset)
 	endLocal := startLocal.AddDate(0, 0, 7)
 	startUTC := startLocal.UTC().Format("2006-01-02 15:04:05")
 	endUTC := endLocal.UTC().Format("2006-01-02 15:04:05")
