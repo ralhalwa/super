@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
 import Modal, { useEscClose } from "../components/Modal";
+import UserAvatar from "../components/UserAvatar";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useConfirm } from "../lib/useConfirm";
+import { fetchRebootAvatars } from "../lib/rebootAvatars";
 import { fetchRebootPhones } from "../lib/rebootPhones";
 
 type BoardRow = {
@@ -67,6 +69,14 @@ function roleDisplay(role: string) {
   if (normalized === "supervisor") return "supervisor";
   if (normalized === "admin") return "admin";
   return role || "-";
+}
+
+function initialsOf(name: string) {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
 /* icons */
@@ -339,6 +349,7 @@ export default function AdminBoardsPage() {
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersErr, setMembersErr] = useState("");
   const [members, setMembers] = useState<BoardMember[]>([]);
+  const [avatarByLogin, setAvatarByLogin] = useState<Record<string, string>>({});
   const [phoneByLogin, setPhoneByLogin] = useState<Record<string, string>>({});
   const [membersBoard, setMembersBoard] = useState<BoardRow | null>(null);
   const [deletingBoardID, setDeletingBoardID] = useState<number | null>(null);
@@ -359,6 +370,24 @@ export default function AdminBoardsPage() {
   useEffect(() => {
     let alive = true;
 
+    async function loadAvatars() {
+      const logins = [...members, ...assignedStudents]
+        .map((user) => user.nickname || user.email.split("@")[0])
+        .filter(Boolean);
+      if (logins.length === 0) {
+        setAvatarByLogin({});
+        return;
+      }
+      try {
+        const next = await fetchRebootAvatars(logins);
+        if (!alive) return;
+        setAvatarByLogin(next);
+      } catch {
+        if (!alive) return;
+        setAvatarByLogin({});
+      }
+    }
+
     async function loadPhones() {
       const logins = members.map((member) => member.nickname || member.email.split("@")[0]).filter(Boolean);
       if (logins.length === 0) {
@@ -375,11 +404,12 @@ export default function AdminBoardsPage() {
       }
     }
 
+    void loadAvatars();
     void loadPhones();
     return () => {
       alive = false;
     };
-  }, [members]);
+  }, [assignedStudents, members]);
 
   useEffect(() => {
     if (!createOpen || !isAdmin) return;
@@ -1188,6 +1218,8 @@ export default function AdminBoardsPage() {
                 <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
                   {assignedStudents.map((student) => {
                     const checked = selectedMemberIDs.has(student.id);
+                    const avatarUrl =
+                      avatarByLogin[String(student.nickname || student.email.split("@")[0] || "").trim().toLowerCase()] || "";
                     return (
                       <label
                         key={student.id}
@@ -1203,6 +1235,12 @@ export default function AdminBoardsPage() {
                           checked={checked}
                           onChange={() => toggleSelectedMember(student.id)}
                           className="h-4 w-4"
+                        />
+                        <UserAvatar
+                          src={avatarUrl}
+                          alt={student.full_name}
+                          fallback={initialsOf(student.full_name)}
+                          className="bg-slate-50"
                         />
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-[14px] font-black text-slate-900">{student.full_name}</div>
