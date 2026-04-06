@@ -59,7 +59,7 @@ function readAdminUsersPageState(): AdminUsersPageState | null {
           ? parsed.role
           : "all",
       cohort: String(parsed?.cohort || "all"),
-      boardFilter: parsed?.boardFilter === "unassigned" ? "unassigned" : "all",
+      boardFilter: parsed?.boardFilter === "unassigned" || parsed?.boardFilter === "assigned" ? parsed.boardFilter : "all",
       scrollY: Number.isFinite(Number(parsed?.scrollY)) ? Number(parsed.scrollY) : 0,
     };
   } catch {
