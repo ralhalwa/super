@@ -42,7 +42,7 @@ type AdminUsersPageState = {
   q: string;
   role: "all" | "supervisor" | "student";
   cohort: string;
-  boardFilter: "all" | "unassigned";
+  boardFilter: "all" | "unassigned" | "assigned";
   scrollY: number;
 };
 
@@ -393,7 +393,7 @@ export default function AdminUsersPage() {
   const [q, setQ] = useState(initialPageState.current?.q || "");
   const [role, setRole] = useState<"all" | "supervisor" | "student">(initialPageState.current?.role || "all");
   const [cohort, setCohort] = useState(initialPageState.current?.cohort || "all");
-  const [boardFilter, setBoardFilter] = useState<"all" | "unassigned">(initialPageState.current?.boardFilter || "all");
+  const [boardFilter, setBoardFilter] = useState<"all" | "unassigned" | "assigned">(initialPageState.current?.boardFilter || "all");
   const [rows, setRows] = useState<UserRow[]>([]);
   const [avatarByLogin, setAvatarByLogin] = useState<Record<string, string>>({});
   const [phoneByLogin, setPhoneByLogin] = useState<Record<string, string>>({});
@@ -475,6 +475,7 @@ export default function AdminUsersPage() {
       rows.filter((row) => {
         if (cohort !== "all" && normalizeCohort(row.cohort) !== cohort) return false;
         if (boardFilter === "unassigned" && (row.assigned_boards || []).length > 0) return false;
+        if (boardFilter === "assigned" && (!row.assigned_boards || row.assigned_boards.length === 0)) return false;
         return true;
       }),
     [rows, cohort, boardFilter]
@@ -1052,7 +1053,8 @@ export default function AdminUsersPage() {
             onChange={(e) => setBoardFilter(e.target.value as "all" | "unassigned")}
           >
             <option value="all">All board states</option>
-            <option value="unassigned">Not assigned to board</option>
+            <option value="unassigned">Not assigned</option>
+            <option value="assigned">Assigned</option>
           </select>
         </div>
 
