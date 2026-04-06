@@ -73,8 +73,11 @@ func SearchUsersByRole(conn DBTX, role string, q string) ([]models.User, error) 
 
 	rows, err := conn.Query(`
 		SELECT u.id, u.full_name, u.email, ?, u.is_active, u.created_at,
-		       IFNULL(u.nickname,''), IFNULL(u.cohort,'')
+		       IFNULL(u.nickname,''), IFNULL(u.cohort,''),
+		       IFNULL(GROUP_CONCAT(DISTINCT b.name), '')
 		FROM users u
+		LEFT JOIN board_members bm ON bm.user_id = u.id
+		LEFT JOIN boards b ON b.id = bm.board_id
 		WHERE u.is_active = 1
 		  AND (
 		    u.role = ?
@@ -89,6 +92,7 @@ func SearchUsersByRole(conn DBTX, role string, q string) ([]models.User, error) 
 		    OR LOWER(u.email) LIKE '%' || LOWER(?) || '%'
 		    OR LOWER(IFNULL(u.nickname,'')) LIKE '%' || LOWER(?) || '%'
 		  )
+		GROUP BY u.id, u.full_name, u.email, u.is_active, u.created_at, u.nickname, u.cohort
 		ORDER BY u.full_name ASC
 	`, role, role, role, q, q, q)
 	if err != nil {
@@ -100,10 +104,12 @@ func SearchUsersByRole(conn DBTX, role string, q string) ([]models.User, error) 
 	for rows.Next() {
 		var u models.User
 		var activeInt int
-		if err := rows.Scan(&u.ID, &u.FullName, &u.Email, &u.Role, &activeInt, &u.CreatedAt, &u.Nickname, &u.Cohort); err != nil {
+		var assignedBoardsCSV string
+		if err := rows.Scan(&u.ID, &u.FullName, &u.Email, &u.Role, &activeInt, &u.CreatedAt, &u.Nickname, &u.Cohort, &assignedBoardsCSV); err != nil {
 			return nil, err
 		}
 		u.IsActive = activeInt == 1
+		u.AssignedBoards = splitAssignedBoardsCSV(assignedBoardsCSV)
 		out = append(out, u)
 	}
 	return out, nil
@@ -134,8 +140,11 @@ func SearchUsersStudentsAndSupervisors(conn DBTX, q string) ([]models.User, erro
 			u.is_active,
 			u.created_at,
 			IFNULL(u.nickname,''),
-			IFNULL(u.cohort,'')
+			IFNULL(u.cohort,''),
+			IFNULL(GROUP_CONCAT(DISTINCT b.name), '')
 		FROM users u
+		LEFT JOIN board_members bm ON bm.user_id = u.id
+		LEFT JOIN boards b ON b.id = bm.board_id
 		WHERE u.is_active = 1
 		  AND (
 		    u.role IN ('student','supervisor')
@@ -150,6 +159,7 @@ func SearchUsersStudentsAndSupervisors(conn DBTX, q string) ([]models.User, erro
 		    OR LOWER(u.email) LIKE '%' || LOWER(?) || '%'
 		    OR LOWER(IFNULL(u.nickname,'')) LIKE '%' || LOWER(?) || '%'
 		  )
+		GROUP BY u.id, u.full_name, u.email, u.role, u.is_active, u.created_at, u.nickname, u.cohort
 		ORDER BY u.full_name ASC
 	`, q, q, q)
 	if err != nil {
@@ -161,13 +171,34 @@ func SearchUsersStudentsAndSupervisors(conn DBTX, q string) ([]models.User, erro
 	for rows.Next() {
 		var u models.User
 		var activeInt int
-		if err := rows.Scan(&u.ID, &u.FullName, &u.Email, &u.Role, &activeInt, &u.CreatedAt, &u.Nickname, &u.Cohort); err != nil {
+		var assignedBoardsCSV string
+		if err := rows.Scan(&u.ID, &u.FullName, &u.Email, &u.Role, &activeInt, &u.CreatedAt, &u.Nickname, &u.Cohort, &assignedBoardsCSV); err != nil {
 			return nil, err
 		}
 		u.IsActive = activeInt == 1
+		u.AssignedBoards = splitAssignedBoardsCSV(assignedBoardsCSV)
 		out = append(out, u)
 	}
 	return out, nil
+}
+
+func splitAssignedBoardsCSV(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return []string{}
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	seen := make(map[string]bool, len(parts))
+	for _, part := range parts {
+		name := strings.TrimSpace(part)
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out
 }
 
 func UserExistsByEmail(conn DBTX, email string) (bool, error) {

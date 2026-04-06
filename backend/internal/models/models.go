@@ -9,6 +9,7 @@ type User struct {
 	CreatedAt string `json:"created_at"`
 	Nickname  string `json:"nickname"`
 	Cohort    string `json:"cohort"`
+	AssignedBoards []string `json:"assigned_boards,omitempty"`
 }
 
 type SupervisorRow struct {
