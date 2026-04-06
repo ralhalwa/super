@@ -178,7 +178,6 @@ async function fetchRebootUserByLogin(login: string): Promise<RebootCandidate | 
     .filter((value: number) => Number.isFinite(value))
     .sort((a: number, b: number) => a - b)
     .filter((value: number, index: number, all: number[]) => index === 0 || value !== all[index - 1]);
-    const assignedstudenttoboard = (json?.data?.assignedStudentToBoard || []).map((row: any) => String(row?.login || "").trim());
 
   let cohort = "";
   if (userEventID > 0 && moduleEventIDs.length > 0) {
