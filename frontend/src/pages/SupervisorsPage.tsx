@@ -277,7 +277,7 @@ export default function SupervisorsPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+      <div className="supervisors-list-panel rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
         {err && (
           <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
             {err}
@@ -304,11 +304,11 @@ export default function SupervisorsPage() {
                 >
                   <div className="relative h-[88px] w-[128px] cursor-pointer origin-bottom [perspective:1500px] sm:h-[96px] sm:w-[144px]">
                     <div className="absolute inset-0">
-                      <div className="absolute inset-x-0 bottom-0 h-full origin-top rounded-[16px] rounded-tl-none bg-[#c7bfff] transition-all duration-300 ease-out after:absolute after:bottom-[99%] after:left-0 after:h-2.5 after:w-12 after:rounded-t-[12px] after:bg-[#c7bfff] after:content-[''] before:absolute before:-top-[9px] before:left-[44px] before:h-2.5 before:w-2.5 before:bg-[#c7bfff] before:[clip-path:polygon(0_35%,0%_100%,50%_100%)] before:content-[''] group-hover:shadow-[0_16px_28px_rgba(109,94,252,0.10)]" />
-                      <div className="absolute inset-1 origin-bottom rounded-[16px] bg-[#ece8ff] transition-all duration-300 ease-out select-none group-hover:[transform:rotateX(-18deg)]" />
-                      <div className="absolute inset-1 origin-bottom rounded-[16px] bg-[#f5f3ff] transition-all duration-300 ease-out group-hover:[transform:rotateX(-28deg)]" />
-                      <div className="absolute inset-1 origin-bottom rounded-[16px] bg-[#fbfaff] transition-all duration-300 ease-out group-hover:[transform:rotateX(-36deg)]" />
-                      <div className="absolute bottom-0 flex h-[84px] w-full origin-bottom items-end rounded-[16px] rounded-tr-none bg-gradient-to-t from-[#a79dff] to-[#d8d2ff] transition-all duration-300 ease-out after:absolute after:bottom-[99%] after:right-0 after:h-2.5 after:w-[82px] after:rounded-t-[12px] after:bg-[#d8d2ff] after:content-[''] before:absolute before:-top-[7px] before:right-[79px] before:size-2 before:bg-[#d8d2ff] before:[clip-path:polygon(100%_14%,50%_100%,100%_100%)] before:content-[''] group-hover:shadow-[inset_0_16px_28px_rgba(255,255,255,0.38),_inset_0_-16px_28px_rgba(109,94,252,0.08)] group-hover:[transform:rotateX(-46deg)_translateY(1px)]">
+                      <div className="workspace-folder-back absolute inset-x-0 bottom-0 h-full origin-top rounded-[16px] rounded-tl-none bg-[#c7bfff] transition-all duration-300 ease-out after:absolute after:bottom-[99%] after:left-0 after:h-2.5 after:w-12 after:rounded-t-[12px] after:bg-[#c7bfff] after:content-[''] before:absolute before:-top-[9px] before:left-[44px] before:h-2.5 before:w-2.5 before:bg-[#c7bfff] before:[clip-path:polygon(0_35%,0%_100%,50%_100%)] before:content-[''] group-hover:shadow-[0_16px_28px_rgba(109,94,252,0.10)]" />
+                      <div className="workspace-folder-sheet workspace-folder-sheet-1 absolute inset-1 origin-bottom rounded-[16px] bg-[#ece8ff] transition-all duration-300 ease-out select-none group-hover:[transform:rotateX(-18deg)]" />
+                      <div className="workspace-folder-sheet workspace-folder-sheet-2 absolute inset-1 origin-bottom rounded-[16px] bg-[#f5f3ff] transition-all duration-300 ease-out group-hover:[transform:rotateX(-28deg)]" />
+                      <div className="workspace-folder-sheet workspace-folder-sheet-3 absolute inset-1 origin-bottom rounded-[16px] bg-[#fbfaff] transition-all duration-300 ease-out group-hover:[transform:rotateX(-36deg)]" />
+                      <div className="workspace-folder-front absolute bottom-0 flex h-[84px] w-full origin-bottom items-end rounded-[16px] rounded-tr-none bg-gradient-to-t from-[#a79dff] to-[#d8d2ff] transition-all duration-300 ease-out after:absolute after:bottom-[99%] after:right-0 after:h-2.5 after:w-[82px] after:rounded-t-[12px] after:bg-[#d8d2ff] after:content-[''] before:absolute before:-top-[7px] before:right-[79px] before:size-2 before:bg-[#d8d2ff] before:[clip-path:polygon(100%_14%,50%_100%,100%_100%)] before:content-[''] group-hover:shadow-[inset_0_16px_28px_rgba(255,255,255,0.38),_inset_0_-16px_28px_rgba(109,94,252,0.08)] group-hover:[transform:rotateX(-46deg)_translateY(1px)]">
                         <div className="flex w-full items-end px-3 pb-3">
                           <div className="min-w-0">
                             <div className="text-[8px] font-black uppercase tracking-[0.16em] text-white/80">
@@ -353,7 +353,7 @@ export default function SupervisorsPage() {
                   key={s.supervisor_user_id}
                   onClick={() => nav(`/admin/files/${s.file_id}`)}
                   title="Open workspace"
-                  className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.06)] transition hover:-translate-y-[1px] hover:border-violet-200 hover:bg-violet-50/30 hover:shadow-[0_16px_32px_rgba(109,94,252,0.12)] active:translate-y-0 active:shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
+                  className="supervisors-list-row group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.06)] transition hover:-translate-y-[1px] hover:border-violet-200 hover:bg-violet-50/30 hover:shadow-[0_16px_32px_rgba(109,94,252,0.12)] active:translate-y-0 active:shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <UserAvatar

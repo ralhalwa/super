@@ -97,8 +97,21 @@ body, button, input, select, textarea {
 
 .admin-dark aside > div {
   background: var(--admin-panel) !important;
-  border-color: var(--admin-border-soft) !important;
+  border-color: transparent !important;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28) !important;
+}
+
+.admin-dark aside button {
+  border-color: transparent !important;
+}
+
+.admin-dark aside button:hover {
+  border-color: transparent !important;
+}
+
+.admin-dark aside button > span[class*="border"] {
+  border-color: transparent !important;
+  background: rgba(17, 26, 44, 0.72) !important;
 }
 
 .admin-dark main {
@@ -126,7 +139,9 @@ body, button, input, select, textarea {
 .admin-dark [class~="bg-white/80"],
 .admin-dark [class~="bg-white/85"],
 .admin-dark [class~="bg-white/90"],
+.admin-dark [class~="bg-white/95"],
 .admin-dark [class~="bg-slate-50/70"],
+.admin-dark [class~="bg-slate-50/80"],
 .admin-dark [class~="bg-slate-100/70"] {
   background: rgba(16, 25, 42, 0.9) !important;
   background-color: rgba(16, 25, 42, 0.9) !important;
@@ -142,6 +157,7 @@ body, button, input, select, textarea {
 
 .admin-dark [class~="border-slate-200"],
 .admin-dark [class~="border-slate-200/70"],
+.admin-dark [class~="border-slate-200/90"],
 .admin-dark [class~="border-slate-300"],
 .admin-dark [class~="border-slate-300/70"],
 .admin-dark [class~="border-[#6d5efc]"],
@@ -152,8 +168,13 @@ body, button, input, select, textarea {
 .admin-dark [class~="border-[#6d5efc]/30"],
 .admin-dark [class~="border-[#6d5efc]/35"],
 .admin-dark [class~="border-[#6d5efc]/40"],
-.admin-dark [class~="border-slate-900/10"] {
+.admin-dark [class~="border-slate-900/10"],
+.admin-dark [class~="border-slate-900/16"] {
   border-color: var(--admin-border) !important;
+}
+
+.admin-dark aside > div {
+  border-color: transparent !important;
 }
 
 .admin-dark [class~="text-slate-950"],
@@ -245,6 +266,57 @@ body, button, input, select, textarea {
   border-color: #5b75a3 !important;
 }
 
+.admin-dark .supervisors-list-panel {
+  background: #0f1727 !important;
+  border-color: #1d2940 !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18) !important;
+}
+
+.admin-dark .supervisors-list-row {
+  background: #101827 !important;
+  border-color: #263149 !important;
+  box-shadow: none !important;
+}
+
+.admin-dark .supervisors-list-row:hover {
+  background: #121d30 !important;
+  border-color: #35425e !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.16) !important;
+}
+
+.admin-dark .workspace-folder-back,
+.admin-dark .workspace-folder-back::before,
+.admin-dark .workspace-folder-back::after {
+  background: #39496d !important;
+  background-color: #39496d !important;
+}
+
+.admin-dark .workspace-folder-sheet-1 {
+  background: #2b3857 !important;
+  background-color: #2b3857 !important;
+}
+
+.admin-dark .workspace-folder-sheet-2 {
+  background: #334361 !important;
+  background-color: #334361 !important;
+}
+
+.admin-dark .workspace-folder-sheet-3 {
+  background: #3b4d70 !important;
+  background-color: #3b4d70 !important;
+}
+
+.admin-dark .workspace-folder-front {
+  background: linear-gradient(180deg, #5f75a5 0%, #3f5684 100%) !important;
+  box-shadow: inset 0 14px 22px rgba(255, 255, 255, 0.08), inset 0 -18px 24px rgba(0, 0, 0, 0.14) !important;
+}
+
+.admin-dark .workspace-folder-front::before,
+.admin-dark .workspace-folder-front::after {
+  background: #5f75a5 !important;
+  background-color: #5f75a5 !important;
+}
+
 .admin-dark .assign-field {
   background: #0b1222 !important;
   border-color: var(--admin-border) !important;
@@ -264,6 +336,77 @@ body, button, input, select, textarea {
 
 .admin-dark .assign-role-pill [class~="text-slate-900"] {
   color: #c9f5dc !important;
+}
+
+.admin-dark .boards-page [class*="text-slate-900/"],
+.admin-dark .boards-page [class*="text-slate-800/"],
+.admin-dark .boards-page [class*="text-slate-700/"] {
+  color: var(--admin-text) !important;
+}
+
+.admin-dark .boards-page [class*="text-slate-600/"],
+.admin-dark .boards-page [class*="text-slate-500/"] {
+  color: var(--admin-muted) !important;
+}
+
+.admin-dark .boards-page [class~="bg-slate-900/3"],
+.admin-dark .boards-page [class~="bg-slate-900/10"] {
+  background: #17223a !important;
+  background-color: #17223a !important;
+}
+
+.admin-dark .boards-page [class~="divide-slate-200"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--admin-border) !important;
+}
+
+.admin-dark .boards-page [class~="hover:bg-[#faf8ff]"]:hover {
+  background: var(--admin-panel-raised) !important;
+  background-color: var(--admin-panel-raised) !important;
+}
+
+.admin-dark .board-action-members {
+  background: #14283a !important;
+  border-color: #245845 !important;
+  color: #7ee0ae !important;
+}
+
+.admin-dark .board-action-members:hover {
+  background: #19364b !important;
+  border-color: #2f765d !important;
+}
+
+.admin-dark .board-action-delete {
+  background: #311b24 !important;
+  border-color: #7f3040 !important;
+  color: #ff8f9d !important;
+}
+
+.admin-dark .board-action-delete:hover {
+  background: #40202b !important;
+  border-color: #a34556 !important;
+}
+
+.admin-dark .board-members-popup {
+  background: var(--admin-panel) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-dark .board-popup-edit {
+  background: #263855 !important;
+  border-color: #405478 !important;
+  color: #dce7ff !important;
+}
+
+.admin-dark .board-popup-close {
+  background: #111a2c !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-dark .board-member-row {
+  background: #111a2c !important;
+  border-color: var(--admin-border) !important;
 }
 
 body.admin-dark-theme .modalPanelIn {
@@ -292,4 +435,17 @@ body.admin-dark-theme .modalPanelIn [class*="text-slate-7"],
 body.admin-dark-theme .modalPanelIn [class*="text-slate-6"],
 body.admin-dark-theme .modalPanelIn [class*="text-slate-5"] {
   color: #a5b0c3 !important;
+}
+
+.admin-dark aside > div {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.admin-dark aside [class*="border"] {
+  border-color: transparent !important;
+}
+
+.admin-dark aside .admin-sidebar-footer {
+  border-top: 1px solid #1d2940 !important;
 }

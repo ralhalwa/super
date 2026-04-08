@@ -333,7 +333,7 @@ export default function AdminSidebar({ active, drawer = false, darkMode = false,
           </nav>
         </div>
 
-        <div className="mt-auto flex flex-col gap-2 border-t border-slate-200 pt-3">
+        <div className="admin-sidebar-footer mt-auto flex flex-col gap-2 border-t border-slate-200 pt-3">
           {onToggleTheme ? (
             <button
               type="button"

@@ -232,7 +232,7 @@ export default function AdminLayout({
             </div>
           </div>
 
-          <div className="mt-auto flex flex-col gap-2 border-t border-slate-200 pt-3">
+          <div className="admin-sidebar-footer mt-auto flex flex-col gap-2 border-t border-slate-200 pt-3">
             <button
               type="button"
               onClick={() => setDarkMode((next) => !next)}
