@@ -209,9 +209,10 @@ export default function SupervisorsPage() {
         </div>
       }
     >
-      <div className="mb-5 flex items-center justify-between gap-3 max-[1180px]:flex-col max-[1180px]:items-stretch">
-        <div className="flex min-w-0 flex-[1.2] items-center gap-3 max-[1180px]:flex-col max-[1180px]:items-stretch">
-          <div className="supervisors-search flex h-12 min-w-[420px] flex-1 items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/90 px-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur max-[1180px]:min-w-0">
+      <div className="supervisors-page">
+        <div className="mb-5 flex items-center justify-between gap-3 max-[1180px]:flex-col max-[1180px]:items-stretch">
+          <div className="flex min-w-0 flex-[1.2] items-center gap-3 max-[1180px]:flex-col max-[1180px]:items-stretch">
+            <div className="supervisors-search flex h-12 min-w-[420px] flex-1 items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/90 px-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur max-[1180px]:min-w-0">
             <span className="text-slate-400" aria-hidden="true">
               <SearchIcon size={18} />
             </span>
@@ -232,7 +233,7 @@ export default function SupervisorsPage() {
             ) : null}
           </div>
 
-          <div className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+            <div className="supervisors-view-toggle inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <button
               type="button"
               onClick={() => setViewMode("cards")}
@@ -259,11 +260,11 @@ export default function SupervisorsPage() {
               <FolderIcon size={15} />
               Workspaces
             </button>
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-wrap justify-end gap-2.5 max-[1180px]:justify-start">
-          <div className="supervisors-count-card inline-flex items-center gap-3 rounded-2xl border border-[#6d5efc]/18 bg-white/90 px-4 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <div className="flex flex-wrap justify-end gap-2.5 max-[1180px]:justify-start">
+            <div className="supervisors-count-card inline-flex items-center gap-3 rounded-2xl border border-[#6d5efc]/18 bg-white/90 px-4 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <span className="supervisors-count-icon grid h-11 w-11 place-items-center rounded-full border border-[#6d5efc]/20 bg-[#f7f5ff] text-[#6d5efc]">
               <FolderIcon size={18} />
             </span>
@@ -273,11 +274,11 @@ export default function SupervisorsPage() {
               </div>
               <div className="mt-1 text-[12px] font-black text-slate-500">Supervisors</div>
             </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="supervisors-list-panel rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
+        <div className="supervisors-list-panel rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.06)]">
         {err && (
           <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
             {err}
@@ -403,6 +404,7 @@ export default function SupervisorsPage() {
             })}
           </div>
         )}
+        </div>
       </div>
     </AdminLayout>
   );

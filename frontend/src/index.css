@@ -233,25 +233,35 @@ body, button, input, select, textarea {
   background-color: #3e5a87 !important;
 }
 
+.admin-dark .supervisors-page [class*="border"] {
+  border-color: #25324a !important;
+}
+
 .admin-dark .supervisors-search {
-  background: #0b1222 !important;
-  border-color: var(--admin-border) !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), 0 12px 30px rgba(0, 0, 0, 0.18) !important;
+  background: #1a263b !important;
+  border-color: #2a3852 !important;
+  box-shadow: none !important;
 }
 
 .admin-dark .supervisors-search:focus-within {
-  border-color: #344665 !important;
-  box-shadow: inset 0 0 0 1px rgba(116, 139, 179, 0.14), 0 12px 30px rgba(0, 0, 0, 0.2) !important;
+  border-color: #3b4d6e !important;
+  box-shadow: none !important;
+}
+
+.admin-dark .supervisors-search input {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .admin-dark .supervisors-count-card {
-  background: var(--admin-panel) !important;
-  border-color: var(--admin-border) !important;
+  background: #151f32 !important;
+  border-color: #25324a !important;
+  box-shadow: none !important;
 }
 
 .admin-dark .supervisors-count-icon {
-  background: #111a2c !important;
-  border-color: #344665 !important;
+  background: #1c2a43 !important;
+  border-color: transparent !important;
   color: #8fb3ff !important;
 }
 
@@ -267,21 +277,31 @@ body, button, input, select, textarea {
 }
 
 .admin-dark .supervisors-list-panel {
-  background: #0f1727 !important;
-  border-color: #1d2940 !important;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18) !important;
+  background: #111a2c !important;
+  border-color: #243149 !important;
+  box-shadow: none !important;
 }
 
 .admin-dark .supervisors-list-row {
-  background: #101827 !important;
-  border-color: #263149 !important;
+  background: #151f32 !important;
+  border-color: #2a3852 !important;
   box-shadow: none !important;
 }
 
 .admin-dark .supervisors-list-row:hover {
-  background: #121d30 !important;
-  border-color: #35425e !important;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.16) !important;
+  background: #18253b !important;
+  border-color: #3b4d6e !important;
+  box-shadow: none !important;
+}
+
+.admin-dark .supervisors-view-toggle {
+  background: #151f32 !important;
+  border-color: #25324a !important;
+  box-shadow: none !important;
+}
+
+.admin-dark .supervisors-page [class*="shadow-"] {
+  box-shadow: none !important;
 }
 
 .admin-dark .workspace-folder-back,
