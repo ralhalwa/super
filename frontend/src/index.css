@@ -560,6 +560,98 @@ body, button, input, select, textarea {
   color: #ff8f9d !important;
 }
 
+.admin-dark .meetings-page [class*="shadow-"] {
+  box-shadow: none !important;
+}
+
+.admin-dark .meetings-page [class*="bg-[radial-gradient"],
+.admin-dark .meetings-page [class*="bg-[linear-gradient"],
+.admin-dark .meetings-page [class~="bg-white"],
+.admin-dark .meetings-page [class~="bg-white/95"] {
+  background: #0e1525 !important;
+  background-color: #0e1525 !important;
+  border-color: #24304a !important;
+}
+
+.admin-dark .meetings-page [class~="bg-slate-50"],
+.admin-dark .meetings-page [class~="bg-slate-50/80"],
+.admin-dark .meetings-page [class~="bg-white/90"] {
+  background: #111a2c !important;
+  background-color: #111a2c !important;
+  border-color: #25324a !important;
+}
+
+.admin-dark .meetings-page input,
+.admin-dark .meetings-page select,
+.admin-dark .meetings-page textarea {
+  background: #111a2c !important;
+  border-color: #24304a !important;
+  color: #f4f7fb !important;
+}
+
+.admin-dark .meetings-page input::placeholder,
+.admin-dark .meetings-page textarea::placeholder {
+  color: #6f7b91 !important;
+}
+
+.admin-dark .meetings-page [class~="bg-amber-50"],
+.admin-dark .meetings-page [class~="bg-amber-50/40"] {
+  background: #3b2d16 !important;
+  border-color: #82601d !important;
+  color: #f4c66a !important;
+}
+
+.admin-dark .meetings-page [class~="bg-emerald-50"],
+.admin-dark .meetings-page [class~="bg-emerald-50/40"] {
+  background: #14283a !important;
+  border-color: #245845 !important;
+  color: #7ee0ae !important;
+}
+
+.admin-dark .meetings-page [class~="bg-violet-50"] {
+  background: #243654 !important;
+  border-color: #405478 !important;
+  color: #dce7ff !important;
+}
+
+.admin-dark .meetings-page [class~="bg-rose-50"],
+.admin-dark .meetings-page [class~="bg-rose-50/40"] {
+  background: #311b24 !important;
+  border-color: #7f3040 !important;
+  color: #ff8f9d !important;
+}
+
+.admin-dark .meetings-page [class~="text-amber-700"],
+.admin-dark .meetings-page [class~="text-amber-800"] {
+  color: #f4c66a !important;
+}
+
+.admin-dark .meetings-page [class~="text-emerald-600"],
+.admin-dark .meetings-page [class~="text-emerald-700"] {
+  color: #7ee0ae !important;
+}
+
+.admin-dark .meetings-page [class~="text-rose-600"],
+.admin-dark .meetings-page [class~="text-rose-700"] {
+  color: #ff8f9d !important;
+}
+
+.admin-dark .meetings-page [class~="text-violet-700"] {
+  color: #dce7ff !important;
+}
+
+.admin-dark .meetings-page [class~="text-slate-900"],
+.admin-dark .meetings-page [class~="text-slate-800"] {
+  color: #f4f7fb !important;
+}
+
+.admin-dark .meetings-page [class~="text-slate-700"],
+.admin-dark .meetings-page [class~="text-slate-600"],
+.admin-dark .meetings-page [class~="text-slate-500"],
+.admin-dark .meetings-page [class~="text-slate-400"] {
+  color: #a5b0c3 !important;
+}
+
 .admin-dark .dashboard-page [class*="border"] {
   border-color: transparent !important;
 }

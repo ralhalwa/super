@@ -575,6 +575,7 @@ export default function MeetingsCalendarPage() {
           </div>
         ) : null}
 
+        <div className="meetings-page">
         <section className="mb-4 grid min-w-0 gap-3 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="min-w-0 overflow-hidden rounded-[24px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.22),_transparent_32%),linear-gradient(135deg,#ffffff,#fff8eb)] p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] max-[520px]:p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -946,6 +947,7 @@ export default function MeetingsCalendarPage() {
             </div>
           </div>
         ) : null}
+        </div>
       </AdminLayout>
     </>
   );
