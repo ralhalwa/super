@@ -211,7 +211,7 @@ export default function SupervisorsPage() {
     >
       <div className="mb-5 flex items-center justify-between gap-3 max-[1180px]:flex-col max-[1180px]:items-stretch">
         <div className="flex min-w-0 flex-[1.2] items-center gap-3 max-[1180px]:flex-col max-[1180px]:items-stretch">
-          <div className="flex h-12 min-w-[420px] flex-1 items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/90 px-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur max-[1180px]:min-w-0">
+          <div className="supervisors-search flex h-12 min-w-[420px] flex-1 items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/90 px-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur max-[1180px]:min-w-0">
             <span className="text-slate-400" aria-hidden="true">
               <SearchIcon size={18} />
             </span>
@@ -263,8 +263,8 @@ export default function SupervisorsPage() {
         </div>
 
         <div className="flex flex-wrap justify-end gap-2.5 max-[1180px]:justify-start">
-          <div className="inline-flex items-center gap-3 rounded-2xl border border-[#6d5efc]/18 bg-white/90 px-4 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-            <span className="grid h-11 w-11 place-items-center rounded-full border border-[#6d5efc]/20 bg-[#f7f5ff] text-[#6d5efc]">
+          <div className="supervisors-count-card inline-flex items-center gap-3 rounded-2xl border border-[#6d5efc]/18 bg-white/90 px-4 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+            <span className="supervisors-count-icon grid h-11 w-11 place-items-center rounded-full border border-[#6d5efc]/20 bg-[#f7f5ff] text-[#6d5efc]">
               <FolderIcon size={18} />
             </span>
             <div className="leading-none">
@@ -391,7 +391,7 @@ export default function SupervisorsPage() {
                   </div>
 
                   <div className="flex flex-none items-center gap-2">
-                    <span className="inline-flex items-center justify-center rounded-full border border-violet-200 bg-violet-100/60 px-3 py-1 text-xs font-black text-violet-700">
+                    <span className="supervisors-open-btn inline-flex items-center justify-center rounded-full border border-violet-200 bg-violet-100/60 px-3 py-1 text-xs font-black text-violet-700">
                       Open
                     </span>
                     <span className="text-2xl font-semibold text-slate-300 transition group-hover:translate-x-[2px] group-hover:text-violet-400">

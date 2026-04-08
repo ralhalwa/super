@@ -438,7 +438,7 @@ export default function AssignPage() {
             </div>
 
             <input
-              className="mb-2 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
+              className="assign-field mb-2 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
               placeholder="Search supervisors by name/email/nickname..."
               value={supQ}
               onChange={(e) => setSupQ(e.target.value)}
@@ -522,7 +522,7 @@ export default function AssignPage() {
             <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px]">
               <input
                 className={cn(
-                  "w-full rounded-xl border bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none",
+                  "assign-field w-full rounded-xl border bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none",
                   "focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10",
                   !selectedSup && "cursor-not-allowed opacity-60"
                 )}
@@ -534,7 +534,7 @@ export default function AssignPage() {
 
               <select
                 className={cn(
-                  "w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none",
+                  "assign-field w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none",
                   "focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10",
                   !selectedSup && "cursor-not-allowed opacity-60"
                 )}
@@ -626,7 +626,7 @@ export default function AssignPage() {
                         ) : null}
 
                         <div className="mt-1 flex min-w-0 items-center gap-2">
-                          <span className="inline-flex h-7 flex-none items-center gap-2 rounded-full border border-emerald-300/60 bg-emerald-50 px-2.5 text-[12px] font-black text-slate-900">
+                          <span className="assign-role-pill inline-flex h-7 flex-none items-center gap-2 rounded-full border border-emerald-300/60 bg-emerald-50 px-2.5 text-[12px] font-black text-slate-900">
                             <span className="text-slate-900">
                               <RoleIcon role="student" />
                             </span>
@@ -673,13 +673,13 @@ export default function AssignPage() {
             {selectedSup ? (
               <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px]">
                 <input
-                  className="w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
+                  className="assign-field w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
                   placeholder="Search assigned by name/email/nickname..."
                   value={assignedQ}
                   onChange={(e) => setAssignedQ(e.target.value)}
                 />
                 <select
-                  className="w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
+                  className="assign-field w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-[13px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/40 focus:ring-4 focus:ring-[#6d5efc]/10"
                   value={assignedCohort}
                   onChange={(e) => setAssignedCohort(e.target.value)}
                 >
@@ -778,7 +778,7 @@ export default function AssignPage() {
                         ) : null}
 
                         <div className="mt-1 flex min-w-0 items-center gap-2">
-                          <span className="inline-flex h-7 flex-none items-center gap-2 rounded-full border border-emerald-300/60 bg-emerald-50 px-2.5 text-[12px] font-black text-slate-900">
+                          <span className="assign-role-pill inline-flex h-7 flex-none items-center gap-2 rounded-full border border-emerald-300/60 bg-emerald-50 px-2.5 text-[12px] font-black text-slate-900">
                             <span className="text-slate-900">
                               <RoleIcon role="student" />
                             </span>

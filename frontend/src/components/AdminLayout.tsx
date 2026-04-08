@@ -87,6 +87,11 @@ export default function AdminLayout({
   const { isAdmin, isSupervisor, login, email, logout } = useAuth();
   const { hasUnread } = useNotifications();
   const [adminSidebarOpen, setAdminSidebarOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const savedTheme = window.localStorage.getItem("taskflow-theme");
+    return savedTheme ? savedTheme === "dark" : true;
+  });
   const baseName = login || email || "User";
   const avatarLogin = String(login || String(email || "").split("@")[0] || "").trim();
   const [avatarUrl, setAvatarUrl] = useState(() => getCachedRebootAvatar(avatarLogin));
@@ -131,6 +136,14 @@ export default function AdminLayout({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [adminSidebarOpen]);
+
+  useEffect(() => {
+    window.localStorage.setItem("taskflow-theme", darkMode ? "dark" : "light");
+    document.body.classList.toggle("admin-dark-theme", darkMode);
+    return () => {
+      document.body.classList.remove("admin-dark-theme");
+    };
+  }, [darkMode]);
 
   const nonAdminNav =
     !isAdmin ? (
@@ -222,6 +235,21 @@ export default function AdminLayout({
           <div className="mt-auto flex flex-col gap-2 border-t border-slate-200 pt-3">
             <button
               type="button"
+              onClick={() => setDarkMode((next) => !next)}
+              aria-pressed={darkMode}
+              className="flex items-center gap-3 rounded-[14px] border border-slate-200 bg-white px-3 py-2 font-extrabold text-slate-700 transition hover:border-[#6d5efc]/25 hover:bg-slate-50 hover:text-slate-900"
+            >
+              <span className="grid h-8 w-8 place-items-center rounded-full border border-current/15 bg-white/70">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3v2.2M12 18.8V21M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M3 12h2.2M18.8 12H21M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </span>
+              <span className="text-[14px] leading-none">Toggle Theme</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => nav("/profile")}
               className="flex min-w-0 items-center gap-3 rounded-[16px] border border-slate-200 bg-white px-3 py-2 text-left transition hover:bg-slate-50"
               title="Open profile"
@@ -259,7 +287,7 @@ export default function AdminLayout({
     ) : null;
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] text-slate-900">
+    <div className={cn(darkMode && "admin-dark", "min-h-screen bg-[#f4f6fb] text-slate-900")}>
       <div
         className={cn(
           "grid min-h-screen min-w-0",
@@ -283,7 +311,7 @@ export default function AdminLayout({
             </button>
 
             <div className="max-[1050px]:hidden">
-              <AdminSidebar active={active} />
+              <AdminSidebar active={active} darkMode={darkMode} onToggleTheme={() => setDarkMode((next) => !next)} />
             </div>
 
             {adminSidebarOpen ? (
@@ -295,7 +323,7 @@ export default function AdminLayout({
                   onClick={() => setAdminSidebarOpen(false)}
                 />
                 <div className="relative h-full w-[260px] max-w-[82vw]">
-                  <AdminSidebar active={active} drawer onNavigate={() => setAdminSidebarOpen(false)} />
+                  <AdminSidebar active={active} drawer darkMode={darkMode} onToggleTheme={() => setDarkMode((next) => !next)} onNavigate={() => setAdminSidebarOpen(false)} />
                 </div>
               </div>
             ) : null}
