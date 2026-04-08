@@ -202,7 +202,7 @@ export default function NotificationsPage() {
         </div>
       ) : null}
 
-      <section className="space-y-4">
+      <section className="notifications-page space-y-4">
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_100%)] px-4 py-3">
             <div>

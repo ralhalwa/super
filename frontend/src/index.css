@@ -652,6 +652,84 @@ body, button, input, select, textarea {
   color: #a5b0c3 !important;
 }
 
+.admin-dark .notifications-page [class*="shadow-"] {
+  box-shadow: none !important;
+}
+
+.admin-dark .notifications-page [class*="bg-[linear-gradient"],
+.admin-dark .notifications-page [class*="bg-[radial-gradient"],
+.admin-dark .notifications-page [class~="bg-white"],
+.admin-dark .notifications-page [class~="bg-slate-50"],
+.admin-dark .notifications-page [class~="bg-slate-50/95"] {
+  background: #0e1525 !important;
+  background-color: #0e1525 !important;
+  border-color: #24304a !important;
+}
+
+.admin-dark .notifications-page select,
+.admin-dark .notifications-page input {
+  background: #111a2c !important;
+  border-color: #24304a !important;
+  color: #f4f7fb !important;
+}
+
+.admin-dark .notifications-page article {
+  background: #0e1525 !important;
+  border-color: transparent !important;
+}
+
+.admin-dark .notifications-page article:hover {
+  background: #111a2c !important;
+  border-color: #344665 !important;
+}
+
+.admin-dark .notifications-page article[class*="border-violet-200"] {
+  background: #1d263d !important;
+  border-color: #8d55ff !important;
+}
+
+.admin-dark .notifications-page [class~="text-slate-900"],
+.admin-dark .notifications-page [class~="text-slate-800"] {
+  color: #f4f7fb !important;
+}
+
+.admin-dark .notifications-page [class~="text-slate-700"],
+.admin-dark .notifications-page [class~="text-slate-600"],
+.admin-dark .notifications-page [class~="text-slate-500"] {
+  color: #a5b0c3 !important;
+}
+
+.admin-dark .notifications-page [class~="bg-violet-50"],
+.admin-dark .notifications-page [class~="bg-purple-50"] {
+  background: #243654 !important;
+  border-color: #405478 !important;
+  color: #dce7ff !important;
+}
+
+.admin-dark .notifications-page [class~="text-violet-700"],
+.admin-dark .notifications-page [class~="text-purple-700"] {
+  color: #c7bfff !important;
+}
+
+.admin-dark .notifications-page [class~="bg-emerald-50"] {
+  background: #14283a !important;
+  border-color: #245845 !important;
+  color: #7ee0ae !important;
+}
+
+.admin-dark .notifications-page [class~="bg-amber-50"] {
+  background: #3b2d16 !important;
+  border-color: #82601d !important;
+  color: #f4c66a !important;
+}
+
+.admin-dark .notifications-page [class~="bg-rose-50"],
+.admin-dark .notifications-page [class~="bg-red-50"] {
+  background: #311b24 !important;
+  border-color: #7f3040 !important;
+  color: #ff8f9d !important;
+}
+
 .admin-dark .dashboard-page [class*="border"] {
   border-color: transparent !important;
 }
