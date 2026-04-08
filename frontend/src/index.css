@@ -15,8 +15,18 @@ body,
   min-height: 100%;
 }
 
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
 body {
   margin: 0;
+  background: #eef2f8;
+}
+
+#root {
+  background: #eef2f8;
 }
 /* micro animations */
 @keyframes pop {
