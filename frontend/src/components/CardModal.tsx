@@ -972,7 +972,7 @@ export default function CardModal({
     {confirmDialog}
     <Modal
       open={open}
-      title={cardId ? `Card #${cardId}` : "Card"}
+      title={card?.title?.trim() || (cardId ? `Card #${cardId}` : "Card")}
       onClose={onClose}
       footer={
         <>

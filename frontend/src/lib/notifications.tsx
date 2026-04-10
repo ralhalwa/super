@@ -60,6 +60,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const recentIdsRef = useRef<Set<number>>(new Set());
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
+  const pollTimerRef = useRef<number | null>(null);
+  const failureCountRef = useRef(0);
+  const loadRef = useRef<() => Promise<void>>(async () => {});
   const isNotificationsPage = location.pathname.startsWith("/notifications");
 
   async function load() {
@@ -97,6 +100,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    loadRef.current = load;
+  });
+
+  useEffect(() => {
     void load();
   }, [authenticated]);
 
@@ -115,9 +122,28 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
 
+    const stopPolling = () => {
+      if (pollTimerRef.current !== null) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+
+    const ensurePolling = () => {
+      if (pollTimerRef.current !== null) return;
+      pollTimerRef.current = window.setInterval(() => {
+        void loadRef.current();
+      }, 15000);
+    };
+
     const connect = () => {
       const socket = new WebSocket(wsUrl(email, login, role));
       socketRef.current = socket;
+
+      socket.onopen = () => {
+        failureCountRef.current = 0;
+        stopPolling();
+      };
 
       socket.onmessage = (event) => {
         try {
@@ -161,9 +187,20 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         }
       };
 
+      socket.onerror = () => {
+        socket.close();
+      };
+
       socket.onclose = () => {
         if (cancelled) return;
-        reconnectTimerRef.current = window.setTimeout(connect, 2500);
+        failureCountRef.current += 1;
+        if (failureCountRef.current >= 3) {
+          void loadRef.current();
+          ensurePolling();
+        }
+
+        const delay = Math.min(2500 * 2 ** Math.max(0, failureCountRef.current - 1), 30000);
+        reconnectTimerRef.current = window.setTimeout(connect, delay);
       };
     };
 
@@ -174,6 +211,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       if (reconnectTimerRef.current !== null) {
         window.clearTimeout(reconnectTimerRef.current);
       }
+      stopPolling();
       socketRef.current?.close();
       socketRef.current = null;
     };
