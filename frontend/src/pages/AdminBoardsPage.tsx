@@ -1154,6 +1154,7 @@ export default function AdminBoardsPage() {
                       </div>
 
                       <div className="flex flex-none items-center gap-2">
+                        {renderMemberPreview(b)}
                         {isAdmin ? (
                           <button
                             type="button"
@@ -1211,10 +1212,6 @@ export default function AdminBoardsPage() {
                       >
                         {formatDate(b.created_at)}
                       </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {renderMemberPreview(b)}
                     </div>
                   </div>
 
@@ -1314,7 +1311,6 @@ export default function AdminBoardsPage() {
                         </span>
                         <div className="min-w-0">
                           <div className="truncate text-[15px] font-black text-slate-900">{b.name}</div>
-                          <div className="mt-2">{renderMemberPreview(b, { compact: true })}</div>
                           <div className="mt-1 line-clamp-1 text-[12px] font-semibold text-slate-500">{desc}</div>
                         </div>
                       </div>
@@ -1340,6 +1336,7 @@ export default function AdminBoardsPage() {
                     </div>
 
                     <div className="flex items-center justify-end gap-2 max-[920px]:justify-start">
+                      {renderMemberPreview(b, { compact: true })}
                       {isAdmin ? (
                         <button
                           type="button"
@@ -1577,97 +1574,14 @@ export default function AdminBoardsPage() {
                 )}
 
                 <label className="grid gap-1.5">
-  <span className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">Board name</span>
-  <input
-    value={boardName}
-    onChange={(e) => setBoardName(e.target.value)}
-    className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[14px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12"
-    placeholder="Enter board name"
-  />
-</label>
-
-<div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
-  <div className="mb-1 flex items-center justify-between gap-3">
-    <div className="text-[15px] font-black text-slate-900">Board members</div>
-    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-black text-slate-600">
-      {selectedMemberIDs.size} selected
-    </span>
-  </div>
-  <div className="mb-3 text-[12px] font-semibold text-slate-500">
-    Pick members from the selected supervisor&apos;s assigned students.
-  </div>
-
-  {!selectedSupervisor ? (
-    <div className="rounded-[14px] border border-dashed border-slate-200 bg-slate-50/80 px-3 py-3 text-[13px] font-semibold text-slate-500">
-      Select a supervisor first.
-    </div>
-  ) : assignedStudentsLoading ? (
-    <div className="rounded-[14px] border border-slate-200 bg-slate-50/80 px-3 py-3 text-[13px] font-semibold text-slate-500">
-      Loading assigned students...
-    </div>
-  ) : assignedStudents.length === 0 ? (
-    <div className="rounded-[14px] border border-slate-200 bg-slate-50/80 px-3 py-3 text-[13px] font-semibold text-slate-500">
-      This supervisor has no assigned students yet.
-    </div>
-  ) : (
-    <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
-      {assignedStudents.map((student) => {
-        const checked = selectedMemberIDs.has(student.id);
-        const avatarUrl =
-          avatarByLogin[String(student.nickname || student.email.split("@")[0] || "").trim().toLowerCase()] || "";
-        return (
-          <label
-            key={student.id}
-            className={[
-              "flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-2.5 transition",
-              checked
-                ? "border-emerald-300/60 bg-emerald-50/50 shadow-[0_10px_22px_rgba(16,185,129,0.08)]"
-                : "border-slate-200/70 bg-white hover:border-slate-300/70 hover:shadow-[0_10px_18px_rgba(15,23,42,0.08)]",
-            ].join(" ")}
-          >
-            <input
-              type="checkbox"
-              checked={checked}
-              onChange={() => toggleSelectedMember(student.id)}
-              className="h-4 w-4"
-            />
-            <UserAvatar
-              src={avatarUrl}
-              alt={student.full_name}
-              fallback={initialsOf(student.full_name)}
-              className="bg-slate-50"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[14px] font-black text-slate-900">{student.full_name}</div>
-              <div className="mt-0.5 truncate text-[12px] font-extrabold text-[#6d5efc]">
-                {(student.nickname || "").trim() ? `@${String(student.nickname).replace(/^@/, "")}` : "-"}
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                {student.cohort ? (
-                  <span className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-extrabold text-slate-700">
-                    {student.cohort}
-                  </span>
-                ) : null}
-                <span className="truncate text-[12px] font-semibold text-slate-500">{student.email}</span>
-              </div>
-            </div>
-          </label>
-        );
-      })}
-    </div>
-  )}
-</div>
-
-{/* <label className="grid gap-1.5">
-  <span className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">Description</span>
-  <textarea
-    value={boardDescription}
-    onChange={(e) => setBoardDescription(e.target.value)}
-    rows={4}
-    className="rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-2.5 text-[14px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12"
-    placeholder="Optional board description"
-  />
-</label> */}
+                  <span className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">Board name</span>
+                  <input
+                    value={boardName}
+                    onChange={(e) => setBoardName(e.target.value)}
+                    className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[14px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12"
+                    placeholder="Enter board name"
+                  />
+                </label>
 
                 <label className="grid gap-1.5">
                   <span className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">Description</span>
