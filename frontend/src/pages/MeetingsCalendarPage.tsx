@@ -62,14 +62,14 @@ type ProfileSummary = {
   };
 };
 
-const MEETING_LOCATIONS = ["Sandbox", "Quest", "Pixel", "Online"] as const;
+const MEETING_LOCATIONS = ["Online","Sandbox", "Quest", "Pixel","Bim"] as const;
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message || fallback : fallback;
 }
 
 function normalizeMeetingLocation(value: string) {
-  return MEETING_LOCATIONS.includes(value as (typeof MEETING_LOCATIONS)[number]) ? value : "Sandbox";
+  return MEETING_LOCATIONS.includes(value as (typeof MEETING_LOCATIONS)[number]) ? value : "Online";
 }
 
 function pad(n: number) {
@@ -196,7 +196,7 @@ export default function MeetingsCalendarPage() {
   const [form, setForm] = useState({
     board_id: "",
     title: "",
-    location: "Sandbox",
+    location: "Online",
     notes: "",
     date: toLocalDateInput(),
     start_time: "10:00",
@@ -419,7 +419,7 @@ export default function MeetingsCalendarPage() {
     setForm({
       board_id: "",
       title: "",
-      location: "Sandbox",
+      location: "Online",
       notes: "",
       date: selectedDate,
       start_time: "10:00",
