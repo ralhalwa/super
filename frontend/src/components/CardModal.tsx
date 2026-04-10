@@ -254,19 +254,6 @@ function prettyPriority(p: Card["priority"]) {
   return "Medium";
 }
 
-function pillStatusClass(s: Card["status"]) {
-  switch (s) {
-    case "doing":
-      return "bg-blue-500/10 border-blue-500/25 text-slate-900";
-    case "blocked":
-      return "bg-rose-500/10 border-rose-500/25 text-slate-900";
-    case "done":
-      return "bg-emerald-500/10 border-emerald-500/25 text-slate-900";
-    default:
-      return "bg-slate-900/5 border-slate-900/10 text-slate-900";
-  }
-}
-
 function pillPriorityClass(p: Card["priority"]) {
   switch (p) {
     case "low":
@@ -917,7 +904,6 @@ export default function CardModal({
   const cardDueKind: "overdue" | "soon" | "none" =
     isOverdue ? "overdue" : card?.due_date ? "soon" : "none";
   const dueBadgeText = isOverdue ? "Overdue" : card?.due_date ? "Scheduled" : "None";
-  const isDone = card?.status === "done";
   const canManageCard = isAdmin || isSupervisor;
   const canDeleteCard = canManageCard;
 

@@ -47,6 +47,20 @@ type AssignedStudentOption = {
   cohort?: string;
 };
 
+type ProjectTrack = "go" | "js" | "rust";
+
+const TRACK_OPTIONS: Array<{ value: ProjectTrack; label: string }> = [
+  { value: "go", label: "Go" },
+  { value: "js", label: "JS" },
+  { value: "rust", label: "Rust" },
+];
+
+const PROJECTS_BY_TRACK: Record<ProjectTrack, string[]> = {
+  go: ["go-reloaded", "ascii-art", "ascii-art-web", "groupie-tracker", "lem-in", "forum"],
+  js: ["make-your-game", "real-time-forum", "graphql", "social-network", "mini-framework", "bomberman-dom"],
+  rust: ["smart-road", "filler", "rt", "localhost", "multiplayer-fps", "0-shell"],
+};
+
 function formatDate(iso: string) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -81,6 +95,25 @@ function initialsOf(name: string) {
 
 function loginOf(user: { nickname?: string; email: string }) {
   return String(user.nickname || user.email.split("@")[0] || "").trim().toLowerCase();
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function nextProjectBoardNumber(boards: BoardRow[], supervisorName: string, projectSlug: string) {
+  const pattern = new RegExp(`(?:^|-)${escapeRegExp(projectSlug)}(?:-(\\d+))?$`, "i");
+  let max = 0;
+
+  for (const board of boards) {
+    if (String(board.supervisor_name || "").trim().toLowerCase() !== supervisorName.trim().toLowerCase()) continue;
+    const match = String(board.name || "").trim().match(pattern);
+    if (!match) continue;
+    const parsed = Number(match[1] || "1");
+    if (Number.isFinite(parsed)) max = Math.max(max, parsed);
+  }
+
+  return max + 1;
 }
 
 /* icons */
@@ -368,6 +401,8 @@ export default function AdminBoardsPage() {
   const [boardName, setBoardName] = useState("");
   const [boardDescription, setBoardDescription] = useState("");
   const [selectedSupervisorID, setSelectedSupervisorID] = useState(0);
+  const [selectedTrack, setSelectedTrack] = useState<ProjectTrack | "">("");
+  const [selectedProject, setSelectedProject] = useState("");
   const [selectedMemberIDs, setSelectedMemberIDs] = useState<Set<number>>(new Set());
 
   const { isAdmin, isSupervisor } = useAuth();
@@ -521,6 +556,8 @@ export default function AdminBoardsPage() {
     setBoardName("");
     setBoardDescription("");
     setSelectedSupervisorID(0);
+    setSelectedTrack("");
+    setSelectedProject("");
     setAssignedStudents([]);
     setSelectedMemberIDs(new Set());
   }, []);
@@ -529,27 +566,26 @@ export default function AdminBoardsPage() {
     () => supervisorOptions.find((supervisor) => supervisor.supervisor_user_id === selectedSupervisorID) || null,
     [selectedSupervisorID, supervisorOptions]
   );
-useEffect(() => {
+  useEffect(() => {
+    if (!selectedTrack) {
+      setSelectedProject("");
+    }
+  }, [selectedTrack]);
+
+  useEffect(() => {
     const nickname = String(selectedSupervisor?.nickname || "").trim().replace(/^@/, "");
     if (!nickname) return;
 
     setBoardName((prev) => {
       const current = String(prev || "").trim();
-      if (!current) return `${nickname}-`;
-
-      const prefixes = supervisorOptions
-        .map((supervisor) => String(supervisor.nickname || "").trim().replace(/^@/, ""))
-        .filter(Boolean);
-
-      for (const prefix of prefixes) {
-        if (current === `${prefix}-` || current.startsWith(`${prefix}-`)) {
-          return `${nickname}-${current.slice(prefix.length + 1)}`;
-        }
+      if (selectedProject) {
+        const nextNumber = nextProjectBoardNumber(boards, selectedSupervisor?.full_name || "", selectedProject);
+        return `${nickname}-${selectedProject}-${nextNumber}`;
       }
-
-      return `${nickname}-${current}`;
+      if (!current) return `${nickname}-`;
+      return current;
     });
-  }, [selectedSupervisor, supervisorOptions]);
+  }, [boards, selectedProject, selectedSupervisor]);
   async function load() {
     setLoading(true);
     setErr("");
@@ -589,10 +625,15 @@ useEffect(() => {
     return { totalBoards, totalLists, totalCards };
   }, [boards]);
 
+  const availableProjects = useMemo(
+    () => (selectedTrack ? PROJECTS_BY_TRACK[selectedTrack] : []),
+    [selectedTrack]
+  );
+
   function renderMemberPreview(board: BoardRow, options?: { compact?: boolean }) {
     const compact = options?.compact ?? false;
     const boardMembers = membersByBoard[board.id] || [];
-    const previewMembers = boardMembers.slice(0, compact ? 3 : 4);
+    const previewMembers = boardMembers.slice(0, compact ? 2 : 4);
     const remaining = boardMembers.length - previewMembers.length;
 
     if (boardMembers.length === 0) {
@@ -602,7 +643,7 @@ useEffect(() => {
           className={[
             "board-action-members inline-flex items-center rounded-full border transition",
             compact
-              ? "h-8 px-2.5 gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              ? "h-8 w-[90px] justify-center gap-1.5 border-emerald-200 bg-emerald-50 px-2 text-emerald-700 hover:bg-emerald-100"
               : "h-8 w-8 justify-center border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
           ].join(" ")}
           title="Board members"
@@ -623,7 +664,7 @@ useEffect(() => {
         className={[
           "board-action-members inline-flex items-center rounded-full border transition",
           compact
-            ? "h-8 gap-1.5 border-emerald-200 bg-emerald-50 px-2 text-emerald-700 hover:bg-emerald-100"
+            ? "h-8 w-[90px] justify-start gap-1.5 border-emerald-200 bg-emerald-50 px-2 text-emerald-700 hover:bg-emerald-100"
             : "h-8 border-emerald-200 bg-emerald-50 px-1.5 text-emerald-700 hover:bg-emerald-100",
         ].join(" ")}
         title={`Board members (${boardMembers.length})`}
@@ -661,6 +702,9 @@ useEffect(() => {
             >
               +{remaining}
             </span>
+          ) : null}
+          {compact && remaining <= 0 && previewMembers.length < 2 ? (
+            <span className="ml-1 h-6 w-6 rounded-full opacity-0" aria-hidden="true" />
           ) : null}
         </span>
       </button>
@@ -1067,7 +1111,7 @@ useEffect(() => {
           </div>
         ) : (
           <div className="overflow-hidden rounded-[18px] border border-slate-900/10 bg-white/95 shadow-[0_14px_34px_rgba(15,23,42,0.07)]">
-            <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_110px_110px_140px] gap-3 border-b border-slate-200 bg-[linear-gradient(180deg,rgba(109,94,252,0.06),rgba(109,94,252,0.02))] px-4 py-3 text-[12px] font-black uppercase tracking-[0.08em] text-slate-500 max-[920px]:hidden">
+            <div className="grid grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_96px_96px_188px] gap-4 border-b border-slate-200 bg-[linear-gradient(180deg,rgba(109,94,252,0.06),rgba(109,94,252,0.02))] px-5 py-3 text-[12px] font-black uppercase tracking-[0.08em] text-slate-500 max-[920px]:hidden">
               <div>Board</div>
               <div>Supervisor</div>
               <div>Lists</div>
@@ -1075,7 +1119,7 @@ useEffect(() => {
               <div className="text-right">Actions</div>
             </div>
 
-            <div className="divide-y divide-slate-200">
+            <div className="divide-y divide-slate-200/90">
               {filtered.map((b) => {
                 const desc = clampText(b.description, "No description provided.");
                 const sup = clampText(b.supervisor_name, "Unknown supervisor");
@@ -1092,33 +1136,37 @@ useEffect(() => {
                         nav(`/admin/boards/${b.id}?from=boards`);
                       }
                     }}
-                    className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_110px_110px_140px] gap-3 px-4 py-3 transition hover:bg-[#faf8ff] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#6d5efc]/15 max-[920px]:grid-cols-1"
+                    className="grid grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_96px_96px_188px] gap-4 px-5 py-4 transition hover:bg-[#faf8ff] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#6d5efc]/15 max-[920px]:grid-cols-1"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-3">
-                        <span className="grid h-10 w-10 flex-none place-items-center rounded-2xl border border-[#6d5efc]/20 bg-[#6d5efc]/10 text-[#6d5efc]">
+                        <span className="grid h-11 w-11 flex-none place-items-center rounded-2xl border border-[#6d5efc]/20 bg-[#6d5efc]/10 text-[#6d5efc] shadow-[0_8px_18px_rgba(109,94,252,0.08)]">
                           <BoardIcon />
                         </span>
                         <div className="min-w-0">
                           <div className="truncate text-[15px] font-black text-slate-900">{b.name}</div>
-                          <div className="mt-0.5 line-clamp-1 text-[12px] font-semibold text-slate-500">{desc}</div>
+                          <div className="mt-1 line-clamp-1 text-[12px] font-semibold text-slate-500">{desc}</div>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex min-w-0 items-center">
-                      <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 px-3 py-1 text-[12px] font-black text-slate-800">
+                      <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#6d5efc]/20 bg-[#6d5efc]/10 px-3 py-1.5 text-[12px] font-black text-slate-800">
                         <UserIcon />
                         <span className="truncate">{sup}</span>
                       </span>
                     </div>
 
-                    <div className="flex items-center text-[13px] font-black text-slate-700">
-                      {b.lists_count}
+                    <div className="flex items-center">
+                      <span className="inline-flex min-w-[58px] items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-black text-slate-700">
+                        {b.lists_count}
+                      </span>
                     </div>
 
-                    <div className="flex items-center text-[13px] font-black text-slate-700">
-                      {b.cards_count}
+                    <div className="flex items-center">
+                      <span className="inline-flex min-w-[58px] items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-black text-slate-700">
+                        {b.cards_count}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-end gap-2 max-[920px]:justify-start">
@@ -1134,12 +1182,12 @@ useEffect(() => {
                             e.stopPropagation();
                             deleteBoard(b);
                           }}
-                        >
+                          >
                           <BinIcon size={14} />
                         </button>
                       ) : null}
 
-                      <span className="inline-flex items-center gap-1 text-[12px] font-black text-slate-500">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-black text-slate-600 shadow-[0_8px_18px_rgba(15,23,42,0.04)]">
                         Open <ArrowIcon size={14} />
                       </span>
                     </div>
@@ -1280,6 +1328,71 @@ useEffect(() => {
               <div className="mb-3 text-[15px] font-black text-slate-900">Board details</div>
               <div className="grid gap-3">
                 <label className="grid gap-1.5">
+                  <span className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">Supervisor</span>
+                  <select
+                    value={selectedSupervisorID || ""}
+                    onChange={(e) => {
+                      setSelectedSupervisorID(Number(e.target.value) || 0);
+                    }}
+                    disabled={supervisorsLoading}
+                    className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[14px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12 disabled:opacity-60"
+                  >
+                    <option value="">{supervisorsLoading ? "Loading supervisors..." : "Select supervisor"}</option>
+                    {supervisorOptions.map((supervisor) => (
+                      <option key={supervisor.supervisor_user_id} value={supervisor.supervisor_user_id}>
+                        {supervisor.nickname? `${supervisor.full_name} (@${supervisor.nickname})` : supervisor.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="grid gap-1.5">
+                    <span className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">Model</span>
+                    <select
+                      value={selectedTrack}
+                      onChange={(e) => setSelectedTrack((e.target.value as ProjectTrack) || "")}
+                      disabled={!selectedSupervisor}
+                      className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[14px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12 disabled:opacity-60"
+                    >
+                      <option value="">Optional model</option>
+                      {TRACK_OPTIONS.map((track) => (
+                        <option key={track.value} value={track.value}>
+                          {track.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="grid gap-1.5">
+                    <span className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">Project</span>
+                    <select
+                      value={selectedProject}
+                      onChange={(e) => setSelectedProject(e.target.value)}
+                      disabled={!selectedSupervisor || !selectedTrack}
+                      className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[14px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12 disabled:opacity-60"
+                    >
+                      <option value="">Optional project</option>
+                      {availableProjects.map((project) => (
+                        <option key={project} value={project}>
+                          {project}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                {selectedSupervisor && selectedProject ? (
+                  <div className="rounded-[14px] border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-[12px] font-semibold text-emerald-800">
+                    Suggested name: <span className="font-black">{boardName || "-"}</span>
+                  </div>
+                ) : (
+                  <div className="rounded-[14px] border border-slate-200 bg-slate-50/80 px-3 py-2 text-[12px] font-semibold text-slate-500">
+                    Project selection is optional. Leave it empty if this board is for another purpose.
+                  </div>
+                )}
+
+                <label className="grid gap-1.5">
                   <span className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">Board name</span>
                   <input
                     value={boardName}
@@ -1298,23 +1411,6 @@ useEffect(() => {
                     className="rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-2.5 text-[14px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12"
                     placeholder="Optional board description"
                   />
-                </label>
-
-                <label className="grid gap-1.5">
-                  <span className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">Supervisor</span>
-                  <select
-                    value={selectedSupervisorID || ""}
-                    onChange={(e) => setSelectedSupervisorID(Number(e.target.value) || 0)}
-                    disabled={supervisorsLoading}
-                    className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[14px] font-semibold text-slate-900 outline-none focus:border-[#6d5efc]/35 focus:bg-white focus:ring-4 focus:ring-[#6d5efc]/12 disabled:opacity-60"
-                  >
-                    <option value="">{supervisorsLoading ? "Loading supervisors..." : "Select supervisor"}</option>
-                    {supervisorOptions.map((supervisor) => (
-                      <option key={supervisor.supervisor_user_id} value={supervisor.supervisor_user_id}>
-                        {supervisor.nickname? `${supervisor.full_name} (@${supervisor.nickname})` : supervisor.full_name}
-                      </option>
-                    ))}
-                  </select>
                 </label>
               </div>
             </div>
