@@ -1154,7 +1154,6 @@ export default function AdminBoardsPage() {
                       </div>
 
                       <div className="flex flex-none items-center gap-2">
-                        {renderMemberPreview(b)}
                         {isAdmin ? (
                           <button
                             type="button"
@@ -1212,6 +1211,10 @@ export default function AdminBoardsPage() {
                       >
                         {formatDate(b.created_at)}
                       </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {renderMemberPreview(b)}
                     </div>
                   </div>
 
@@ -1311,6 +1314,7 @@ export default function AdminBoardsPage() {
                         </span>
                         <div className="min-w-0">
                           <div className="truncate text-[15px] font-black text-slate-900">{b.name}</div>
+                          <div className="mt-2">{renderMemberPreview(b, { compact: true })}</div>
                           <div className="mt-1 line-clamp-1 text-[12px] font-semibold text-slate-500">{desc}</div>
                         </div>
                       </div>
@@ -1336,7 +1340,6 @@ export default function AdminBoardsPage() {
                     </div>
 
                     <div className="flex items-center justify-end gap-2 max-[920px]:justify-start">
-                      {renderMemberPreview(b, { compact: true })}
                       {isAdmin ? (
                         <button
                           type="button"
