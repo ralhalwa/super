@@ -54,6 +54,7 @@ func main() {
 
 	api := handlers.NewAPI(conn, discord.NewFromEnv())
 	api.StartDiscordReminderWorker()
+	api.SyncAllBoardDiscordChannelsAsync()
 
 	r := chi.NewRouter()
 

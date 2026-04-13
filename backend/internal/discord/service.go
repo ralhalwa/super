@@ -27,12 +27,12 @@ var channelSanitizer = regexp.MustCompile(`[^a-z0-9-]+`)
 var discordNameTokenPattern = regexp.MustCompile(`[a-z0-9_-]+`)
 
 type Service struct {
-	token         string
-	applicationID string
-	guildID       string
-	categoryID    string
+	token          string
+	applicationID  string
+	guildID        string
+	categoryID     string
 	techTeamRoleID string
-	httpClient    *http.Client
+	httpClient     *http.Client
 }
 
 type MemberAccess struct {
@@ -61,6 +61,13 @@ type channelResponse struct {
 	ID string `json:"id"`
 }
 
+type guildChannel struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Type     int    `json:"type"`
+	ParentID string `json:"parent_id"`
+}
+
 type channelDetails struct {
 	PermissionOverwrites []permissionOverwrite `json:"permission_overwrites"`
 }
@@ -75,12 +82,13 @@ type permissionOverwrite struct {
 type createChannelRequest struct {
 	Name                 string                `json:"name"`
 	Type                 int                   `json:"type"`
-	ParentID             string                `json:"parent_id"`
-	PermissionOverwrites []permissionOverwrite `json:"permission_overwrites"`
+	ParentID             string                `json:"parent_id,omitempty"`
+	PermissionOverwrites []permissionOverwrite `json:"permission_overwrites,omitempty"`
 }
 
 type updateChannelRequest struct {
 	Name                 string                `json:"name"`
+	ParentID             string                `json:"parent_id,omitempty"`
 	PermissionOverwrites []permissionOverwrite `json:"permission_overwrites"`
 }
 
@@ -99,15 +107,15 @@ func NewFromEnv() *Service {
 	categoryID := strings.TrimSpace(os.Getenv("DISCORD_CATEGORY_ID"))
 	techTeamRoleID := strings.TrimSpace(os.Getenv("DISCORD_TECH_TEAM_ROLE_ID"))
 
-	if token == "" || appID == "" || guildID == "" || categoryID == "" {
+	if token == "" || appID == "" || guildID == "" {
 		return nil
 	}
 
 	return &Service{
-		token:         token,
-		applicationID: appID,
-		guildID:       guildID,
-		categoryID:    categoryID,
+		token:          token,
+		applicationID:  appID,
+		guildID:        guildID,
+		categoryID:     categoryID,
 		techTeamRoleID: techTeamRoleID,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
@@ -119,11 +127,48 @@ func (s *Service) Enabled() bool {
 	return s != nil
 }
 
-func (s *Service) CreateBoardChannel(ctx context.Context, boardName string, members []MemberAccess) (string, error) {
+func (s *Service) EnsureSupervisorCategory(ctx context.Context, supervisorName string) (string, error) {
+	categoryName := supervisorCategoryName(supervisorName)
+	if categoryName == "" {
+		return s.categoryID, nil
+	}
+
+	var channels []guildChannel
+	if err := s.doJSON(ctx, http.MethodGet, fmt.Sprintf("https://discord.com/api/v10/guilds/%s/channels", s.guildID), nil, &channels); err != nil {
+		return "", err
+	}
+	for _, channel := range channels {
+		if channel.Type == 4 && strings.EqualFold(strings.TrimSpace(channel.Name), categoryName) {
+			return strings.TrimSpace(channel.ID), nil
+		}
+	}
+
+	body := createChannelRequest{
+		Name:                 categoryName,
+		Type:                 4,
+		PermissionOverwrites: s.categoryPermissionOverwrites(),
+	}
+
+	var out channelResponse
+	if err := s.doJSON(ctx, http.MethodPost, fmt.Sprintf("https://discord.com/api/v10/guilds/%s/channels", s.guildID), body, &out); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(out.ID) == "" {
+		return "", fmt.Errorf("discord returned empty category id")
+	}
+	return out.ID, nil
+}
+
+func (s *Service) CreateBoardChannel(ctx context.Context, boardName, categoryID string, members []MemberAccess) (string, error) {
+	categoryID = strings.TrimSpace(categoryID)
+	if categoryID == "" {
+		categoryID = s.categoryID
+	}
+
 	body := createChannelRequest{
 		Name:                 sanitizeChannelName(boardName),
 		Type:                 0,
-		ParentID:             s.categoryID,
+		ParentID:             categoryID,
 		PermissionOverwrites: s.permissionOverwrites(members),
 	}
 
@@ -137,7 +182,7 @@ func (s *Service) CreateBoardChannel(ctx context.Context, boardName string, memb
 	return out.ID, nil
 }
 
-func (s *Service) UpdateBoardChannel(ctx context.Context, channelID, boardName string, members []MemberAccess, previouslyManagedUserIDs []string) error {
+func (s *Service) UpdateBoardChannel(ctx context.Context, channelID, boardName, categoryID string, members []MemberAccess, previouslyManagedUserIDs []string) error {
 	existingOverwrites, err := s.GetChannelPermissionOverwrites(ctx, channelID)
 	if err != nil {
 		return err
@@ -145,6 +190,7 @@ func (s *Service) UpdateBoardChannel(ctx context.Context, channelID, boardName s
 
 	body := updateChannelRequest{
 		Name:                 sanitizeChannelName(boardName),
+		ParentID:             strings.TrimSpace(categoryID),
 		PermissionOverwrites: s.mergePermissionOverwrites(existingOverwrites, members, previouslyManagedUserIDs),
 	}
 
@@ -318,6 +364,10 @@ func (s *Service) permissionOverwrites(members []MemberAccess) []permissionOverw
 	return overwrites
 }
 
+func (s *Service) categoryPermissionOverwrites() []permissionOverwrite {
+	return s.permissionOverwrites(nil)
+}
+
 func (s *Service) mergePermissionOverwrites(existing []permissionOverwrite, members []MemberAccess, previouslyManagedUserIDs []string) []permissionOverwrite {
 	base := s.permissionOverwrites(members)
 
@@ -425,4 +475,12 @@ func sanitizeChannelName(boardName string) string {
 		}
 	}
 	return name
+}
+
+func supervisorCategoryName(supervisorName string) string {
+	name := strings.TrimSpace(strings.TrimPrefix(supervisorName, "@"))
+	if name == "" {
+		return ""
+	}
+	return sanitizeChannelName(name + "-boards")
 }

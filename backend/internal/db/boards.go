@@ -45,6 +45,28 @@ func ListBoardsBySupervisorFile(conn *sql.DB, supervisorFileID int64) ([]models.
 	return out, nil
 }
 
+func ListAllBoardIDs(conn *sql.DB) ([]int64, error) {
+	rows, err := conn.Query(`
+		SELECT id
+		FROM boards
+		ORDER BY created_at ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []int64{}
+	for rows.Next() {
+		var boardID int64
+		if err := rows.Scan(&boardID); err != nil {
+			return nil, err
+		}
+		out = append(out, boardID)
+	}
+	return out, rows.Err()
+}
+
 // Board data
 func GetBoardBasic(conn *sql.DB, boardID int64) (models.Board, error) {
 	var b models.Board
@@ -52,6 +74,35 @@ func GetBoardBasic(conn *sql.DB, boardID int64) (models.Board, error) {
 		SELECT id, supervisor_file_id, name, description, created_by, created_at
 		FROM boards WHERE id = ?
 	`, boardID).Scan(&b.ID, &b.SupervisorFileID, &b.Name, &b.Description, &b.CreatedBy, &b.CreatedAt)
+	return b, err
+}
+
+func GetBoardDiscordInfo(conn *sql.DB, boardID int64) (models.BoardDiscordInfo, error) {
+	var b models.BoardDiscordInfo
+	err := conn.QueryRow(`
+		SELECT
+			b.id,
+			b.supervisor_file_id,
+			b.name,
+			b.description,
+			b.created_by,
+			b.created_at,
+			IFNULL(u.full_name, ''),
+			IFNULL(u.nickname, '')
+		FROM boards b
+		JOIN supervisor_files sf ON sf.id = b.supervisor_file_id
+		LEFT JOIN users u ON u.id = sf.supervisor_user_id
+		WHERE b.id = ?
+	`, boardID).Scan(
+		&b.ID,
+		&b.SupervisorFileID,
+		&b.Name,
+		&b.Description,
+		&b.CreatedBy,
+		&b.CreatedAt,
+		&b.SupervisorFullName,
+		&b.SupervisorNickname,
+	)
 	return b, err
 }
 

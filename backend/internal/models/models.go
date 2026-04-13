@@ -1,14 +1,14 @@
 package models
 
 type User struct {
-	ID        int64  `json:"id"`
-	FullName  string `json:"full_name"`
-	Email     string `json:"email"`
-	Role      string `json:"role"` // admin|supervisor|student
-	IsActive  bool   `json:"is_active"`
-	CreatedAt string `json:"created_at"`
-	Nickname  string `json:"nickname"`
-	Cohort    string `json:"cohort"`
+	ID             int64    `json:"id"`
+	FullName       string   `json:"full_name"`
+	Email          string   `json:"email"`
+	Role           string   `json:"role"` // admin|supervisor|student
+	IsActive       bool     `json:"is_active"`
+	CreatedAt      string   `json:"created_at"`
+	Nickname       string   `json:"nickname"`
+	Cohort         string   `json:"cohort"`
 	AssignedBoards []string `json:"assigned_boards,omitempty"`
 }
 
@@ -28,6 +28,12 @@ type Board struct {
 	Description      string `json:"description"`
 	CreatedBy        int64  `json:"created_by"`
 	CreatedAt        string `json:"created_at"`
+}
+
+type BoardDiscordInfo struct {
+	Board
+	SupervisorFullName string `json:"supervisor_full_name"`
+	SupervisorNickname string `json:"supervisor_nickname"`
 }
 
 type BoardMember struct {

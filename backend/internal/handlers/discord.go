@@ -16,12 +16,38 @@ import (
 
 const discordSyncTimeout = 30 * time.Second
 
+func (a *API) SyncAllBoardDiscordChannelsAsync() {
+	if a.discord == nil || !a.discord.Enabled() {
+		return
+	}
+
+	go func() {
+		boardIDs, err := db.ListAllBoardIDs(a.conn)
+		if err != nil {
+			log.Printf("discord startup sync skipped: board list failed: %v", err)
+			return
+		}
+		if len(boardIDs) == 0 {
+			log.Printf("discord startup sync skipped: no boards found")
+			return
+		}
+
+		synced := 0
+		for _, boardID := range boardIDs {
+			if a.syncBoardDiscordChannel(boardID) {
+				synced++
+			}
+		}
+		log.Printf("discord startup sync completed: %d/%d board channels synced", synced, len(boardIDs))
+	}()
+}
+
 func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 	if a.discord == nil || !a.discord.Enabled() {
 		return false
 	}
 
-	board, err := db.GetBoardBasic(a.conn, boardID)
+	board, err := db.GetBoardDiscordInfo(a.conn, boardID)
 	if err != nil {
 		log.Printf("discord sync skipped: board %d not found: %v", boardID, err)
 		return false
@@ -60,10 +86,19 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 		})
 	}
 
+	categoryName := discordSupervisorName(board.SupervisorNickname, board.SupervisorFullName, board.Name)
+	categoryCtx, categoryCancel := context.WithTimeout(context.Background(), discordSyncTimeout)
+	categoryID, err := a.discord.EnsureSupervisorCategory(categoryCtx, categoryName)
+	categoryCancel()
+	if err != nil {
+		log.Printf("discord category sync failed for board %d supervisor %q: %v", boardID, categoryName, err)
+		return false
+	}
+
 	channelID, err := db.GetBoardDiscordChannelID(a.conn, boardID)
 	if err == sql.ErrNoRows {
 		createCtx, createCancel := context.WithTimeout(context.Background(), discordSyncTimeout)
-		channelID, err = a.discord.CreateBoardChannel(createCtx, board.Name, access)
+		channelID, err = a.discord.CreateBoardChannel(createCtx, board.Name, categoryID, access)
 		createCancel()
 		if err != nil {
 			log.Printf("discord channel create failed for board %d: %v", boardID, err)
@@ -91,7 +126,7 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 	}
 
 	updateCtx, updateCancel := context.WithTimeout(context.Background(), discordSyncTimeout)
-	if err := a.discord.UpdateBoardChannel(updateCtx, channelID, board.Name, access, previouslyManagedUserIDs); err != nil {
+	if err := a.discord.UpdateBoardChannel(updateCtx, channelID, board.Name, categoryID, access, previouslyManagedUserIDs); err != nil {
 		updateCancel()
 		log.Printf("discord channel update failed for board %d: %v", boardID, err)
 		return false
@@ -102,6 +137,22 @@ func (a *API) syncBoardDiscordChannel(boardID int64) bool {
 		return false
 	}
 	return true
+}
+
+func discordSupervisorName(nickname, fullName, boardName string) string {
+	nickname = strings.TrimSpace(strings.TrimPrefix(nickname, "@"))
+	if nickname != "" {
+		return nickname
+	}
+	boardName = strings.TrimSpace(boardName)
+	if before, _, ok := strings.Cut(boardName, "-"); ok {
+		return strings.TrimSpace(before)
+	}
+	fullName = strings.TrimSpace(fullName)
+	if fullName != "" {
+		return fullName
+	}
+	return boardName
 }
 
 func (a *API) deleteBoardDiscordChannel(boardID int64) error {
