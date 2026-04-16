@@ -32,31 +32,62 @@ export default function Modal({
 
   return createPortal(
     <div
-      className="modalOverlayIn fixed inset-0 z-[9999] grid place-items-center bg-slate-900/45 p-4 backdrop-blur-[2px]"
+      className="
+        fixed inset-0 z-[9999]
+        bg-slate-900/45 backdrop-blur-[2px]
+        overflow-y-auto
+      "
       onMouseDown={onClose}
       role="dialog"
       aria-modal="true"
     >
-      <div
-        className="modalPanelIn grid w-full max-w-[940px] grid-rows-[auto_1fr_auto] overflow-hidden rounded-[18px] border border-slate-200 bg-white text-slate-900 shadow-[0_24px_70px_rgba(15,23,42,0.24)]"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
-          <div className="text-[13px] font-black tracking-[-0.01em]">{title}</div>
+      {/* wrapper */}
+      <div className="min-h-full flex items-start sm:items-center justify-center p-3 sm:p-4">
+        
+        {/* modal */}
+        <div
+          className="
+            w-full max-w-[940px]
+            max-h-[calc(100vh-16px)] sm:max-h-[calc(100vh-32px)]
+            grid grid-rows-[auto_1fr_auto]
+            overflow-hidden
+            rounded-[18px]
+            border border-slate-200
+            bg-white text-slate-900
+            shadow-[0_24px_70px_rgba(15,23,42,0.24)]
+          "
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {/* header */}
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
+            <div className="text-[13px] font-black tracking-[-0.01em]">
+              {title}
+            </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-8 rounded-[10px] border border-slate-300 bg-slate-50 px-3 text-[13px] font-extrabold text-slate-700 transition hover:border-[#6d5efc]/25 hover:bg-[#f2f5ff]"
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-8 rounded-[10px] border border-slate-300 bg-slate-50 px-3 text-[13px] font-extrabold text-slate-700 transition hover:border-[#6d5efc]/25 hover:bg-[#f2f5ff]"
+            >
+              Close
+            </button>
+          </div>
+
+          {/* content (scrollable) */}
+          <div
+            className="
+              overflow-y-auto overflow-x-hidden
+              bg-[#f7f8fb]
+              p-3 sm:p-4
+            "
           >
-            Close
-          </button>
-        </div>
+            {children}
+          </div>
 
-        <div className="overflow-y-auto overflow-x-hidden bg-[#f7f8fb] p-4">{children}</div>
-
-        <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-white px-4 py-2.5">
-          {footer}
+          {/* footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-white px-4 py-2.5">
+            {footer}
+          </div>
         </div>
       </div>
     </div>,
