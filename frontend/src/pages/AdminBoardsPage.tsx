@@ -1417,7 +1417,10 @@ export default function AdminBoardsPage() {
 
                         <div className="min-w-0">
                           <div
-                            className="truncate text-[16px] font-black text-slate-900/92"
+                            className={[
+                              "truncate text-[16px] font-black text-slate-900/92",
+                              status === "inactive" ? "decoration-slate-900/70 decoration-2 line-through" : "",
+                            ].join(" ")}
                             title={b.name}
                           >
                             {b.name}
@@ -1606,7 +1609,15 @@ export default function AdminBoardsPage() {
                           <BoardIcon />
                         </span>
                         <div className="min-w-0">
-                          <div className="truncate text-[15px] font-black text-slate-900">{b.name}</div>
+                          <div
+                            className={[
+                              "truncate text-[15px] font-black text-slate-900",
+                              status === "inactive" ? "decoration-slate-900/70 decoration-2 line-through" : "",
+                            ].join(" ")}
+                            title={b.name}
+                          >
+                            {b.name}
+                          </div>
                           <div className="mt-2">{renderMemberPreview(b, { compact: true })}</div>
                           {status === "inactive" ? (
                             <div className="mt-1 text-[11px] font-black text-slate-500">
