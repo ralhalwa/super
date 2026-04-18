@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout";
+import UserAvatar from "../components/UserAvatar";
 import { API_URL, apiFetch, authHeaders } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { fetchRebootAvatars } from "../lib/rebootAvatars";
 
 type BoardFull = {
   board_id: number;
@@ -40,10 +42,26 @@ type MeetingParticipant = {
   updated_at: string;
 };
 
-const MEETING_LOCATIONS = ["Online", "Sandbox", "Quest", "Pixel", "Bim"] as const;
+const MEETING_LOCATIONS = ["Online", "Sandbox", "Quest", "Pixel", "Bim", "Snap", "Other"] as const;
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message || fallback : fallback;
+}
+
+function initialsOf(name: string) {
+  return String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "U";
+}
+
+function loginOf(user: { nickname?: string; email?: string }) {
+  const nickname = String(user.nickname || "").trim().replace(/^@/, "");
+  if (nickname) return nickname.toLowerCase();
+  return String(user.email || "").split("@")[0]?.trim().toLowerCase() || "";
 }
 
 function pad(n: number) {
@@ -120,6 +138,7 @@ export default function BoardMeetingsPage() {
   const [meetings, setMeetings] = useState<MeetingRow[]>([]);
   const [participantsByMeeting, setParticipantsByMeeting] = useState<Record<number, MeetingParticipant[]>>({});
   const [participantsLoading, setParticipantsLoading] = useState<Record<number, boolean>>({});
+  const [avatarByLogin, setAvatarByLogin] = useState<Record<string, string>>({});
   const [selectedMeetingID, setSelectedMeetingID] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -190,6 +209,20 @@ export default function BoardMeetingsPage() {
     const rows = selectedMeeting ? participantsByMeeting[selectedMeeting.id] || [] : [];
     return rows.filter((participant) => (participant.role || "").toLowerCase() !== "supervisor");
   }, [participantsByMeeting, selectedMeeting]);
+
+  useEffect(() => {
+    let alive = true;
+    const logins = Array.from(new Set(selectedParticipants.map((participant) => loginOf(participant)).filter(Boolean)));
+    if (logins.length === 0) return;
+    fetchRebootAvatars(logins)
+      .then((next) => {
+        if (alive) setAvatarByLogin((prev) => ({ ...prev, ...next }));
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [selectedParticipants]);
 
   useEffect(() => {
     if (!selectedMeeting) return;
@@ -447,34 +480,40 @@ export default function BoardMeetingsPage() {
                       </div>
                     ) : (
                       <div className="grid gap-3">
-                        {selectedParticipants.map((participant) => (
-                          <div
-                            key={participant.user_id}
-                            className="rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-3"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="truncate text-[14px] font-black text-slate-900">
-                                  {participant.full_name}
+                        {selectedParticipants.map((participant) => {
+                          const avatarUrl = avatarByLogin[loginOf(participant)] || "";
+                          return (
+                            <div
+                              key={participant.user_id}
+                              className="rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-3"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <UserAvatar src={avatarUrl} alt={participant.full_name} fallback={initialsOf(participant.full_name)} sizeClass="h-10 w-10" textClass="text-[12px]" className="bg-white" />
+                                  <div className="min-w-0">
+                                    <div className="truncate text-[14px] font-black text-slate-900">
+                                      {participant.full_name}
+                                    </div>
+                                    <div className="mt-1 flex flex-wrap gap-2 text-[12px] font-semibold text-slate-500">
+                                      <span>{participant.email}</span>
+                                      {participant.nickname ? <span>@{participant.nickname}</span> : null}
+                                      <span>{participant.role_in_board || participant.role}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="mt-1 flex flex-wrap gap-2 text-[12px] font-semibold text-slate-500">
-                                  <span>{participant.email}</span>
-                                  {participant.nickname ? <span>@{participant.nickname}</span> : null}
-                                  <span>{participant.role_in_board || participant.role}</span>
-                                </div>
-                              </div>
 
-                              <div className="flex flex-wrap gap-2">
-                                <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${rsvpTone(participant.rsvp_status)}`}>
-                                  RSVP: {participant.rsvp_status}
-                                </span>
-                                <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${attendanceTone(participant.attendance_status)}`}>
-                                  Attendance: {participant.attendance_status}
-                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${rsvpTone(participant.rsvp_status)}`}>
+                                    RSVP: {participant.rsvp_status}
+                                  </span>
+                                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${attendanceTone(participant.attendance_status)}`}>
+                                    Attendance: {participant.attendance_status}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

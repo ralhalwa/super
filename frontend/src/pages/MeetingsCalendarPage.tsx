@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import AdminLayout from "../components/AdminLayout";
+import UserAvatar from "../components/UserAvatar";
 import { API_URL, apiFetch, authHeaders } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { fetchRebootAvatars } from "../lib/rebootAvatars";
 import { useConfirm } from "../lib/useConfirm";
 
 type MeetingRow = {
@@ -40,6 +42,16 @@ type BoardRow = {
   name: string;
   description: string;
   supervisor_name: string;
+  supervisor_user_id: number;
+};
+
+type BoardMember = {
+  user_id: number;
+  full_name: string;
+  nickname: string;
+  email: string;
+  role: string;
+  role_in_board: string;
 };
 
 type SupervisorRow = {
@@ -58,11 +70,12 @@ type SupervisorOption = {
 
 type ProfileSummary = {
   user?: {
+    id?: number;
     role?: string;
   };
 };
 
-const MEETING_LOCATIONS = ["Online","Sandbox", "Quest", "Pixel","Bim"] as const;
+const MEETING_LOCATIONS = ["Online", "Sandbox", "Quest", "Pixel", "Bim", "Snap", "Other"] as const;
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message || fallback : fallback;
@@ -70,6 +83,22 @@ function errorMessage(error: unknown, fallback: string) {
 
 function normalizeMeetingLocation(value: string) {
   return MEETING_LOCATIONS.includes(value as (typeof MEETING_LOCATIONS)[number]) ? value : "Online";
+}
+
+function initialsOf(name: string) {
+  return String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "U";
+}
+
+function loginOf(user: { nickname?: string; email?: string }) {
+  const nickname = String(user.nickname || "").trim().replace(/^@/, "");
+  if (nickname) return nickname.toLowerCase();
+  return String(user.email || "").split("@")[0]?.trim().toLowerCase() || "";
 }
 
 function pad(n: number) {
@@ -176,8 +205,13 @@ export default function MeetingsCalendarPage() {
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
   const [participantsByMeeting, setParticipantsByMeeting] = useState<Record<number, MeetingParticipant[]>>({});
   const [participantsLoading, setParticipantsLoading] = useState<Record<number, boolean>>({});
+  const [boardMembersByBoard, setBoardMembersByBoard] = useState<Record<number, BoardMember[]>>({});
+  const [boardMembersLoading, setBoardMembersLoading] = useState<Record<number, boolean>>({});
+  const [avatarByLogin, setAvatarByLogin] = useState<Record<string, string>>({});
+  const [currentUserID, setCurrentUserID] = useState(0);
   const [selectedBoardFilter, setSelectedBoardFilter] = useState("all");
   const [selectedSupervisorFilter, setSelectedSupervisorFilter] = useState("all");
+  const [composerSupervisorID, setComposerSupervisorID] = useState("");
   const [selectedDate, setSelectedDate] = useState(toLocalDateInput());
   const [selectedMeetingID, setSelectedMeetingID] = useState<number | null>(null);
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -220,12 +254,14 @@ export default function MeetingsCalendarPage() {
       setSupervisors(Array.isArray(supervisorsRes) ? supervisorsRes : []);
       const nextRole = String((profileRes as ProfileSummary)?.user?.role || role).trim().toLowerCase();
       setResolvedRole(nextRole || role);
+      setCurrentUserID(Number((profileRes as ProfileSummary)?.user?.id || 0));
     } catch (e: unknown) {
       setError(errorMessage(e, "Failed to load meetings"));
       setMeetings([]);
       setBoards([]);
       setSupervisors([]);
       setResolvedRole(role);
+      setCurrentUserID(0);
     } finally {
       setLoading(false);
     }
@@ -243,6 +279,19 @@ export default function MeetingsCalendarPage() {
     }
   }, []);
 
+  const loadBoardMembers = useCallback(async (boardID: number) => {
+    if (!boardID || boardMembersByBoard[boardID] || boardMembersLoading[boardID]) return;
+    setBoardMembersLoading((prev) => ({ ...prev, [boardID]: true }));
+    try {
+      const res = await apiFetch(`/admin/board-members?board_id=${boardID}`);
+      setBoardMembersByBoard((prev) => ({ ...prev, [boardID]: Array.isArray(res) ? res : [] }));
+    } catch {
+      setBoardMembersByBoard((prev) => ({ ...prev, [boardID]: [] }));
+    } finally {
+      setBoardMembersLoading((prev) => ({ ...prev, [boardID]: false }));
+    }
+  }, [boardMembersByBoard, boardMembersLoading]);
+
   useEffect(() => {
     loadAll();
   }, [loadAll]);
@@ -257,11 +306,31 @@ export default function MeetingsCalendarPage() {
           name: meeting.board_name,
           description: "",
           supervisor_name: meeting.supervisor_name,
+          supervisor_user_id: meeting.supervisor_id,
         });
       }
     });
     return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [boards, meetings]);
+
+  const composerBoardOptions = useMemo(() => {
+    if (isEffectiveSupervisor) return boardOptions;
+    if (!composerSupervisorID) return [];
+    return boardOptions.filter((board) => String(board.supervisor_user_id) === composerSupervisorID);
+  }, [boardOptions, composerSupervisorID, isEffectiveSupervisor]);
+
+  const selectedBoardMembers = useMemo(() => {
+    const boardID = Number(form.board_id);
+    if (!boardID) return [];
+    return (boardMembersByBoard[boardID] || []).filter((member) => (member.role || "").toLowerCase() !== "supervisor");
+  }, [boardMembersByBoard, form.board_id]);
+
+  useEffect(() => {
+    const boardID = Number(form.board_id);
+    if (showComposer && boardID) {
+      void loadBoardMembers(boardID);
+    }
+  }, [form.board_id, loadBoardMembers, showComposer]);
 
   const supervisorOptions = useMemo(() => {
     const seen = new Map<number, SupervisorOption>();
@@ -283,6 +352,20 @@ export default function MeetingsCalendarPage() {
     });
     return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [meetings, supervisors]);
+
+  const defaultComposerSupervisorID = useCallback(() => {
+    if (!isEffectiveAdmin) return "";
+    if (currentUserID > 0 && supervisorOptions.some((supervisor) => supervisor.id === currentUserID)) {
+      return String(currentUserID);
+    }
+    const byLogin = supervisorOptions.find((supervisor) => {
+      const row = supervisors.find((item) => item.supervisor_user_id === supervisor.id);
+      const rowEmail = String(row?.email || "").trim().toLowerCase();
+      const rowLogin = String(row?.nickname || "").trim().replace(/^@/, "").toLowerCase();
+      return (email && rowEmail === email.toLowerCase()) || (login && rowLogin === login.toLowerCase());
+    });
+    return byLogin ? String(byLogin.id) : "";
+  }, [currentUserID, email, isEffectiveAdmin, login, supervisorOptions, supervisors]);
 
   const filteredBoardOptions = useMemo(() => {
     if (selectedSupervisorFilter === "all") {
@@ -344,6 +427,26 @@ export default function MeetingsCalendarPage() {
     const rows = selectedMeeting ? participantsByMeeting[selectedMeeting.id] || [] : [];
     return rows.filter((participant) => (participant.role || "").toLowerCase() !== "supervisor");
   }, [participantsByMeeting, selectedMeeting]);
+
+  useEffect(() => {
+    let alive = true;
+    const logins = Array.from(
+      new Set(
+        [...selectedParticipants, ...selectedBoardMembers]
+          .map((user) => loginOf(user))
+          .filter(Boolean)
+      )
+    );
+    if (logins.length === 0) return;
+    fetchRebootAvatars(logins)
+      .then((next) => {
+        if (alive) setAvatarByLogin((prev) => ({ ...prev, ...next }));
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [selectedBoardMembers, selectedParticipants]);
 
   useEffect(() => {
     if (!selectedMeeting) {
@@ -416,6 +519,7 @@ export default function MeetingsCalendarPage() {
 
   function startCreateMeeting() {
     setEditingMeetingID(null);
+    setComposerSupervisorID(defaultComposerSupervisorID());
     setForm({
       board_id: "",
       title: "",
@@ -432,6 +536,7 @@ export default function MeetingsCalendarPage() {
     const start = new Date(meeting.starts_at);
     const end = new Date(meeting.ends_at);
     setEditingMeetingID(meeting.id);
+    setComposerSupervisorID(String(meeting.supervisor_id || ""));
     setForm({
       board_id: String(meeting.board_id),
       title: meeting.title,
@@ -846,12 +951,16 @@ export default function MeetingsCalendarPage() {
                         (participant.nickname || "").toLowerCase() === login.toLowerCase()
                       );
                       const canEditParticipant = canManage || matchesSelf;
+                      const avatarUrl = avatarByLogin[loginOf(participant)] || "";
                       return (
                         <div key={participant.user_id} className="rounded-[14px] border border-slate-200 bg-white px-3 py-3">
                           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_160px_160px] md:items-start">
-                            <div className="min-w-0">
-                              <div className="text-[13px] font-black leading-5 text-slate-900">{participant.full_name}</div>
-                              <div className="mt-1 truncate text-[11px] font-semibold text-slate-500">{participant.nickname ? `@${participant.nickname}` : participant.email}</div>
+                            <div className="flex min-w-0 items-center gap-3">
+                              <UserAvatar src={avatarUrl} alt={participant.full_name} fallback={initialsOf(participant.full_name)} sizeClass="h-10 w-10" textClass="text-[12px]" className="bg-slate-50" />
+                              <div className="min-w-0">
+                                <div className="text-[13px] font-black leading-5 text-slate-900">{participant.full_name}</div>
+                                <div className="mt-1 truncate text-[11px] font-semibold text-slate-500">{participant.nickname ? `@${participant.nickname}` : participant.email}</div>
+                              </div>
                             </div>
                             <div className="md:justify-self-end">
                               <SelectField
@@ -913,10 +1022,32 @@ export default function MeetingsCalendarPage() {
 
               <form className="grid min-h-0 gap-4 overflow-y-auto pr-1" onSubmit={submitMeeting}>
                 <div className="grid gap-4 md:grid-cols-2">
+                  {isEffectiveAdmin ? (
+                    <Field label="Supervisor">
+                      <select
+                        required
+                        value={composerSupervisorID}
+                        onChange={(e) => {
+                          setComposerSupervisorID(e.target.value);
+                          setForm((prev) => ({ ...prev, board_id: "" }));
+                        }}
+                        className="h-12 w-full rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-amber-300"
+                      >
+                        <option value="">Choose supervisor</option>
+                        {supervisorOptions.map((supervisor) => <option key={supervisor.id} value={supervisor.id}>{supervisor.name}</option>)}
+                      </select>
+                    </Field>
+                  ) : null}
                   <Field label="Board">
-                    <select required value={form.board_id} onChange={(e) => setForm((prev) => ({ ...prev, board_id: e.target.value }))} className="h-12 w-full rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-amber-300">
-                      <option value="">Choose board</option>
-                      {boardOptions.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
+                    <select
+                      required
+                      value={form.board_id}
+                      disabled={isEffectiveAdmin && !composerSupervisorID}
+                      onChange={(e) => setForm((prev) => ({ ...prev, board_id: e.target.value }))}
+                      className="h-12 w-full rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <option value="">{isEffectiveAdmin && !composerSupervisorID ? "Pick supervisor first" : "Choose board"}</option>
+                      {composerBoardOptions.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
                     </select>
                   </Field>
                   <Field label="Meeting title">
@@ -940,6 +1071,32 @@ export default function MeetingsCalendarPage() {
                 <Field label="Agenda / meeting notes">
                   <textarea value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} className="min-h-[96px] w-full rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-3 text-[13px] font-semibold text-slate-800 outline-none focus:border-amber-300" placeholder="Topics to cover, preparation notes, or room setup details." />
                 </Field>
+                {form.board_id ? (
+                  <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-[12px] font-black uppercase tracking-[0.12em] text-slate-500">Board talents</div>
+                      {boardMembersLoading[Number(form.board_id)] ? <span className="text-[11px] font-bold text-slate-400">Loading...</span> : null}
+                    </div>
+                    {selectedBoardMembers.length === 0 && !boardMembersLoading[Number(form.board_id)] ? (
+                      <div className="mt-2 text-[12px] font-semibold text-slate-500">No talents found for this board.</div>
+                    ) : (
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {selectedBoardMembers.map((member) => {
+                          const avatarUrl = avatarByLogin[loginOf(member)] || "";
+                          return (
+                            <div key={member.user_id} className="flex min-w-0 items-center gap-3 rounded-[12px] border border-slate-200 bg-white px-3 py-2">
+                              <UserAvatar src={avatarUrl} alt={member.full_name} fallback={initialsOf(member.full_name)} sizeClass="h-9 w-9" textClass="text-[11px]" className="bg-slate-50" />
+                              <div className="min-w-0">
+                                <div className="truncate text-[13px] font-black text-slate-900">{member.full_name}</div>
+                                <div className="truncate text-[11px] font-semibold text-slate-500">{member.nickname ? `@${member.nickname}` : member.email}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
                 <div className="flex justify-end max-[520px]:sticky max-[520px]:bottom-0 max-[520px]:bg-white max-[520px]:py-2">
                   <button type="submit" disabled={saving} className="h-12 rounded-[14px] border border-amber-300 bg-gradient-to-br from-amber-400 to-orange-400 px-5 text-[13px] font-black text-white shadow-[0_16px_34px_rgba(245,158,11,0.24)] disabled:opacity-70 max-[520px]:w-full">{saving ? "Saving..." : editingMeetingID ? "Save reschedule" : "Create meeting"}</button>
                 </div>

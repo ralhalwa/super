@@ -12,6 +12,9 @@ var meetingLocationCatalog = []meetingLocationOption{
 	{Label: "Sandbox", SendRoomNotice: true, BlocksRoomSlot: true},
 	{Label: "Quest", SendRoomNotice: true, BlocksRoomSlot: true},
 	{Label: "Pixel", SendRoomNotice: true, BlocksRoomSlot: true},
+	{Label: "Bim", SendRoomNotice: true, BlocksRoomSlot: true},
+	{Label: "Snap", SendRoomNotice: true, BlocksRoomSlot: true},
+	{Label: "Other", SendRoomNotice: true, BlocksRoomSlot: false},
 	{Label: "Online", SendRoomNotice: false, BlocksRoomSlot: false},
 }
 
