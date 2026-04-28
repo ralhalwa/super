@@ -320,6 +320,30 @@ export default function AdminReportsPage() {
     };
   }, [boards, boardDetails, users, supervisors.length]);
 
+  const meetingSupervisorOptions = useMemo(
+    () => [...new Set(boards.map((board) => board.supervisor_name).filter(Boolean))].sort(),
+    [boards]
+  );
+  const meetingBoardOptions = useMemo(() => {
+    if (meetingFilter.supervisor === "all") return [];
+    return boards
+      .filter((board) => board.supervisor_name === meetingFilter.supervisor)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [boards, meetingFilter.supervisor]);
+
+  useEffect(() => {
+    if (meetingFilter.supervisor === "all" && meetingFilter.boardId !== "all") {
+      setMeetingFilter((prev) => ({ ...prev, boardId: "all" }));
+      return;
+    }
+    if (
+      meetingFilter.boardId !== "all" &&
+      !meetingBoardOptions.some((board) => String(board.id) === meetingFilter.boardId)
+    ) {
+      setMeetingFilter((prev) => ({ ...prev, boardId: "all" }));
+    }
+  }, [meetingBoardOptions, meetingFilter.boardId, meetingFilter.supervisor]);
+
   const filteredMeetings = useMemo(() => {
     return meetings.filter((meeting) => {
       if (meetingFilter.boardId !== "all" && String(meeting.board_id) !== meetingFilter.boardId) return false;
@@ -367,6 +391,7 @@ export default function AdminReportsPage() {
     const supervisorsInScope = [...new Set(
       boards
         .filter((board) => meetingFilter.boardId === "all" || String(board.id) === meetingFilter.boardId)
+        .filter((board) => meetingFilter.supervisor === "all" || board.supervisor_name === meetingFilter.supervisor)
         .map((board) => board.supervisor_name)
         .filter(Boolean)
     )];
@@ -538,26 +563,27 @@ export default function AdminReportsPage() {
 
             <ReportPanel eyebrow="Meetings" title="Operations lens">
               <div className="grid gap-3 lg:grid-cols-2">
+                <ReportField label="Supervisor">
+                  <select
+                    value={meetingFilter.supervisor}
+                    onChange={(e) => setMeetingFilter((prev) => ({ ...prev, supervisor: e.target.value, boardId: "all" }))}
+                    className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none transition focus:border-[#6d5efc]/30 focus:bg-white"
+                  >
+                    <option value="all">All supervisors</option>
+                    {meetingSupervisorOptions.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </ReportField>
                 <ReportField label="Board">
                   <select
                     value={meetingFilter.boardId}
                     onChange={(e) => setMeetingFilter((prev) => ({ ...prev, boardId: e.target.value }))}
-                    className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none transition focus:border-[#6d5efc]/30 focus:bg-white"
+                    disabled={meetingFilter.supervisor === "all"}
+                    className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none transition focus:border-[#6d5efc]/30 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <option value="all">All boards</option>
-                    {boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
-                  </select>
-                </ReportField>
-                <ReportField label="Supervisor">
-                  <select
-                    value={meetingFilter.supervisor}
-                    onChange={(e) => setMeetingFilter((prev) => ({ ...prev, supervisor: e.target.value }))}
-                    className="h-11 rounded-[14px] border border-slate-200 bg-slate-50 px-3 text-[13px] font-bold text-slate-800 outline-none transition focus:border-[#6d5efc]/30 focus:bg-white"
-                  >
-                    <option value="all">All supervisors</option>
-                    {[...new Set(boards.map((board) => board.supervisor_name).filter(Boolean))].sort().map((name) => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
+                    <option value="all">{meetingFilter.supervisor === "all" ? "Pick supervisor first" : "All supervisor boards"}</option>
+                    {meetingBoardOptions.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
                   </select>
                 </ReportField>
                 <ReportField label="From">
