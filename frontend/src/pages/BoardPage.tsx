@@ -411,7 +411,8 @@ function CardItem({
 
             <div
               className={[
-                "max-w-full truncate font-extrabold text-slate-900 transition",
+                "max-w-full overflow-hidden break-words font-extrabold leading-snug text-slate-900 transition",
+                "[display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]",
                 isDone ? "text-slate-500 line-through decoration-slate-300" : "",
               ].join(" ")}
             >
