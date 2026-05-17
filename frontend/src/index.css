@@ -788,14 +788,17 @@ body.admin-dark-theme {
 .admin-dark .reports-page [class*="bg-[radial-gradient"],
 .admin-dark .reports-page [class*="bg-[linear-gradient"],
 .admin-dark .reports-page [class~="bg-white"],
-.admin-dark .reports-page [class~="bg-white/85"] {
+.admin-dark .reports-page [class~="bg-white/85"],
+.admin-dark .reports-page [class*="bg-[#f7f5ff]"] {
   background: #0e1525 !important;
   background-color: #0e1525 !important;
   border-color: #24304a !important;
 }
 
 .admin-dark .reports-page [class~="bg-slate-50"],
-.admin-dark .reports-page [class~="bg-white/80"] {
+.admin-dark .reports-page [class~="bg-white/80"],
+.admin-dark .reports-page [class~="bg-sky-50"],
+.admin-dark .reports-page [class~="bg-sky-50/70"] {
   background: #111a2c !important;
   background-color: #111a2c !important;
   border-color: #25324a !important;
@@ -809,6 +812,7 @@ body.admin-dark-theme {
 }
 
 .admin-dark .reports-page [class~="bg-emerald-50"],
+.admin-dark .reports-page [class~="bg-emerald-50/70"],
 .admin-dark .reports-page [class~="bg-emerald-50/80"] {
   background: #14283a !important;
   border-color: #245845 !important;
@@ -816,12 +820,14 @@ body.admin-dark-theme {
 }
 
 .admin-dark .reports-page [class~="bg-red-50"],
+.admin-dark .reports-page [class~="bg-red-50/70"],
 .admin-dark .reports-page [class~="bg-red-50/80"] {
   background: #311b24 !important;
   border-color: #7f3040 !important;
   color: #ff8f9d !important;
 }
 
+.admin-dark .reports-page [class~="bg-orange-50"],
 .admin-dark .reports-page [class~="bg-amber-50/80"] {
   background: #3b2d16 !important;
   border-color: #82601d !important;
@@ -851,6 +857,10 @@ body.admin-dark-theme {
 .admin-dark .reports-page [class~="text-orange-700"],
 .admin-dark .reports-page [class~="text-amber-700"] {
   color: #f4c66a !important;
+}
+
+.admin-dark .reports-page [class~="text-sky-700"] {
+  color: #91d8ff !important;
 }
 
 .admin-dark .reports-page [class~="text-[#4f46e5]"],
@@ -1020,6 +1030,28 @@ body.admin-dark-theme {
 .admin-dark .board-action-members:hover {
   background: #19364b !important;
   border-color: #2f765d !important;
+}
+
+.admin-dark .board-action-status {
+  background: #14283a !important;
+  border-color: #245845 !important;
+  color: #7ee0ae !important;
+}
+
+.admin-dark .board-action-status:hover {
+  background: #19364b !important;
+  border-color: #2f765d !important;
+}
+
+.admin-dark .board-action-reassign {
+  background: #3b2d16 !important;
+  border-color: #82601d !important;
+  color: #f4c66a !important;
+}
+
+.admin-dark .board-action-reassign:hover {
+  background: #49371a !important;
+  border-color: #a87922 !important;
 }
 
 .admin-dark .board-action-delete {
