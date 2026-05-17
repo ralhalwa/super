@@ -309,15 +309,15 @@ const btnGhost =
 const btnSoft =
   "h-9 rounded-[10px] px-4 text-[14px] font-extrabold border border-slate-300 bg-white text-slate-700 hover:bg-slate-50";
 const btnDangerIcon =
-  "inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-slate-300 bg-white text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600";
+  "card-modal-danger-icon inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-slate-300 bg-white text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600";
 const btnEditIcon =
-  "inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-slate-300 bg-white text-slate-500 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700";
+  "card-modal-edit-icon inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-slate-300 bg-white text-slate-500 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700";
 
 const pillBase =
   "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-extrabold";
 
 const section =
-  "rounded-[14px] border border-slate-200 bg-[#fbfcff] p-3 shadow-[0_8px_22px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)]";
+  "card-modal-section rounded-[14px] border border-slate-200 bg-[#fbfcff] p-3 shadow-[0_8px_22px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)]";
 const sectionHead = "mb-1.5 flex items-center justify-between gap-2";
 const sectionTitle = "text-[13px] font-black text-slate-900";
 
